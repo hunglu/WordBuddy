@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using WordBuddy.Domain.Entities;
 using WordBuddy.Domain.Enums;
 using WordBuddy.Infrastructure.Persistence;
@@ -15,16 +16,28 @@ public static class DataSeeder
     /// </summary>
     public static async Task MigrateAndSeedAsync(IServiceProvider services, CancellationToken ct = default)
     {
+        ILoggerFactory loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        ILogger logger = loggerFactory.CreateLogger(typeof(DataSeeder).FullName!);
         WordBuddyDbContext context = services.GetRequiredService<WordBuddyDbContext>();
+
+        logger.LogInformation("Applying pending migrations and seeding development data...");
         await context.Database.MigrateAsync(ct);
-        await SeedUsersAsync(context, ct);
-        await SeedLessonsAsync(context, ct);
+
+        await SeedUsersAsync(context, logger, ct);
+        await SeedLessonsAsync(context, logger, ct);
+
+        logger.LogInformation("Migration and seeding completed.");
     }
 
-    private static async Task SeedUsersAsync(WordBuddyDbContext context, CancellationToken ct)
+    private static async Task SeedUsersAsync(WordBuddyDbContext context, ILogger logger, CancellationToken ct)
     {
-        if (await context.Users.AnyAsync(ct)) return;
+        if (await context.Users.AnyAsync(ct))
+        {
+            logger.LogWarning("Users table already contains data — user seed skipped.");
+            return;
+        }
 
+        logger.LogInformation("Seeding admin user...");
         DateTime now = DateTime.UtcNow;
         User admin = new(
             Guid.NewGuid(),
@@ -38,11 +51,18 @@ public static class DataSeeder
 
         await context.Users.AddAsync(admin, ct);
         await context.SaveChangesAsync(ct);
+        logger.LogInformation("Admin user seeded.");
     }
 
-    private static async Task SeedLessonsAsync(WordBuddyDbContext context, CancellationToken ct)
+    private static async Task SeedLessonsAsync(WordBuddyDbContext context, ILogger logger, CancellationToken ct)
     {
-        if (await context.Lessons.AnyAsync(ct)) return;
+        if (await context.Lessons.AnyAsync(ct))
+        {
+            logger.LogWarning("Lessons table already contains data — lesson seed skipped.");
+            return;
+        }
+
+        logger.LogInformation("Seeding sample lessons and content items...");
 
         Guid vocabLessonId   = Guid.NewGuid();
         Guid grammarLessonId = Guid.NewGuid();
@@ -181,5 +201,9 @@ public static class DataSeeder
         await context.GrammarRules.AddRangeAsync(grammarRules, ct);
         await context.DailyPhrases.AddRangeAsync(dailyPhrases, ct);
         await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Sample lessons and {Count} content items seeded.",
+            vocabItems.Length + grammarRules.Length + dailyPhrases.Length);
     }
 }

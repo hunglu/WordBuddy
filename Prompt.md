@@ -176,3 +176,120 @@ dotnet ef database update `
   --startup-project src/WordBuddy.API
 ```
 
+## Refactor Progam.cs using class-based
+
+Refactor WordBuddy.API Program.cs from top-level statements to a traditional
+class-based entry point. Requirements:
+
+1. Create a Program class with a static Main(string[] args) method as entry point.
+2. Extract all service registration into a static class ServiceCollectionExtensions
+   with extension methods:
+   - AddWordBuddyAuthentication(this IServiceCollection services, IConfiguration config)
+   - AddWordBuddyDatabase(this IServiceCollection services, IConfiguration config)
+   - AddWordBuddyServices(this IServiceCollection services)
+3. Extract all middleware pipeline setup into a static class WebApplicationExtensions
+   with an extension method:
+   - UseWordBuddyMiddleware(this WebApplication app)
+4. Program.cs should only contain the Main method — thin orchestrator, no inline logic.
+5. Keep all existing functionality (JWT, Swagger, CORS, seeder, EF Core).
+
+Show me the complete updated file for each class.
+
+## Add Microsoft.Extensions.Logging
+
+Add Microsoft.Extensions.Logging throughout the WordBuddy solution. Requirements:
+
+1. WordBuddy.API — Program.cs / Main:
+   - Configure logging via builder.Logging:
+     - ClearProviders()
+     - AddConsole()
+     - AddDebug()
+     - Log level: Information for default, Warning for Microsoft.AspNetCore,
+       Error for Microsoft.EntityFrameworkCore
+   - Read log levels from appsettings.json under "Logging" section
+
+2. WordBuddy.API — All controllers (LessonsController, ProgressController, AuthController):
+   - Inject `ILogger<T>` via constructor
+   - Log Information on every successful action with method name and key identifiers
+     e.g. _logger.LogInformation("GetLesson called for lessonId {LessonId}", id)
+   - Log Warning on not-found or invalid input cases
+   - Log Error (with exception) in catch blocks
+
+3. WordBuddy.Application — All use case handlers (queries and commands):
+   - Inject `ILogger<T>` via constructor
+   - Log Information at handler entry: handler name + input summary
+   - Log Warning when Result.Failure is returned (include error message)
+
+4. WordBuddy.Infrastructure — All repository implementations:
+   - Inject `ILogger<T>` via constructor
+   - Log Debug for every query execution (entity type + operation)
+   - Log Warning if a GetById returns null
+
+5. WordBuddy.Infrastructure — DataSeeder:
+   - Log Information when seeding starts and completes
+   - Log Warning if seed data already exists (skip condition)
+
+6. Update appsettings.json and appsettings.Development.json with the Logging section:
+   appsettings.json → Warning as default (production-safe)
+   appsettings.Development.json → Information as default (verbose for dev)
+
+Show me every modified file in full. Do not use placeholder comments like
+"// existing code here" — show the complete file each time.
+
+## Compose README.md
+
+Write a complete README.md for the WordBuddy project based on everything
+that has been built so far. Include:
+
+1. Project overview
+   - What WordBuddy is (English learning app for children and adults)
+   - Features: vocabulary, grammar, daily phrases, quizzes
+   - Media support: text, images, audio, video
+
+2. Tech stack
+   - Backend: ASP.NET Core Web API .NET 8, clean architecture
+   - Database: SQL Server (EF Core), localdb for development
+   - Auth: JWT Bearer
+   - Logging: Microsoft.Extensions.Logging
+   - Testing: xUnit
+
+3. Solution structure — show the full folder tree with a brief description
+   of each project's responsibility:
+   - WordBuddy.API
+   - WordBuddy.Application
+   - WordBuddy.Domain
+   - WordBuddy.Infrastructure
+   - WordBuddy.Tests
+
+4. Domain entities — list all entities with a one-line description each:
+   User, Lesson, VocabularyItem, GrammarRule, DailyPhrase, MediaAsset, LearnerProgress
+
+5. API endpoints — table format:
+   Method | Route | Auth required | Description
+   Cover: AuthController, LessonsController, ProgressController
+
+6. Getting started (step by step for a new developer on Windows):
+   - Prerequisites (Node.js, .NET 8, SQL Server localdb, Claude Code)
+   - Clone and build
+   - Set up appsettings.Development.json
+   - Run EF Core migrations
+   - Run the API
+   - Open Swagger
+
+7. Environment configuration — list all keys in appsettings.json
+   and what they do (ConnectionStrings, Jwt, Logging)
+
+8. Development conventions (from CLAUDE.md):
+   - Clean architecture rules
+   - Result<T> pattern
+   - Logging pattern
+   - Async/await rules
+
+9. Roadmap (phases still to come):
+   - Phase 3: Frontend
+   - Phase 4: Infrastructure
+   - Phase 5: Deployment pipeline
+   - Phase 6: Iteration and maintenance
+
+Write it in clean Markdown. Use badges for .NET 8 and SQL Server at the top.
+Do not use placeholder text — write real content based on the actual project.
