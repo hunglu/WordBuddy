@@ -2,25 +2,38 @@
 
 ## Project Overview
 
-WordBuddy is a microservices-based application Serve for English Study built on .NET 8. This repository contains the backend services. The frontend lives in a separate GitHub repository (TBD).
+WordBuddy is a microservices-based English learning web application built on .NET 8. It serves both children and adults with vocabulary lessons, grammar lessons, daily phrases, and quizzes. Content is delivered as text, images, audio pronunciations, and video clips. This repository contains all backend services; the frontend lives in a separate repository (TBD).
+
+## Domain Concepts
+
+| Concept | Description |
+|---|---|
+| `User` | Learner or admin account with profile and role |
+| `Lesson` | A structured learning unit (vocabulary or grammar) |
+| `Vocabulary` | A word entry with definition, examples, and media |
+| `Grammar` | A grammar rule with explanations and examples |
+| `DailyPhrase` | A phrase surfaced to learners each day |
+| `Quiz` | A set of questions testing lesson content |
+| `MediaAsset` | Text, image, audio, or video content attached to any domain object |
+| `LearnerProgress` | Tracks a user's completion and score across lessons and quizzes |
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Runtime | .NET 8 |
-| Web framework | ASP.NET Core Web API |
+| Web framework | ASP.NET Core Web API, use controller, use class-based (no top-level statement) |
 | Database | SQL Server |
 | ORM | Entity Framework Core 8 |
-| Authentication | JWT (access + refresh tokens) |
+| Authentication | JWT (access + refresh tokens) via Auth0 |
 | Testing | xUnit, FluentAssertions, Moq |
-| Logging | Serilog (structured, sinks: Console, File, Seq) |
-| Caching | IDistributedCache (Redis) |
+| Logging | Serilog (structured; sinks: Console, File, Seq) |
+| Caching | `IDistributedCache` (Redis) |
 | Distributed tracing | OpenTelemetry + Jaeger |
-| Distributed messaging | TBD (MassTransit / Azure Service Bus) |
+| Distributed messaging | MassTransit (Azure Service Bus in production) |
 | Health checks | ASP.NET Core Health Checks |
 | Rate limiting | ASP.NET Core Rate Limiting middleware |
-| Circuit breaker | ASP.NET Core Circuit Breaker middleware |
+| Circuit breaker | ASP.NET Core Resilience (`Microsoft.Extensions.Http.Resilience`) |
 | Containerization | Docker + Docker Compose |
 | CI/CD | GitHub Actions |
 
@@ -31,17 +44,28 @@ Clean Architecture with CQRS. Each microservice is independently deployable and 
 ```
 Presentation  →  Application  →  Domain  →  Infrastructure
 (Controllers)    (Commands/       (Entities,  (EF Core, Redis,
-                  Queries,         Value        HTTP clients,
-                  DTOs)            Objects,     Serilog)
-                                   Events)
+                  Queries,         Value        MassTransit,
+                  DTOs,            Objects,     HTTP clients,
+                  Validators)      Events)      Serilog)
 ```
 
-**Key rules:**
+**Layer rules:**
 
-- Domain layer has zero dependencies on other layers or external packages.
-- Application layer depends only on Domain. It defines interfaces that Infrastructure implements.
-- Infrastructure implements all I/O: database, cache, messaging, external APIs.
-- Presentation layer depends on Application only (never Infrastructure directly).
+- Domain has zero dependencies on other layers or external packages.
+- Application depends only on Domain; it defines interfaces that Infrastructure implements.
+- Infrastructure implements all I/O: database, cache, messaging, external APIs, media storage.
+- Presentation depends on Application only — never directly on Infrastructure.
+- Use Controller definition (no minimal endpoint), use class-based instead top-level statement.
+
+## Microservices
+
+| Service | Responsibility |
+|---|---|
+| `IdentityService` | Registration, login, JWT issuance, refresh token rotation |
+| `ContentService` | Lessons, Vocabulary, Grammar, DailyPhrases, MediaAssets |
+| `QuizService` | Quiz definitions, question banks, answer evaluation |
+| `ProgressService` | LearnerProgress tracking, streaks, completion history |
+| `NotificationService` | Push/email notifications for daily phrases and reminders |
 
 ## Conventions
 
@@ -49,7 +73,8 @@ Presentation  →  Application  →  Domain  →  Infrastructure
 
 - SOLID principles throughout.
 - `async`/`await` everywhere — no `.Result`, `.Wait()`, or blocking calls.
-- No `null` returns from service/repository methods — use `Result<T>` or `Option<T>`.
+- No `null` returns from service or repository methods — use `Result<T>` or `Option<T>`.
+- Do not use `var` when the type is not immediately obvious from the right-hand side.
 - All public API surface is documented with XML doc comments.
 
 ### Result Pattern
@@ -58,97 +83,131 @@ All application-layer methods return `Result<T>` (or `Result` for void operation
 
 ```csharp
 // Success
-return Result<UserDto>.Success(dto);
+return Result<LessonDto>.Success(dto);
 
 // Failure
-return Result<UserDto>.Failure(Error.NotFound("User.NotFound", $"User {id} was not found."));
+return Result<LessonDto>.Failure(Error.NotFound("Lesson.NotFound", $"Lesson {id} was not found."));
 ```
 
-Errors are typed value objects (`Error` record with `Code` and `Description`). Never throw exceptions for expected business failures — use `Result`.
+`Error` is a typed value object (record with `Code` and `Description`). Never throw exceptions for expected business failures — use `Result`.
 
 ### CQRS
 
-- Commands mutate state, queries read state. Keep them separate.
-- Use MediatR for dispatching.
-- One handler per command/query.
+- Commands mutate state. Queries read state. Keep them strictly separate.
+- Do NOT Use MediatR for dispatching commands and queries, instead using the original in dotnet.
+- One handler per command or query.
 - Handlers live in the Application layer under `Features/<FeatureName>/`.
 
 ```
 Features/
-  Users/
+  Lessons/
     Commands/
-      CreateUser/
-        CreateUserCommand.cs
-        CreateUserCommandHandler.cs
-        CreateUserCommandValidator.cs
+      CreateLesson/
+        CreateLessonCommand.cs
+        CreateLessonCommandHandler.cs
+        CreateLessonCommandValidator.cs
     Queries/
-      GetUserById/
-        GetUserByIdQuery.cs
-        GetUserByIdQueryHandler.cs
+      GetLessonById/
+        GetLessonByIdQuery.cs
+        GetLessonByIdQueryHandler.cs
+  Vocabulary/
+    Commands/
+      AddVocabulary/
+        ...
+    Queries/
+      GetVocabularyByLesson/
+        ...
+  Quiz/
+    Commands/
+      SubmitQuizAnswer/
+        ...
+    Queries/
+      GetQuizById/
+        ...
 ```
 
 ### Validation
 
-- FluentValidation for all commands/queries.
+- FluentValidation for all commands and queries.
 - Register a MediatR pipeline behavior that runs validation before the handler.
-- Return `Result.Failure` with validation errors — never throw `ValidationException` past the pipeline.
+- Return `Result.Failure` with validation errors — never let `ValidationException` propagate past the pipeline.
 
 ### Error Handling
 
 - Global exception middleware catches unhandled exceptions and returns RFC 7807 `ProblemDetails`.
-- Expected failures flow through `Result<T>` — they never become exceptions.
+- Expected failures flow through `Result<T>` and are never promoted to exceptions.
 - Log unhandled exceptions at `Error` level with full stack trace and correlation ID.
 
 ### Logging (Serilog)
 
-- Structured logging only — no string interpolation in log messages, use message templates.
+- Structured logging only — never use string interpolation in log messages; use message templates.
 - Enrich every log entry with: `CorrelationId`, `ServiceName`, `Environment`.
-- Log levels: `Verbose` (trace-level dev only), `Debug`, `Information`, `Warning`, `Error`, `Fatal`.
-- Do not log sensitive data (passwords, tokens, PII).
+- Log levels: `Debug`, `Information`, `Warning`, `Error`, `Fatal`. Use `Verbose` only for local trace-level diagnostics.
+- Never log sensitive data: passwords, tokens, PII, or child user data.
+- Add configuration on appsetting.json instead hard code in program.cs file to flexible change.
+- Using Microsoft extension logging interface and instanse is serilog.
 
 ### Distributed Tracing (OpenTelemetry)
 
 - Instrument all inbound HTTP requests, outbound HTTP calls, EF Core queries, and message bus operations.
 - Export traces to Jaeger in development; configure via environment variables for other environments.
-- Propagate `traceparent` header across service boundaries.
+- Propagate `traceparent` header across all service boundaries.
 
 ### Caching
 
 - Cache reads in query handlers using `IDistributedCache`.
-- Cache keys follow the pattern: `{ServiceName}:{EntityName}:{Id}`.
+- Cache key pattern: `{ServiceName}:{EntityName}:{Id}` — e.g., `content:lesson:42`.
 - Always set an absolute expiry. Do not use sliding expiry by default.
-- Invalidate on write via cache-aside pattern (delete on command success).
+- Invalidate via cache-aside on command success (delete the key after a successful write).
+- Cache high-read, low-mutation content aggressively: `Vocabulary`, `Grammar`, `DailyPhrase`.
 
 ### Health Checks
 
 Every service exposes:
 
 - `GET /health` — liveness (returns 200 if the process is up).
-- `GET /health/ready` — readiness (checks DB, cache, downstream dependencies).
+- `GET /health/ready` — readiness (checks DB, Redis, downstream service dependencies).
 
 ### Rate Limiting
 
 - Applied globally via ASP.NET Core Rate Limiting middleware.
 - Per-endpoint policies defined in `RateLimitingConfiguration`.
-- Return `429 Too Many Requests` with `Retry-After` header.
+- Return `429 Too Many Requests` with a `Retry-After` header.
+- Apply stricter limits on quiz submission and auth endpoints to prevent abuse.
 
 ### Authentication & Authorization
 
-- JWT bearer tokens issued by an identity service (using Auth0 as 3rd-Party).
-- Refresh token rotation stored in the database.
-- Use policy-based authorization — avoid `[Authorize(Roles = "...")]` strings.
+- JWT bearer tokens issued by `IdentityService` (backed by Auth0).
+- Refresh token rotation persisted in the database.
+- Use policy-based authorization — avoid hardcoded role strings in `[Authorize]` attributes.
+- Child accounts (`AgeGroup = Child`) are subject to additional content restrictions enforced via authorization policies.
+
+### Media Assets
+
+- `MediaAsset` records store the asset type (`Text`, `Image`, `Audio`, `Video`), a storage URL, and metadata.
+- Actual binary files are stored in blob storage (Azure Blob or local volume in development); the database holds only references.
+- Audio pronunciation files follow the naming convention: `vocab-{vocabularyId}-{locale}.mp3`.
+- Video clips are linked per `Lesson` or `Vocabulary` entry and streamed from the CDN URL stored in `MediaAsset`.
+
+### Distributed Messaging
+
+- MassTransit with in-memory transport for local development; Azure Service Bus in staging and production.
+- Published domain events (e.g., `QuizCompletedEvent`, `LessonCompletedEvent`) drive `ProgressService` updates asynchronously.
+- Consumers are idempotent — processing the same message twice must not corrupt state.
+- Message contracts live in `WordBuddy.Shared.Contracts`.
 
 ### Testing
 
-- Unit tests for domain logic and application handlers (mock infrastructure interfaces).
-- Integration tests for API endpoints and database (use `WebApplicationFactory`, real SQL Server via Docker).
-- No mocking EF Core — use a real database for integration tests (learned from prior incidents).
+- Unit tests for domain logic and application handlers; mock infrastructure interfaces with Moq.
+- Integration tests for API endpoints and database using `WebApplicationFactory` and a real SQL Server (Docker).
+- Never mock EF Core — integration tests must hit a real database.
 - Test class naming: `{ClassUnderTest}_{Method}_{ExpectedOutcome}`.
-- One `[Fact]` / `[Theory]` per logical scenario.
+- One `[Fact]` or `[Theory]` per logical scenario.
+- Cover both child-targeted and adult-targeted content paths where behavior differs.
 
 ### Docker / Docker Compose
 
-- Each service has its own `Dockerfile` (multi-stage build).
+- Each service has its own multi-stage `Dockerfile`.
 - `docker-compose.yml` at repo root orchestrates all services + SQL Server + Redis + Jaeger for local development.
 - Never hardcode connection strings — use environment variables or `appsettings.{Environment}.json` (excluded from git).
 
@@ -158,12 +217,10 @@ Every service exposes:
 |---|---|
 | `appsettings.json` | Non-secret defaults |
 | `appsettings.Development.json` | Local overrides (not in git) |
-| `appsettings.Production.json` | Prod overrides (not in git) |
+| `appsettings.Production.json` | Production overrides (not in git) |
 | Environment variables | Secrets in CI/CD and containers |
 
-Secrets (connection strings, JWT signing keys) are never committed. Use `dotnet user-secrets` locally.
-
-Apply User Secrets technique support by IDE Visual Studio and Dotnet 8 framework.
+Secrets (connection strings, JWT signing keys, Auth0 credentials, storage account keys) are never committed. Use `dotnet user-secrets` locally.
 
 ## Build & Run
 
@@ -172,7 +229,7 @@ Apply User Secrets technique support by IDE Visual Studio and Dotnet 8 framework
 dotnet restore
 dotnet build
 
-# Run a specific service (replace <ServiceName>)
+# Run a specific service
 dotnet run --project src/Services/<ServiceName>/<ServiceName>.Api
 
 # Run all services with Docker Compose
@@ -184,21 +241,39 @@ dotnet test
 
 ## Project Structure
 
-> Fill in as services and shared libraries are added.
-
 ```
 WordBuddy/
 ├── src/
-│   ├── Services/               # Individual microservices (one folder per service)
-│   │   └── <ServiceName>/
-│   │       ├── <ServiceName>.Api/          # ASP.NET Core Web API (Presentation)
-│   │       ├── <ServiceName>.Application/  # CQRS handlers, DTOs, interfaces
-│   │       ├── <ServiceName>.Domain/       # Entities, value objects, domain events
-│   │       └── <ServiceName>.Infrastructure/ # EF Core, Redis, HTTP clients
-│   └── Shared/                 # Cross-cutting shared libraries
+│   ├── Services/
+│   │   ├── Identity/
+│   │   │   ├── Identity.Api/
+│   │   │   ├── Identity.Application/
+│   │   │   ├── Identity.Domain/
+│   │   │   └── Identity.Infrastructure/
+│   │   ├── Content/
+│   │   │   ├── Content.Api/
+│   │   │   ├── Content.Application/       # Lessons, Vocabulary, Grammar, DailyPhrase, MediaAsset features
+│   │   │   ├── Content.Domain/
+│   │   │   └── Content.Infrastructure/
+│   │   ├── Quiz/
+│   │   │   ├── Quiz.Api/
+│   │   │   ├── Quiz.Application/
+│   │   │   ├── Quiz.Domain/
+│   │   │   └── Quiz.Infrastructure/
+│   │   ├── Progress/
+│   │   │   ├── Progress.Api/
+│   │   │   ├── Progress.Application/      # LearnerProgress features
+│   │   │   ├── Progress.Domain/
+│   │   │   └── Progress.Infrastructure/
+│   │   └── Notification/
+│   │       ├── Notification.Api/
+│   │       ├── Notification.Application/
+│   │       ├── Notification.Domain/
+│   │       └── Notification.Infrastructure/
+│   └── Shared/
 │       ├── WordBuddy.Shared.Kernel/        # Result<T>, Error, base entity, common interfaces
-│       ├── WordBuddy.Shared.Infrastructure/ # Serilog setup, OpenTelemetry, health checks
-│       └── WordBuddy.Shared.Contracts/     # Shared message contracts for inter-service communication
+│       ├── WordBuddy.Shared.Infrastructure/ # Serilog setup, OpenTelemetry, health checks, rate limiting
+│       └── WordBuddy.Shared.Contracts/     # MassTransit message contracts for inter-service events
 ├── tests/
 │   ├── UnitTests/
 │   └── IntegrationTests/
@@ -219,4 +294,4 @@ Pipelines live in `.github/workflows/`. Standard pipeline per service:
 2. Run unit tests.
 3. Run integration tests (spin up SQL Server + Redis containers).
 4. Build Docker image.
-5. Push to container registry (on merge to `main`).
+5. Push to container registry on merge to `main`.
