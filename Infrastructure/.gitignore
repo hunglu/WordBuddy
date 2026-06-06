@@ -1,0 +1,2 @@
+# Local environment secrets — copy .env.example → .env to get started
+.env

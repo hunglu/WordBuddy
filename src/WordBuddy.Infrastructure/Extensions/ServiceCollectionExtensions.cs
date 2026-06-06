@@ -5,6 +5,7 @@ using WordBuddy.Application.Interfaces;
 using WordBuddy.Infrastructure.Persistence;
 using WordBuddy.Infrastructure.Persistence.Repositories;
 using WordBuddy.Infrastructure.Services;
+using WordBuddy.Infrastructure.Settings;
 
 namespace WordBuddy.Infrastructure.Extensions;
 
@@ -21,6 +22,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
+
         services.AddDbContext<WordBuddyDbContext>(options =>
             options
                 .UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
@@ -28,7 +31,9 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ILessonRepository, LessonRepository>();
         services.AddScoped<ILearnerProgressRepository, LearnerProgressRepository>();
+        services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
 
         return services;
     }

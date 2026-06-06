@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Application.Features.Lessons.Commands.CreateLesson;
 using WordBuddy.Application.Features.Lessons.Queries.GetLessonDetail;
 using WordBuddy.Application.Features.Lessons.Queries.GetLessons;
+using WordBuddy.Application.Features.Media.Commands.UploadMedia;
+using WordBuddy.Application.Features.Media.Queries.GetMediaAsset;
 using WordBuddy.Application.Features.Progress.Commands.RecordProgress;
 using WordBuddy.Application.Features.Progress.Queries.GetUserProgress;
 
@@ -26,6 +28,8 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<CreateLessonCommandHandler>();
         services.AddScoped<RecordProgressCommandHandler>();
         services.AddScoped<GetUserProgressQueryHandler>();
+        services.AddScoped<UploadMediaCommandHandler>();
+        services.AddScoped<GetMediaAssetQueryHandler>();
 
         return services;
     }

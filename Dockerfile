@@ -33,4 +33,6 @@ ENV ASPNETCORE_URLS=http://+:8080
 
 EXPOSE 8080
 
+VOLUME /app/media
+
 ENTRYPOINT ["dotnet", "WordBuddy.API.dll"]

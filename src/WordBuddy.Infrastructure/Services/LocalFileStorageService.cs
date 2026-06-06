@@ -1,12 +1,13 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using WordBuddy.Application.Interfaces;
+using WordBuddy.Infrastructure.Settings;
 
 namespace WordBuddy.Infrastructure.Services;
 
 /// <summary>
 /// Stores media files on the local file system under a configurable base path.
-/// Configured via <c>FileStorage:BasePath</c> in application settings.
+/// Configured via the <c>FileStorage</c> section in application settings.
 /// Files are organised as <c>BasePath/{type}/{year}/{month}/{guid+ext}</c>.
 /// </summary>
 internal sealed class LocalFileStorageService : IFileStorageService
@@ -18,11 +19,13 @@ internal sealed class LocalFileStorageService : IFileStorageService
     /// <exception cref="InvalidOperationException">
     /// Thrown when <c>FileStorage:BasePath</c> is absent or empty in configuration.
     /// </exception>
-    public LocalFileStorageService(IConfiguration configuration, ILogger<LocalFileStorageService> logger)
+    public LocalFileStorageService(IOptions<FileStorageSettings> options, ILogger<LocalFileStorageService> logger)
     {
-        _basePath = configuration.GetValue<string>("FileStorage:BasePath")
-            ?? throw new InvalidOperationException(
+        string basePath = options.Value.BasePath;
+        if (string.IsNullOrWhiteSpace(basePath))
+            throw new InvalidOperationException(
                 "'FileStorage:BasePath' configuration is required but was not set.");
+        _basePath = basePath;
         _logger = logger;
     }
 
