@@ -8,19 +8,33 @@ project references to any other WordBuddy service or shared project — see the 
 
 ## Endpoints
 
-_None yet — added in Phase 2 (expect `GET /api/quiz/{id}`, `POST /api/quiz/{id}/submit`)._
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/quiz` | Bearer | Lists quizzes; optional `?lessonId=` filter |
+| GET | `/api/quiz/{id}` | Bearer | Quiz with its questions (answers not included) |
+| POST | `/api/quiz/{id}/submit` | Bearer | Submits one question's answer, returns correctness + explanation |
+| POST | `/api/quiz` | Bearer | Creates a quiz with its questions (admin use) |
+
+Swagger UI: `http://localhost:5082/swagger` (Development only). Bearer tokens come from
+Identity — this service only validates them (same `Jwt:Secret`/`Jwt:Issuer` config), it never
+issues its own. `QuizId` is a plain field, not a foreign key to Content's `Lesson` — services
+never reference each other's data directly.
 
 ## Running standalone
 
 ```bash
-dotnet run --project WordBuddy.Quiz.Api
+dotnet run --project WordBuddy.Quiz.Api --urls http://localhost:5082
 ```
 
 ## Configuration
 
-`WordBuddy.Quiz.Api/appsettings.Development.json` (added in Phase 2) will hold:
+Copy `WordBuddy.Quiz.Api/appsettings.Development.json.example` to
+`appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyQuiz`)
-- `Jwt:Issuer` (validates tokens issued by Identity)
+- `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Quiz validates tokens
+  Identity issued
+- `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
+  Tracing section
 
 ## Projects
 

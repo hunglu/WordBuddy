@@ -26,7 +26,7 @@ later with nothing to untangle. See [`CLAUDE.md`](./CLAUDE.md) for the full mode
 |---|---|---|---|---|
 | Identity | Implemented | Registration, login, JWT issuance | [src/Services/Identity](./src/Services/Identity/README.md) | `localhost:5080/swagger` |
 | Content | Implemented | Lessons, Vocabulary, Grammar, DailyPhrases, MediaAssets | [src/Services/Content](./src/Services/Content/README.md) | `localhost:5081/swagger` |
-| Quiz | Scaffold only | Quiz definitions, question banks, answer evaluation | [src/Services/Quiz](./src/Services/Quiz/README.md) | — |
+| Quiz | Implemented | Quiz definitions, question banks, answer evaluation | [src/Services/Quiz](./src/Services/Quiz/README.md) | `localhost:5082/swagger` |
 | Progress | Scaffold only | Learner progress tracking, streaks, completion history | [src/Services/Progress](./src/Services/Progress/README.md) | — |
 | Notification | Scaffold only | Push/email notifications for daily phrases and reminders | [src/Services/Notification](./src/Services/Notification/README.md) | — |
 
