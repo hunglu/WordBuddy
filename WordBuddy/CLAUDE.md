@@ -103,6 +103,13 @@ Naming matches the root `../CLAUDE.md` domain concepts table.
   Phase 2).
 - `ILogger<T>` (Microsoft.Extensions.Logging, backed by Serilog) — structured message templates,
   never string interpolation.
+- Serilog + OpenTelemetry setup is never per-service code — every `Program.cs` calls
+  `builder.Host.ConfigureWordBuddySerilog(ServiceName)` and
+  `builder.Services.AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration)` from
+  `WordBuddy.Shared.Infrastructure`'s `Observability` folder. `ServiceName` is always
+  `"WordBuddy.<Service>"` (e.g. `"WordBuddy.Identity"`), never the bare service name. See root
+  `../CLAUDE.md`'s Logging/Tracing section for the full contract (enrichment, sinks, OTLP
+  endpoint) — don't re-derive it here or in a new service.
 
 ## Build & run
 

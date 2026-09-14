@@ -59,6 +59,9 @@ service-specific entities/endpoints — don't re-derive it per service, copy the
       integration from CLAUDE.md is a later swap-in, not this phase)
 - [ ] Swagger with JWT support, one Swagger doc per service
 - [ ] `ILogger<T>` injected in controllers, handlers, repositories
+- [ ] Serilog + OpenTelemetry wired via `WordBuddy.Shared.Infrastructure` (not re-implemented
+      per service) — `ServiceName` constant in `Program.cs` is `"WordBuddy.<Service>"`, never the
+      bare service name
 - [ ] Class-based `Program.cs` with `ServiceCollectionExtensions`/`WebApplicationExtensions` in
       every service
 - [ ] `InitialCreate` migration applied per service's database
@@ -127,28 +130,44 @@ methods async, `AsNoTracking` on queries.
 In each `WordBuddy.<Service>.Api`:
 
 - Install per-service as needed: `Microsoft.AspNetCore.Authentication.JwtBearer`,
-  `Swashbuckle.AspNetCore`; Identity only: `BCrypt.Net-Next`
+  `Swashbuckle.AspNetCore` **pinned to `6.6.2`** (10.x ships OpenAPI.NET v2, which breaks the
+  classic `OpenApiSecurityScheme`/`OpenApiReference` security-definition pattern used below —
+  don't fight that API, just pin the version), `Serilog.AspNetCore` (for
+  `UseSerilogRequestLogging`), `WordBuddy.Shared.Infrastructure`; Identity only:
+  `BCrypt.Net-Next`
 - Class-based `Program.cs`:
   - `Program` class with static `Main(string[] args)`
+  - `private const string ServiceName = "WordBuddy.<Service>";` (e.g. `"WordBuddy.Content"`)
+  - `builder.Host.ConfigureWordBuddySerilog(ServiceName);` before `builder.Services...`
   - `ServiceCollectionExtensions`: `AddWordBuddyAuthentication`, `AddWordBuddyDatabase`,
-    `AddWordBuddyServices`
-  - `WebApplicationExtensions`: `UseWordBuddyMiddleware`
+    `AddWordBuddyServices`, then `.AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration)`
+  - `WebApplicationExtensions`: `UseWordBuddyMiddlewareAsync` — call `app.UseSerilogRequestLogging()`
+    first, before Swagger/auth/controllers
+  - Wrap `app.Run()` in `try/finally { Log.CloseAndFlush(); }` so buffered log entries flush on
+    shutdown
 - Controllers (see Requirements table above for which service gets which)
 - All actions: async, `IActionResult`, `[Authorize]` except Identity's login/register,
   `ILogger<T>`, XML doc comments
-- `appsettings.Development.json`: `ConnectionStrings`, `Jwt`, `Logging`, and (Content only)
-  `FileStorage`
+- `services.AddControllers().AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))`
+  — without this, any enum in a request body (e.g. `AgeGroup`, `LessonType`) fails to bind from
+  its JSON string value
+- `appsettings.Development.json`: `ConnectionStrings`, `Jwt`, `Serilog`, `OpenTelemetry`, and
+  (Content only) `FileStorage`
 
-### Step 6 — Logging (all services, same conventions)
+### Step 6 — Logging & tracing (all services, same conventions)
 
-Apply `ILogger<T>` across all layers, in every service:
+Apply `ILogger<T>` across all layers, in every service — see root `CLAUDE.md`'s Logging &
+Distributed Tracing section for the full Serilog/OpenTelemetry contract; this step is just the
+per-call-site logging discipline on top of that shared wiring:
 
 - Controllers: Info on success, Warning on not-found, Error on exceptions
 - Handlers: Info on entry, Warning on `Result.Failure`
 - Repositories: Debug on queries, Warning on null returns
 - Seeder (Identity, Content): Info on start/complete, Warning if data already exists
-- `appsettings.json`: Warning (prod); `appsettings.Development.json`: Information (dev) — same
-  in every service
+- `appsettings.json`'s `Serilog` section: Console sink only, `Warning` default (production-safe)
+- `appsettings.Development.json`'s `Serilog` section: Console + rolling File sink,
+  `Information` default — same shape in every service, copy Identity's and adjust the log file
+  name (`logs/<service-lowercase>-.log`)
 
 ### Step 7 — Migrations + seed (per service, independently)
 

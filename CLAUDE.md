@@ -160,20 +160,43 @@ Features/
 - Expected failures flow through `Result<T>` and are never promoted to exceptions.
 - Log unhandled exceptions at `Error` level with full stack trace and correlation ID.
 
-### Logging (Serilog)
+### Logging (Serilog) & Distributed Tracing (OpenTelemetry)
 
-- Structured logging only — never use string interpolation in log messages; use message templates.
-- Enrich every log entry with: `CorrelationId`, `ServiceName`, `Environment`.
-- Log levels: `Debug`, `Information`, `Warning`, `Error`, `Fatal`. Use `Verbose` only for local trace-level diagnostics.
+**Both are implemented once, in `WordBuddy.Shared.Infrastructure`'s `Observability` folder —
+never re-implement Serilog/OpenTelemetry setup per service.** Every service's `Program.cs` wires
+them with exactly two calls:
+
+```csharp
+builder.Host.ConfigureWordBuddySerilog(ServiceName);
+// ...
+builder.Services.AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
+```
+
+- `ServiceName` is a `private const string` in `Program.cs`, always in the form
+  **`WordBuddy.<Service>`** (e.g. `"WordBuddy.Identity"`, `"WordBuddy.Content"`) — never the bare
+  service name — so it reads unambiguously in logs/traces/Jaeger regardless of what else is
+  running.
+- Structured logging only — never use string interpolation in log messages; use message
+  templates. Log via `ILogger<T>` (`Microsoft.Extensions.Logging`) everywhere — never a Serilog
+  type directly; Serilog is only the backend, wired once at the host level.
+- Every log entry is enriched with `CorrelationId` (the current OpenTelemetry trace id — ties
+  together every log line from one request, including Serilog's own request-logging summary),
+  `ServiceName`, and `Environment` — this enrichment lives in `CorrelationIdEnricher` +
+  `ConfigureWordBuddySerilog`, not per-service code.
+- Log levels: `Debug`, `Information`, `Warning`, `Error`, `Fatal`. Use `Verbose` only for local
+  trace-level diagnostics.
 - Never log sensitive data: passwords, tokens, PII, or child user data.
-- Add configuration on appsetting.json instead hard code in program.cs file to flexible change.
-- Using Microsoft extension logging interface and instanse is serilog.
-
-### Distributed Tracing (OpenTelemetry)
-
-- Instrument all inbound HTTP requests, outbound HTTP calls, EF Core queries, and message bus operations.
-- Export traces to Jaeger in development; configure via environment variables for other environments.
-- Propagate `traceparent` header across all service boundaries.
+- Sinks/levels are configuration, not code: a `Serilog` section in `appsettings.json`
+  (Console-only, `Warning` default — production-safe) and `appsettings.Development.json`
+  (Console + rolling file, `Information` default). Copy an existing service's sections rather
+  than inventing new ones.
+- `AddWordBuddyOpenTelemetry` instruments inbound HTTP, outbound `HttpClient`, and EF Core
+  automatically, exporting via OTLP. Default endpoint is Jaeger's local OTLP/gRPC port
+  (`http://localhost:4317`), overridable via `OpenTelemetry:OtlpEndpoint` in config or the
+  standard `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable for other environments — harmless
+  if nothing is listening there (the host still starts cleanly).
+- `traceparent` propagation across service boundaries comes for free from the ASP.NET Core +
+  `HttpClient` instrumentation above — don't hand-roll header forwarding.
 
 ### Caching
 

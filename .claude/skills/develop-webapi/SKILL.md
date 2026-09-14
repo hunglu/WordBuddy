@@ -25,27 +25,50 @@ logging calls, controller wiring) consistent across every feature and every serv
    below when nothing comparable exists yet.
 3. **Decide Command vs Query.** Mutation → Command (`Commands/<Verb><Noun>/`). Read → Query
    (`Queries/<Verb><Noun>/`). Never mix reads and writes in one handler.
-4. **DotNet Solution** 
-  - Make sure the new feature's project is already in the solution and has the right references:
-   - Presentation → Application, Infrastructure
-   - Application → Domain
-   - Infrastructure → Application
-   - Tests → Application, Domain, Infrastructure
-  - Make sure DotNet project using the correct target framework (net10.0) and has the right NuGet packages installed:
-   - Microsoft.EntityFrameworkCore.SqlServer
-   - Microsoft.EntityFrameworkCore.Tools
-   - FluentValidation
-   - xUnit + FluentAssertions (for tests)
-  - Make sure the project file should not use minimal APIs. Use explicit `Program.cs` and `Startup.cs` if the service already has them and Controllers should be class-based, not minimal API lambdas.
-5. **Serilog Logging**
-  - The configuration should place in appsettings.json and appsettings.Development.json, not in code. 
-  - Use `ILogger<T>` from Microsoft.Extensions.Logging in every handler and controller, never use ISerilog interfaces directly. 
-  - Inject `ILogger<T>` into every handler and controller.
-  - Log at fixed points: entry, validation failure, repository failure, success.
-  - Use structured message templates (`"CreateLessonCommand started: Title={Title}, Type={Type}"`), never string interpolation.
-  - Never log passwords, tokens, or raw child-user PII.
-6. **Project Folder Structure** 
-  - Root 
+4. **DotNet Solution** — each service is fully independent (own `WordBuddy.<Service>.slnx`, own
+   `nuget.config`), never wired to another service or a shared project reference:
+   - Presentation (`WordBuddy.<Service>.Api`) → `Application`, `Infrastructure`
+     (`ProjectReference`, same service only)
+   - `Application` → `Domain` (`ProjectReference`, same service only)
+   - `Infrastructure` → `Application` (`ProjectReference`, same service only)
+   - `UnitTests` → `Application`, `Domain`; `IntegrationTests` → `Api` (`ProjectReference`, same
+     service only)
+   - `WordBuddy.Shared.Kernel`/`Infrastructure`/`Contracts` are **never** a `ProjectReference` —
+     they're a `<PackageReference>` restored from `local-nuget-feed/` (see root `CLAUDE.md`'s
+     independence model)
+   - Confirm `net10.0`, and the expected NuGet packages are present per layer: `Application` gets
+     `WordBuddy.Shared.Kernel` + `FluentValidation`; `Infrastructure` gets
+     `Microsoft.EntityFrameworkCore.SqlServer`/`.Design`; `Api` gets
+     `Microsoft.AspNetCore.Authentication.JwtBearer`, `Swashbuckle.AspNetCore` **pinned to
+     `6.6.2`** (10.x's OpenAPI.NET v2 breaks the classic security-definition API used here),
+     `Serilog.AspNetCore`, `WordBuddy.Shared.Infrastructure`
+   - Controllers, not minimal APIs; class-based `Program.cs`/`Main`, not top-level statements
+5. **Serilog & OpenTelemetry** — implemented once in `WordBuddy.Shared.Infrastructure`'s
+   `Observability` folder; never re-implement or hand-configure either per service:
+   - `Program.cs` declares `private const string ServiceName = "WordBuddy.<Service>";` (always
+     this prefix — not the bare service name) and calls
+     `builder.Host.ConfigureWordBuddySerilog(ServiceName)` before building, plus
+     `.AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration)` when registering services
+   - `WebApplicationExtensions` calls `app.UseSerilogRequestLogging()` first in the pipeline, and
+     `Program.Main` wraps `app.Run()` in `try/finally { Log.CloseAndFlush(); }`
+   - Sinks/levels live in each service's `appsettings.json`/`appsettings.Development.json`
+     under a `Serilog` section — never hardcoded in `Program.cs`. Copy an existing service's
+     section rather than inventing a new shape
+   - Use `ILogger<T>` from `Microsoft.Extensions.Logging` in every handler and controller, never
+     a Serilog type directly
+   - Inject `ILogger<T>` into every handler and controller; log at fixed points: entry,
+     validation failure, repository failure, success
+   - Structured message templates only (`"CreateLessonCommand started: Title={Title}"`), never
+     string interpolation
+   - Never log passwords, tokens, or raw child-user PII
+   - Full contract (enrichment fields, OTLP endpoint, why) is in root `CLAUDE.md`'s "Logging &
+     Distributed Tracing" section — read it once, don't re-derive it per feature
+6. **JSON enum binding** — every service's `AddControllers()` must chain
+   `.AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))`.
+   Without it, any enum in a request body (`AgeGroup`, `LessonType`, ...) fails to bind from its
+   JSON string value with an opaque 400.
+7. **Project Folder Structure**
+  - Root
      |-- WordBuddy - Backend solution folder, it recognizes as the root folder of Backend solution.
      |
      |-- WordBuddy.UI - Frontend solution folder, it regconizes as the root folder of Frontend solution.
