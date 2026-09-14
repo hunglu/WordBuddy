@@ -1,21 +1,37 @@
-var builder = WebApplication.CreateBuilder(args);
+using Serilog;
+using WordBuddy.Progress.Api.Extensions;
+using WordBuddy.Shared.Infrastructure.Observability;
 
-// Add services to the container.
+namespace WordBuddy.Progress.Api;
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+/// <summary>Application entry point for the Progress API host.</summary>
+public sealed class Program
 {
-    app.MapOpenApi();
+    private const string ServiceName = "WordBuddy.Progress";
+
+    /// <summary>Builds, configures, and starts the Progress API host.</summary>
+    public static async Task Main(string[] args)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        builder.Host.ConfigureWordBuddySerilog(ServiceName);
+
+        builder.Services
+            .AddWordBuddyAuthentication(builder.Configuration)
+            .AddWordBuddyDatabase(builder.Configuration)
+            .AddWordBuddyServices()
+            .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
+
+        WebApplication app = builder.Build();
+
+        try
+        {
+            await app.UseWordBuddyMiddlewareAsync();
+            app.Run();
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
+    }
 }
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

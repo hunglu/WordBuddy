@@ -11,20 +11,26 @@ follows. Will consume domain events (`QuizCompletedEvent`/`LessonCompletedEvent`
 ## Endpoints
 
 _None yet — this service has no public HTTP surface planned so far; it reacts to events rather
-than serving requests._
+than serving requests._ It does have the same Serilog/OpenTelemetry/JWT-validation wiring every
+other service gets (see `Program.cs`), so Swagger comes up at `http://localhost:5084/swagger`
+even with zero controllers — ready to grow into real endpoints without re-deriving the setup.
 
 ## Running standalone
 
 ```bash
-dotnet run --project WordBuddy.Notification.Api
+dotnet run --project WordBuddy.Notification.Api --urls http://localhost:5084
 ```
 
 ## Configuration
 
-`WordBuddy.Notification.Api/appsettings.Development.json` (added when this service gains real behavior)
-will hold:
-- `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyNotification`),
-  once it has entities to persist
+Copy `WordBuddy.Notification.Api/appsettings.Development.json.example` to
+`appsettings.Development.json` (gitignored) to get started locally. It currently holds only:
+- `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values (no controllers use
+  `[Authorize]` yet, but the wiring is in place)
+- `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
+  Tracing section
+
+`ConnectionStrings:DefaultConnection` will be added once this service has entities to persist.
 
 ## Projects
 

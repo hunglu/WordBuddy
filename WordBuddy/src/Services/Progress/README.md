@@ -9,19 +9,33 @@ model this follows. Consumes `QuizCompletedEvent`/`LessonCompletedEvent` (from
 
 ## Endpoints
 
-_None yet — added in Phase 2 (expect `POST /api/progress`, `GET /api/progress`)._
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/progress` | Bearer | Records/updates the caller's progress on a lesson (upsert by user+lesson) |
+| GET | `/api/progress` | Bearer | Lists the caller's progress across all lessons |
+
+Swagger UI: `http://localhost:5083/swagger` (Development only). Bearer tokens come from
+Identity — this service only validates them (same `Jwt:Secret`/`Jwt:Issuer` config), it never
+issues its own. The user id comes from the JWT's own `sub` claim, never a client-supplied value.
+`LessonId` is a plain field, not a foreign key to Content's `Lesson` — services never reference
+each other's data directly, so `GET /api/progress` returns lesson ids only, not titles (the
+frontend/a caller that needs titles looks them up from Content separately).
 
 ## Running standalone
 
 ```bash
-dotnet run --project WordBuddy.Progress.Api
+dotnet run --project WordBuddy.Progress.Api --urls http://localhost:5083
 ```
 
 ## Configuration
 
-`WordBuddy.Progress.Api/appsettings.Development.json` (added in Phase 2) will hold:
+Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
+`appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyProgress`)
-- `Jwt:Issuer` (validates tokens issued by Identity)
+- `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Progress validates
+  tokens Identity issued
+- `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
+  Tracing section
 
 ## Projects
 
