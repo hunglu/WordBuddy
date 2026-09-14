@@ -1,0 +1,31 @@
+# Project structure
+
+project-root/
+├── CLAUDE.md                    # Loaded every session — project overview, stack, commands
+├── .mcp.json                    # MCP server config, committed, shared with team
+├── .gitignore                   # must exclude settings.local.json (see below)
+└── .claude/
+    ├── settings.json            # permissions, model, hooks — committed
+    ├── settings.local.json      # personal overrides — NEVER committed
+    ├── rules/                   # path-scoped, only loads when matching files are touched
+    │   ├── code-style.md
+    │   ├── testing.md
+    │   └── api-conventions.md
+    ├── commands/                # slash commands — always available, not path-gated
+    │   ├── review.md
+    │   └── fix-issue.md
+    ├── skills/                  # progressive disclosure — loads only on task match
+    │   └── deploy/
+    │       ├── SKILL.md
+    │       └── deploy-config.md
+    ├── agents/                  # subagents, isolated context windows
+    │   ├── code-reviewer.md
+    │   └── security-auditor.md
+    └── hooks/                   # pre/post tool-use scripts
+        └── validate-bash.sh
+
+~/.claude/                       # USER-LEVEL, global, loads before project-level
+├── CLAUDE.md                    # personal instructions across all projects
+├── settings.json                # personal defaults (model, permissions)
+└── rules/
+    └── preferences.md           # loads before project rules; project rules take precedence on conflict
