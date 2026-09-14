@@ -15,6 +15,9 @@ obj/
 ## NuGet
 local-nuget-feed/
 
+## Serilog file sink output
+**/logs/
+
 ## Node (WordBuddy.UI)
 node_modules/
 dist/

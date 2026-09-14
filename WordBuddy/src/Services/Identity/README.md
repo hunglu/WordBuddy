@@ -28,6 +28,18 @@ Copy `WordBuddy.Identity.Api/appsettings.Development.json.example` to
 `appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyIdentity`)
 - `Jwt:Secret` / `Jwt:Issuer` / `Jwt:ExpiryMinutes`
+- `Serilog:*` — sinks/levels (Console + rolling file in dev, Console-only + Warning in prod)
+- `OpenTelemetry:OtlpEndpoint` — where traces are exported (Jaeger's OTLP/gRPC port,
+  `http://localhost:4317`, by default); harmless if nothing is listening there
+
+## Observability
+
+Logging goes through `ILogger<T>` backed by Serilog (via `WordBuddy.Shared.Infrastructure`),
+every entry enriched with `CorrelationId` (the current trace id — ties together every log line
+from one request, including Serilog's own request-logging summary), `ServiceName`, and
+`Environment`. Distributed tracing (ASP.NET Core, outbound HTTP, EF Core) exports via OTLP to
+Jaeger — see `WordBuddy.Shared.Infrastructure`'s `Observability` folder for the shared setup
+every service uses.
 
 ## Projects
 
