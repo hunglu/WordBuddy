@@ -38,18 +38,15 @@ spec:
             - name: sqlserver-data
               mountPath: /var/opt/mssql
           readinessProbe:
+            # exec probes don't expand $(VAR) the way a container's own command/args do (that
+            # substitution is kubelet-side and only applies at container start) — sqlcmd would
+            # otherwise receive the literal string "$(MSSQL_SA_PASSWORD)" as the password. Route
+            # through a shell so the container's own env performs the substitution instead.
             exec:
               command:
-                - /opt/mssql-tools18/bin/sqlcmd
-                - -S
-                - localhost
-                - -U
-                - sa
-                - -P
-                - $(MSSQL_SA_PASSWORD)
-                - -C
-                - -Q
-                - "SELECT 1"
+                - /bin/bash
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"
             initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 5
