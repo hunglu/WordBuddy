@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="WordBuddy.Notification.Api/WordBuddy.Notification.Api.csproj" />
+  <Project Path="WordBuddy.Notification.Application/WordBuddy.Notification.Application.csproj" />
+  <Project Path="WordBuddy.Notification.Domain/WordBuddy.Notification.Domain.csproj" />
+  <Project Path="WordBuddy.Notification.Infrastructure/WordBuddy.Notification.Infrastructure.csproj" />
+  <Project Path="WordBuddy.Notification.IntegrationTests/WordBuddy.Notification.IntegrationTests.csproj" />
+  <Project Path="WordBuddy.Notification.UnitTests/WordBuddy.Notification.UnitTests.csproj" />
+</Solution>

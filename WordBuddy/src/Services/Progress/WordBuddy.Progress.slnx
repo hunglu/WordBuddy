@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="WordBuddy.Progress.Api/WordBuddy.Progress.Api.csproj" />
+  <Project Path="WordBuddy.Progress.Application/WordBuddy.Progress.Application.csproj" />
+  <Project Path="WordBuddy.Progress.Domain/WordBuddy.Progress.Domain.csproj" />
+  <Project Path="WordBuddy.Progress.Infrastructure/WordBuddy.Progress.Infrastructure.csproj" />
+  <Project Path="WordBuddy.Progress.IntegrationTests/WordBuddy.Progress.IntegrationTests.csproj" />
+  <Project Path="WordBuddy.Progress.UnitTests/WordBuddy.Progress.UnitTests.csproj" />
+</Solution>

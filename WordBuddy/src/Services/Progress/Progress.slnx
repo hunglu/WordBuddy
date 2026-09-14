@@ -1,8 +1,0 @@
-<Solution>
-  <Project Path="Progress.Api/Progress.Api.csproj" />
-  <Project Path="Progress.Application/Progress.Application.csproj" />
-  <Project Path="Progress.Domain/Progress.Domain.csproj" />
-  <Project Path="Progress.Infrastructure/Progress.Infrastructure.csproj" />
-  <Project Path="Progress.IntegrationTests/Progress.IntegrationTests.csproj" />
-  <Project Path="Progress.UnitTests/Progress.UnitTests.csproj" />
-</Solution>
