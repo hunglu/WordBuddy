@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>WordBuddy.Shared.Kernel</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Result&lt;T&gt;, Error, and base entity types shared across WordBuddy microservices.</Description>
+  </PropertyGroup>
+
+</Project>

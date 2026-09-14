@@ -1,2 +1,22 @@
 # Local environment secrets — copy .env.example → .env to get started
 .env
+
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## NuGet
+local-nuget-feed/
+
+## Node (WordBuddy.UI)
+node_modules/
+dist/
+build/
+.env.local
+
+## VS Code
+.vscode/*
+!.vscode/extensions.json

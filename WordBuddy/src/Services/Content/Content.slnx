@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Content.Api/Content.Api.csproj" />
+  <Project Path="Content.Application/Content.Application.csproj" />
+  <Project Path="Content.Domain/Content.Domain.csproj" />
+  <Project Path="Content.Infrastructure/Content.Infrastructure.csproj" />
+  <Project Path="Content.IntegrationTests/Content.IntegrationTests.csproj" />
+  <Project Path="Content.UnitTests/Content.UnitTests.csproj" />
+</Solution>

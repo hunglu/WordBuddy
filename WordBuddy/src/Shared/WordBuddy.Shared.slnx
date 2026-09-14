@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="WordBuddy.Shared.Contracts/WordBuddy.Shared.Contracts.csproj" />
+  <Project Path="WordBuddy.Shared.Infrastructure/WordBuddy.Shared.Infrastructure.csproj" />
+  <Project Path="WordBuddy.Shared.Kernel/WordBuddy.Shared.Kernel.csproj" />
+</Solution>

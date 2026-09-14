@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>WordBuddy.Shared.Infrastructure</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Cross-cutting Serilog, OpenTelemetry, health-check, and rate-limiting helpers shared across WordBuddy microservices.</Description>
+  </PropertyGroup>
+
+</Project>
