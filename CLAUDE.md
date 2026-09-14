@@ -52,10 +52,15 @@ Presentation  →  Application  →  Domain  →  Infrastructure
 
 **Layer rules:**
 
-- Domain has zero dependencies on other layers or external packages.
+- Domain has zero dependencies on other layers or third-party packages. It may take a
+  `<PackageReference>` on `WordBuddy.Shared.Kernel` (`Result<T>`/`Error`/base entity) — that's a
+  first-party package built from this same solution family, not an external dependency.
 - Application depends only on Domain; it defines interfaces that Infrastructure implements.
 - Infrastructure implements all I/O: database, cache, messaging, external APIs, media storage.
-- Presentation depends on Application only — never directly on Infrastructure.
+- Presentation depends on Application only — never directly on Infrastructure. (The one standard
+  exception: a service's `Api` project also references its own `Infrastructure` project, but only
+  as the Clean Architecture composition root — to call `AddInfrastructure(...)` in `Program.cs` —
+  never to call Infrastructure types from business logic.)
 - Use Controller definition (no minimal endpoint), use class-based instead top-level statement.
 
 ## Microservices
@@ -67,6 +72,22 @@ Presentation  →  Application  →  Domain  →  Infrastructure
 | `QuizService` | Quiz definitions, question banks, answer evaluation |
 | `ProgressService` | LearnerProgress tracking, streaks, completion history |
 | `NotificationService` | Push/email notifications for daily phrases and reminders |
+
+**Independence model:** no service has a project reference to another service, or to any shared
+project — the deliberate goal is that any `src/Services/<Service>/` folder can be lifted into its
+own git repository later with nothing to untangle. Consequences:
+
+- Each service has its **own solution** (`src/Services/<Service>/<Service>.sln`) containing only
+  that service's own projects. There is no root solution that builds all 5 at once.
+- Common code (`WordBuddy.Shared.Kernel`, `WordBuddy.Shared.Infrastructure`,
+  `WordBuddy.Shared.Contracts`) is never a `ProjectReference` from a service — it's a versioned
+  NuGet package every service consumes via `<PackageReference>`, published from two feeds: a
+  local file-system feed (`local-nuget-feed/`, gitignored) for fast local `dotnet build`
+  iteration, and GitHub Packages (`nuget.pkg.github.com`) for CI and Docker builds (a Docker
+  build's context can't see an arbitrary folder on your machine, so it needs a real,
+  network-reachable feed).
+- Each service folder is self-sufficient: its own `.sln`, `nuget.config`, `Dockerfile`,
+  `README.md`, and `UnitTests`/`IntegrationTests` projects.
 
 ## Conventions
 
@@ -208,7 +229,11 @@ Every service exposes:
 
 ### Docker / Docker Compose
 
-- Each service has its own multi-stage `Dockerfile`.
+- Each service has its own multi-stage `Dockerfile` **inside its own service folder**, with the
+  build context scoped to that folder only (not the repo root) — consistent with the
+  independence model. Restoring `WordBuddy.Shared.*` inside a Docker build therefore uses the
+  GitHub Packages feed (not `local-nuget-feed/`, which a Docker build context can't see),
+  authenticated via a BuildKit secret — never a plaintext token in an `ARG`/`ENV`/layer.
 - `docker-compose.yml` at repo root orchestrates all services + SQL Server + Redis + Jaeger for local development.
 - Never hardcode connection strings — use environment variables or `appsettings.{Environment}.json` (excluded from git).
 
@@ -225,66 +250,77 @@ Secrets (connection strings, JWT signing keys, Auth0 credentials, storage accoun
 
 ## Build & Run
 
+There is no root solution (see the independence model above) — restore/build/test one service
+at a time, against its own `.sln`:
+
 ```bash
-# Restore and build
-dotnet restore
-dotnet build
+# Restore, build, and test one service
+dotnet restore src/Services/<ServiceName>/<ServiceName>.sln
+dotnet build src/Services/<ServiceName>/<ServiceName>.sln
+dotnet test src/Services/<ServiceName>/<ServiceName>.sln
 
 # Run a specific service
 dotnet run --project src/Services/<ServiceName>/<ServiceName>.Api
 
-# Run all services with Docker Compose
+# Run all services with Docker Compose (local dev inner loop)
 docker compose up --build
 
-# Run tests
-dotnet test
+# Repack a shared library after changing it, for local restore
+dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 ```
 
 ## Project Structure
 
+Per the independence model above: no root solution, no cross-service or service→shared project
+references. `k8s/`, `docker-compose.yml`, and the Makefile live at the root because they're
+orchestration/ops concerns that legitimately span all 5 services at *runtime* — that's not the
+same thing as source-level coupling.
+
 ```
 WordBuddy/
-├── src/
-│   ├── Services/
-│   │   ├── Identity/
-│   │   │   ├── Identity.Api/
-│   │   │   ├── Identity.Application/
-│   │   │   ├── Identity.Domain/
-│   │   │   └── Identity.Infrastructure/
-│   │   ├── Content/
-│   │   │   ├── Content.Api/
-│   │   │   ├── Content.Application/       # Lessons, Vocabulary, Grammar, DailyPhrase, MediaAsset features
-│   │   │   ├── Content.Domain/
-│   │   │   └── Content.Infrastructure/
-│   │   ├── Quiz/
-│   │   │   ├── Quiz.Api/
-│   │   │   ├── Quiz.Application/
-│   │   │   ├── Quiz.Domain/
-│   │   │   └── Quiz.Infrastructure/
-│   │   ├── Progress/
-│   │   │   ├── Progress.Api/
-│   │   │   ├── Progress.Application/      # LearnerProgress features
-│   │   │   ├── Progress.Domain/
-│   │   │   └── Progress.Infrastructure/
-│   │   └── Notification/
-│   │       ├── Notification.Api/
-│   │       ├── Notification.Application/
-│   │       ├── Notification.Domain/
-│   │       └── Notification.Infrastructure/
-│   └── Shared/
-│       ├── WordBuddy.Shared.Kernel/        # Result<T>, Error, base entity, common interfaces
-│       ├── WordBuddy.Shared.Infrastructure/ # Serilog setup, OpenTelemetry, health checks, rate limiting
-│       └── WordBuddy.Shared.Contracts/     # MassTransit message contracts for inter-service events
-├── tests/
-│   ├── UnitTests/
-│   └── IntegrationTests/
-├── docker-compose.yml
-├── docker-compose.override.yml
+├── nuget.config                # nuget.org + local-nuget-feed + GitHub Packages (root convenience)
+├── local-nuget-feed/           # gitignored — dotnet pack output for fast local restore
+├── .env.example
+├── docker-compose.yml          # local dev inner loop: sqlserver + all 5 APIs + ui
+├── kind-config.yaml            # local Kubernetes (kind) cluster config
+├── Makefile                    # pack-shared, publish-shared, cluster-up, k8s-apply, ...
 ├── .github/
 │   └── workflows/
 ├── .dockerignore
 ├── .gitignore
-└── CLAUDE.md
+├── CLAUDE.md
+├── README.md
+│
+├── k8s/                        # orchestration only — not owned by any one service
+│   ├── namespace.yaml / configmap.yaml / secret.yaml.example
+│   ├── sqlserver-statefulset.yaml / sqlserver-service.yaml / sqlserver-init-job.yaml
+│   ├── <service>-deployment.yaml / <service>-service.yaml   # one pair per service
+│   ├── ui-deployment.yaml / ui-service.yaml
+│   └── ingress.yaml
+│
+└── src/
+    ├── Shared/
+    │   ├── WordBuddy.Shared.sln              # convenience solution for developing the 3 libs together
+    │   ├── WordBuddy.Shared.Kernel/           # Result<T>, Error, base entity — packed as a NuGet package
+    │   ├── WordBuddy.Shared.Infrastructure/   # Serilog/OpenTelemetry/health-check/rate-limit helpers — packed
+    │   └── WordBuddy.Shared.Contracts/        # MassTransit message contracts — packed
+    │
+    └── Services/
+        ├── Identity/
+        │   ├── Identity.sln                  # only this service's own projects
+        │   ├── nuget.config                  # local feed + GitHub Packages + nuget.org (self-sufficient)
+        │   ├── Dockerfile                     # build context = this folder only
+        │   ├── README.md
+        │   ├── Identity.Api/
+        │   ├── Identity.Application/
+        │   ├── Identity.Domain/
+        │   ├── Identity.Infrastructure/
+        │   ├── Identity.UnitTests/
+        │   └── Identity.IntegrationTests/
+        ├── Content/         # same shape — Content.Application owns Lessons, Vocabulary, Grammar, DailyPhrase, MediaAsset
+        ├── Quiz/            # same shape
+        ├── Progress/        # same shape — Progress.Application owns LearnerProgress
+        └── Notification/    # same shape
 ```
 
 ## CI/CD (GitHub Actions)

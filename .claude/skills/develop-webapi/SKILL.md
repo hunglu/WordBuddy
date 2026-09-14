@@ -25,7 +25,30 @@ logging calls, controller wiring) consistent across every feature and every serv
    below when nothing comparable exists yet.
 3. **Decide Command vs Query.** Mutation → Command (`Commands/<Verb><Noun>/`). Read → Query
    (`Queries/<Verb><Noun>/`). Never mix reads and writes in one handler.
-
+4. **DotNet Solution** 
+  - Make sure the new feature's project is already in the solution and has the right references:
+   - Presentation → Application, Infrastructure
+   - Application → Domain
+   - Infrastructure → Application
+   - Tests → Application, Domain, Infrastructure
+  - Make sure DotNet project using the correct target framework (net10.0) and has the right NuGet packages installed:
+   - Microsoft.EntityFrameworkCore.SqlServer
+   - Microsoft.EntityFrameworkCore.Tools
+   - FluentValidation
+   - xUnit + FluentAssertions (for tests)
+  - Make sure the project file should not use minimal APIs. Use explicit `Program.cs` and `Startup.cs` if the service already has them and Controllers should be class-based, not minimal API lambdas.
+5. **Serilog Logging**
+  - The configuration should place in appsettings.json and appsettings.Development.json, not in code. 
+  - Use `ILogger<T>` from Microsoft.Extensions.Logging in every handler and controller, never use ISerilog interfaces directly. 
+  - Inject `ILogger<T>` into every handler and controller.
+  - Log at fixed points: entry, validation failure, repository failure, success.
+  - Use structured message templates (`"CreateLessonCommand started: Title={Title}, Type={Type}"`), never string interpolation.
+  - Never log passwords, tokens, or raw child-user PII.
+6. **Project Folder Structure** 
+  - Root 
+     |-- WordBuddy - Backend solution folder, it recognizes as the root folder of Backend solution.
+     |
+     |-- WordBuddy.UI - Frontend solution folder, it regconizes as the root folder of Frontend solution.
 ## Feature folder layout
 
 Inside `<Service>.Application/Features/<Area>/`:

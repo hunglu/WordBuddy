@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet add tests/UnitTests package FluentAssertions)",
+      "PowerShell(dotnet add tests/IntegrationTests package FluentAssertions)",
+      "PowerShell(dotnet add tests/UnitTests package Moq)"
+    ]
+  }
+}
