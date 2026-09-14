@@ -1,21 +1,24 @@
-var builder = WebApplication.CreateBuilder(args);
+using WordBuddy.Identity.Api.Extensions;
 
-// Add services to the container.
+namespace WordBuddy.Identity.Api;
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+/// <summary>Application entry point for the Identity API host.</summary>
+public sealed class Program
 {
-    app.MapOpenApi();
+    /// <summary>Builds, configures, and starts the Identity API host.</summary>
+    public static async Task Main(string[] args)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+        builder.Services
+            .AddWordBuddyAuthentication(builder.Configuration)
+            .AddWordBuddyDatabase(builder.Configuration)
+            .AddWordBuddyServices();
+
+        WebApplication app = builder.Build();
+
+        await app.UseWordBuddyMiddlewareAsync();
+
+        app.Run();
+    }
 }
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

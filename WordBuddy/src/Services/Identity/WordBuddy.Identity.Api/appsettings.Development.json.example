@@ -1,0 +1,16 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=WordBuddyIdentity;Trusted_Connection=true"
+  },
+  "Jwt": {
+    "Secret": "dev-secret-do-not-use-in-production-must-be-at-least-32-characters",
+    "Issuer": "WordBuddy",
+    "ExpiryMinutes": 60
+  }
+}

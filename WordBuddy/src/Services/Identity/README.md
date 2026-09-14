@@ -9,7 +9,12 @@ references to any other WordBuddy service or shared project — see the root
 
 ## Endpoints
 
-_None yet — added in Phase 2 (expect `POST /api/auth/register`, `POST /api/auth/login`)._
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | Anonymous | Creates a new account, returns a JWT |
+| POST | `/api/auth/login` | Anonymous | Authenticates an existing account, returns a JWT |
+
+Swagger UI: `http://localhost:5080/swagger` (Development only).
 
 ## Running standalone
 
@@ -19,7 +24,8 @@ dotnet run --project WordBuddy.Identity.Api
 
 ## Configuration
 
-`WordBuddy.Identity.Api/appsettings.Development.json` (added in Phase 2) will hold:
+Copy `WordBuddy.Identity.Api/appsettings.Development.json.example` to
+`appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyIdentity`)
 - `Jwt:Secret` / `Jwt:Issuer` / `Jwt:ExpiryMinutes`
 

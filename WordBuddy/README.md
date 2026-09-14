@@ -22,13 +22,13 @@ Common code (`Result<T>`/`Error`, cross-cutting infra helpers, message contracts
 versioned NuGet packages, not project references, so any service folder can become its own repo
 later with nothing to untangle. See [`CLAUDE.md`](./CLAUDE.md) for the full model and rationale.
 
-| Service | Responsibility | README |
-|---|---|---|
-| Identity | Registration, login, JWT issuance | [src/Services/Identity](./src/Services/Identity/README.md) |
-| Content | Lessons, Vocabulary, Grammar, DailyPhrases, MediaAssets | [src/Services/Content](./src/Services/Content/README.md) |
-| Quiz | Quiz definitions, question banks, answer evaluation | [src/Services/Quiz](./src/Services/Quiz/README.md) |
-| Progress | Learner progress tracking, streaks, completion history | [src/Services/Progress](./src/Services/Progress/README.md) |
-| Notification | Push/email notifications for daily phrases and reminders | [src/Services/Notification](./src/Services/Notification/README.md) |
+| Service | Status | Responsibility | README | Swagger (dev) |
+|---|---|---|---|---|
+| Identity | Implemented | Registration, login, JWT issuance | [src/Services/Identity](./src/Services/Identity/README.md) | `localhost:5080/swagger` |
+| Content | Scaffold only | Lessons, Vocabulary, Grammar, DailyPhrases, MediaAssets | [src/Services/Content](./src/Services/Content/README.md) | — |
+| Quiz | Scaffold only | Quiz definitions, question banks, answer evaluation | [src/Services/Quiz](./src/Services/Quiz/README.md) | — |
+| Progress | Scaffold only | Learner progress tracking, streaks, completion history | [src/Services/Progress](./src/Services/Progress/README.md) | — |
+| Notification | Scaffold only | Push/email notifications for daily phrases and reminders | [src/Services/Notification](./src/Services/Notification/README.md) | — |
 
 ## Folder structure
 

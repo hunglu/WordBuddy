@@ -8,6 +8,10 @@ obj/
 *.suo
 .vs/
 
+## Per-service local overrides — copy the committed .example file to get started
+**/appsettings.Development.json
+**/appsettings.Production.json
+
 ## NuGet
 local-nuget-feed/
 
