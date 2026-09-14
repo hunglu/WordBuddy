@@ -14,12 +14,12 @@ _None yet — added in Phase 2 (expect `POST /api/auth/register`, `POST /api/aut
 ## Running standalone
 
 ```bash
-dotnet run --project Identity.Api
+dotnet run --project WordBuddy.Identity.Api
 ```
 
 ## Configuration
 
-`Identity.Api/appsettings.Development.json` (added in Phase 2) will hold:
+`WordBuddy.Identity.Api/appsettings.Development.json` (added in Phase 2) will hold:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyIdentity`)
 - `Jwt:Secret` / `Jwt:Issuer` / `Jwt:ExpiryMinutes`
 
@@ -27,9 +27,9 @@ dotnet run --project Identity.Api
 
 | Project | Purpose |
 |---|---|
-| `Identity.Api` | Controllers, `Program.cs`, composition root |
-| `Identity.Application` | Commands/queries, DTOs, validators |
-| `Identity.Domain` | `User` entity, `AgeGroup` enum |
-| `Identity.Infrastructure` | EF Core `IdentityDbContext`, repositories |
-| `Identity.UnitTests` | Handler/domain unit tests (Moq) |
-| `Identity.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |
+| `WordBuddy.Identity.Api` | Controllers, `Program.cs`, composition root |
+| `WordBuddy.Identity.Application` | Commands/queries, DTOs, validators |
+| `WordBuddy.Identity.Domain` | `User` entity, `AgeGroup` enum |
+| `WordBuddy.Identity.Infrastructure` | EF Core `IdentityDbContext`, repositories |
+| `WordBuddy.Identity.UnitTests` | Handler/domain unit tests (Moq) |
+| `WordBuddy.Identity.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

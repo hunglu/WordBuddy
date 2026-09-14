@@ -22,7 +22,7 @@ be lifted into its own git repository later with nothing to untangle.
 
 Consequences, all already in place:
 
-- **No root `.sln`.** Each service has its own `<Service>.slnx` (this repo's .NET 10 SDK
+- **No root `.sln`.** Each service has its own `WordBuddy.<Service>.slnx` (this repo's .NET 10 SDK
   generates the newer XML solution format) containing only that service's own 6 projects
   (`Api`, `Application`, `Domain`, `Infrastructure`, `UnitTests`, `IntegrationTests`).
 - **Common code ships as NuGet packages, not project references.** `WordBuddy.Shared.Kernel`
@@ -56,15 +56,15 @@ WordBuddy/
     │
     └── Services/
         ├── Identity/
-        │   ├── Identity.slnx
+        │   ├── WordBuddy.Identity.slnx
         │   ├── nuget.config
         │   ├── README.md
-        │   ├── Identity.Api/
-        │   ├── Identity.Application/
-        │   ├── Identity.Domain/
-        │   ├── Identity.Infrastructure/
-        │   ├── Identity.UnitTests/
-        │   └── Identity.IntegrationTests/
+        │   ├── WordBuddy.Identity.Api/
+        │   ├── WordBuddy.Identity.Application/
+        │   ├── WordBuddy.Identity.Domain/
+        │   ├── WordBuddy.Identity.Infrastructure/
+        │   ├── WordBuddy.Identity.UnitTests/
+        │   └── WordBuddy.Identity.IntegrationTests/
         ├── Content/         # same shape
         ├── Quiz/            # same shape
         ├── Progress/        # same shape
@@ -109,9 +109,9 @@ Naming matches the root `../CLAUDE.md` domain concepts table.
 There's no root solution — build/run/test one service at a time:
 
 ```bash
-dotnet build src/Services/<Service>/<Service>.slnx
-dotnet run --project src/Services/<Service>/<Service>.Api
-dotnet test src/Services/<Service>/<Service>.slnx
+dotnet build src/Services/<Service>/WordBuddy.<Service>.slnx
+dotnet run --project src/Services/<Service>/WordBuddy.<Service>.Api
+dotnet test src/Services/<Service>/WordBuddy.<Service>.slnx
 ```
 
 Repack a shared library after changing it (only needed before another service's next restore

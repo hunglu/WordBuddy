@@ -46,7 +46,7 @@ Two independent things get path-filtered in this monorepo:
 
 ### Step 1 — Health check endpoint (every service)
 
-In every `<Service>.Api`, add a `HealthController`:
+In every `WordBuddy.<Service>.Api`, add a `HealthController`:
 - `GET /api/health` → 200 OK with `{ status: "healthy", service: "<service>", timestamp: utcNow }`
 - No `[Authorize]` — must be public
 - Log Info on each health check call

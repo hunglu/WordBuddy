@@ -68,7 +68,7 @@ service-specific entities/endpoints — don't re-derive it per service, copy the
 
 ### Step 1 — Domain entities (per service)
 
-In each `<Service>.Domain`, following the ownership table above:
+In each `WordBuddy.<Service>.Domain`, following the ownership table above:
 
 - Entities: constructor-only setters, `Guid Id`, no public setters
 - Enums as listed in the table
@@ -82,7 +82,7 @@ Representative example (Content):
 
 ### Step 2 — EF Core setup (per service)
 
-In each `<Service>.Infrastructure`:
+In each `WordBuddy.<Service>.Infrastructure`:
 
 - Install: `Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.EntityFrameworkCore.Tools`
 - Create `<Service>DbContext` with `DbSet`s for just that service's entities
@@ -97,7 +97,7 @@ In each `<Service>.Infrastructure`:
 
 ### Step 3 — Application layer (per service)
 
-In each `<Service>.Application`:
+In each `WordBuddy.<Service>.Application`:
 
 - Define `ICommand`, `ICommand<TResult>`, `IQuery<TResult>`, `ICommandHandler<T>`,
   `ICommandHandler<T,TResult>`, `IQueryHandler<T,TResult>` once under `Application/Abstractions/`
@@ -124,7 +124,7 @@ methods async, `AsNoTracking` on queries.
 
 ### Step 5 — API layer (per service)
 
-In each `<Service>.Api`:
+In each `WordBuddy.<Service>.Api`:
 
 - Install per-service as needed: `Microsoft.AspNetCore.Authentication.JwtBearer`,
   `Swashbuckle.AspNetCore`; Identity only: `BCrypt.Net-Next`
@@ -154,13 +154,13 @@ Apply `ILogger<T>` across all layers, in every service:
 
 Run per service, e.g. for Content:
 ```bash
-dotnet ef migrations add InitialCreate --project src/Services/Content/Content.Infrastructure --startup-project src/Services/Content/Content.Api
-dotnet ef database update --project src/Services/Content/Content.Infrastructure --startup-project src/Services/Content/Content.Api
+dotnet ef migrations add InitialCreate --project src/Services/Content/WordBuddy.Content.Infrastructure --startup-project src/Services/Content/WordBuddy.Content.Api
+dotnet ef database update --project src/Services/Content/WordBuddy.Content.Infrastructure --startup-project src/Services/Content/WordBuddy.Content.Api
 ```
 Repeat for Identity, Quiz, Progress (Notification has no entities yet this phase).
 
-`DataSeeder` in Content.Infrastructure: 3 lessons with child items.
-`DataSeeder` in Identity.Infrastructure: 1 admin user (BCrypt hash).
+`DataSeeder` in WordBuddy.Content.Infrastructure: 3 lessons with child items.
+`DataSeeder` in WordBuddy.Identity.Infrastructure: 1 admin user (BCrypt hash).
 Call each service's seeder from its own `Main`, Development environment only.
 
 ### Step 8 — Docs
@@ -177,12 +177,12 @@ git commit -m "feat: phase 2 — per-service domain/application/infrastructure/a
 
 ## Verification
 
-- `dotnet build src/Services/<Service>/<Service>.sln` for each of the 5 services → 0 errors,
+- `dotnet build src/Services/<Service>/WordBuddy.<Service>.slnx` for each of the 5 services → 0 errors,
   independently (there's no root solution to build all at once — see Phase 1)
-- `dotnet run --project src/Services/Identity/Identity.Api` → Swagger opens; POST
+- `dotnet run --project src/Services/Identity/WordBuddy.Identity.Api` → Swagger opens; POST
   `/api/auth/login` with the seeded admin returns a JWT
-- `dotnet run --project src/Services/Content/Content.Api` → GET `/api/lessons` returns the
+- `dotnet run --project src/Services/Content/WordBuddy.Content.Api` → GET `/api/lessons` returns the
   3 seeded lessons (with the Identity-issued JWT in the `Authorization` header)
-- `dotnet run --project src/Services/Progress/Progress.Api` and
-  `src/Services/Quiz/Quiz.Api` start cleanly and expose Swagger
+- `dotnet run --project src/Services/Progress/WordBuddy.Progress.Api` and
+  `src/Services/Quiz/WordBuddy.Quiz.Api` start cleanly and expose Swagger
 - All log lines appear in each service's own terminal during requests

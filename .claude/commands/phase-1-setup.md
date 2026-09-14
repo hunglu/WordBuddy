@@ -11,7 +11,7 @@ WordBuddy is 5 independent microservices (`Identity`, `Content`, `Quiz`, `Progre
 service or a shared project** — the explicit goal is that any `src/Services/<Service>/` folder
 can be lifted out into its own git repo later with zero untangling. Consequences of that goal:
 
-- **No root `.sln`.** Each service has its own `<Service>.sln` containing only that service's
+- **No root `.sln`.** Each service has its own `WordBuddy.<Service>.slnx` containing only that service's
   own projects. There's no single "build everything" solution — build/test each service folder
   independently (the Makefile loops over them for convenience).
 - **Common code (`Result<T>`/`Error`, cross-cutting Serilog/health-check/rate-limit helpers,
@@ -46,15 +46,15 @@ WordBuddy/
     │
     └── Services/
         ├── Identity/
-        │   ├── Identity.sln
+        │   ├── WordBuddy.Identity.slnx
         │   ├── nuget.config
         │   ├── README.md
-        │   ├── Identity.Api/
-        │   ├── Identity.Application/
-        │   ├── Identity.Domain/
-        │   ├── Identity.Infrastructure/
-        │   ├── Identity.UnitTests/
-        │   └── Identity.IntegrationTests/
+        │   ├── WordBuddy.Identity.Api/
+        │   ├── WordBuddy.Identity.Application/
+        │   ├── WordBuddy.Identity.Domain/
+        │   ├── WordBuddy.Identity.Infrastructure/
+        │   ├── WordBuddy.Identity.UnitTests/
+        │   └── WordBuddy.Identity.IntegrationTests/
         ├── Content/         # same shape
         ├── Quiz/            # same shape
         ├── Progress/        # same shape
@@ -122,24 +122,24 @@ target; not required for every local iteration, only before a Docker build needs
 Repeat for each of `Identity`, `Content`, `Quiz`, `Progress`, `Notification`:
 ```powershell
 dotnet new sln -n <Service> -o src/Services/<Service>
-dotnet new webapi -n <Service>.Api -o src/Services/<Service>/<Service>.Api -controllers -f net10.0
-dotnet new classlib -n <Service>.Application -o src/Services/<Service>/<Service>.Application -f net10.0
-dotnet new classlib -n <Service>.Domain -o src/Services/<Service>/<Service>.Domain -f net10.0
-dotnet new classlib -n <Service>.Infrastructure -o src/Services/<Service>/<Service>.Infrastructure -f net10.0
-dotnet new xunit -n <Service>.UnitTests -o src/Services/<Service>/<Service>.UnitTests -f net10.0
-dotnet new xunit -n <Service>.IntegrationTests -o src/Services/<Service>/<Service>.IntegrationTests -f net10.0
+dotnet new webapi -n WordBuddy.<Service>.Api -o src/Services/<Service>/WordBuddy.<Service>.Api -controllers -f net10.0
+dotnet new classlib -n WordBuddy.<Service>.Application -o src/Services/<Service>/WordBuddy.<Service>.Application -f net10.0
+dotnet new classlib -n WordBuddy.<Service>.Domain -o src/Services/<Service>/WordBuddy.<Service>.Domain -f net10.0
+dotnet new classlib -n WordBuddy.<Service>.Infrastructure -o src/Services/<Service>/WordBuddy.<Service>.Infrastructure -f net10.0
+dotnet new xunit -n WordBuddy.<Service>.UnitTests -o src/Services/<Service>/WordBuddy.<Service>.UnitTests -f net10.0
+dotnet new xunit -n WordBuddy.<Service>.IntegrationTests -o src/Services/<Service>/WordBuddy.<Service>.IntegrationTests -f net10.0
 
-dotnet sln src/Services/<Service>/<Service>.sln add (every .csproj just created for this service)
+dotnet sln src/Services/<Service>/WordBuddy.<Service>.slnx add (every .csproj just created for this service)
 
-dotnet add src/Services/<Service>/<Service>.Application reference src/Services/<Service>/<Service>.Domain
-dotnet add src/Services/<Service>/<Service>.Infrastructure reference src/Services/<Service>/<Service>.Application
-dotnet add src/Services/<Service>/<Service>.Api reference src/Services/<Service>/<Service>.Application src/Services/<Service>/<Service>.Infrastructure
-dotnet add src/Services/<Service>/<Service>.UnitTests reference src/Services/<Service>/<Service>.Application src/Services/<Service>/<Service>.Domain
-dotnet add src/Services/<Service>/<Service>.IntegrationTests reference src/Services/<Service>/<Service>.Api
+dotnet add src/Services/<Service>/WordBuddy.<Service>.Application reference src/Services/<Service>/WordBuddy.<Service>.Domain
+dotnet add src/Services/<Service>/WordBuddy.<Service>.Infrastructure reference src/Services/<Service>/WordBuddy.<Service>.Application
+dotnet add src/Services/<Service>/WordBuddy.<Service>.Api reference src/Services/<Service>/WordBuddy.<Service>.Application src/Services/<Service>/WordBuddy.<Service>.Infrastructure
+dotnet add src/Services/<Service>/WordBuddy.<Service>.UnitTests reference src/Services/<Service>/WordBuddy.<Service>.Application src/Services/<Service>/WordBuddy.<Service>.Domain
+dotnet add src/Services/<Service>/WordBuddy.<Service>.IntegrationTests reference src/Services/<Service>/WordBuddy.<Service>.Api
 
-dotnet add src/Services/<Service>/<Service>.UnitTests package FluentAssertions
-dotnet add src/Services/<Service>/<Service>.UnitTests package Moq
-dotnet add src/Services/<Service>/<Service>.IntegrationTests package FluentAssertions
+dotnet add src/Services/<Service>/WordBuddy.<Service>.UnitTests package FluentAssertions
+dotnet add src/Services/<Service>/WordBuddy.<Service>.UnitTests package Moq
+dotnet add src/Services/<Service>/WordBuddy.<Service>.IntegrationTests package FluentAssertions
 ```
 These references are the *only* project-level wiring inside a service — all within its own
 folder. `Domain` has no reference at all yet (it will take a `PackageReference` on
@@ -205,7 +205,7 @@ Content must include:
 - Domain entities table (matching root `sources/CLAUDE.md`'s naming): `User`, `Lesson`,
   `Vocabulary`, `Grammar`, `DailyPhrase`, `Quiz`, `MediaAsset`, `LearnerProgress` — and which
   service owns each
-- How to build/test one service (`dotnet build src/Services/<Service>/<Service>.sln`) and how to
+- How to build/test one service (`dotnet build src/Services/<Service>/WordBuddy.<Service>.slnx`) and how to
   re-pack + republish a shared library after changing it
 
 ### Step 5 — Root `README.md` + per-service `README.md`
@@ -214,7 +214,7 @@ Root `README.md`: project overview, tech stack badges, the folder structure from
 getting-started steps, a roadmap of all 5 phases, and a link to each service's own README.
 
 Each `src/Services/<Service>/README.md`: that service's responsibility, its endpoints (filled in
-by Phase 2), how to run it standalone (`dotnet run --project <Service>.Api`), its own env vars/
+by Phase 2), how to run it standalone (`dotnet run --project WordBuddy.<Service>.Api`), its own env vars/
 connection string, and a note that it has zero dependencies on sibling services.
 
 ### Step 6 — First commit
@@ -226,7 +226,7 @@ git commit -m "chore: phase 1 — independent per-service microservices skeleton
 
 ## Verification
 
-- `dotnet build src/Services/Identity/Identity.sln` (and the same for the other 4) →
+- `dotnet build src/Services/Identity/WordBuddy.Identity.slnx` (and the same for the other 4) →
   `Build succeeded`, 0 errors, using only that service's own projects
 - `dotnet pack`+`dotnet nuget push` round-trip: pack a shared lib into `local-nuget-feed/`,
   confirm a service's `dotnet restore` picks it up via `<PackageReference>`

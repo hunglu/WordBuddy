@@ -14,12 +14,12 @@ _None yet — added in Phase 2 (expect `POST /api/progress`, `GET /api/progress`
 ## Running standalone
 
 ```bash
-dotnet run --project Progress.Api
+dotnet run --project WordBuddy.Progress.Api
 ```
 
 ## Configuration
 
-`Progress.Api/appsettings.Development.json` (added in Phase 2) will hold:
+`WordBuddy.Progress.Api/appsettings.Development.json` (added in Phase 2) will hold:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyProgress`)
 - `Jwt:Issuer` (validates tokens issued by Identity)
 
@@ -27,9 +27,9 @@ dotnet run --project Progress.Api
 
 | Project | Purpose |
 |---|---|
-| `Progress.Api` | Controllers, `Program.cs`, composition root |
-| `Progress.Application` | Commands/queries, DTOs, validators |
-| `Progress.Domain` | `LearnerProgress` entity |
-| `Progress.Infrastructure` | EF Core `ProgressDbContext`, repositories |
-| `Progress.UnitTests` | Handler/domain unit tests (Moq) |
-| `Progress.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |
+| `WordBuddy.Progress.Api` | Controllers, `Program.cs`, composition root |
+| `WordBuddy.Progress.Application` | Commands/queries, DTOs, validators |
+| `WordBuddy.Progress.Domain` | `LearnerProgress` entity |
+| `WordBuddy.Progress.Infrastructure` | EF Core `ProgressDbContext`, repositories |
+| `WordBuddy.Progress.UnitTests` | Handler/domain unit tests (Moq) |
+| `WordBuddy.Progress.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

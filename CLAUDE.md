@@ -77,7 +77,7 @@ Presentation  →  Application  →  Domain  →  Infrastructure
 project — the deliberate goal is that any `src/Services/<Service>/` folder can be lifted into its
 own git repository later with nothing to untangle. Consequences:
 
-- Each service has its **own solution** (`src/Services/<Service>/<Service>.sln`) containing only
+- Each service has its **own solution** (`src/Services/<Service>/WordBuddy.<Service>.slnx`) containing only
   that service's own projects. There is no root solution that builds all 5 at once.
 - Common code (`WordBuddy.Shared.Kernel`, `WordBuddy.Shared.Infrastructure`,
   `WordBuddy.Shared.Contracts`) is never a `ProjectReference` from a service — it's a versioned
@@ -255,12 +255,12 @@ at a time, against its own `.sln`:
 
 ```bash
 # Restore, build, and test one service
-dotnet restore src/Services/<ServiceName>/<ServiceName>.sln
-dotnet build src/Services/<ServiceName>/<ServiceName>.sln
-dotnet test src/Services/<ServiceName>/<ServiceName>.sln
+dotnet restore src/Services/<ServiceName>/WordBuddy.<ServiceName>.slnx
+dotnet build src/Services/<ServiceName>/WordBuddy.<ServiceName>.slnx
+dotnet test src/Services/<ServiceName>/WordBuddy.<ServiceName>.slnx
 
 # Run a specific service
-dotnet run --project src/Services/<ServiceName>/<ServiceName>.Api
+dotnet run --project src/Services/<ServiceName>/WordBuddy.<ServiceName>.Api
 
 # Run all services with Docker Compose (local dev inner loop)
 docker compose up --build
@@ -307,19 +307,19 @@ WordBuddy/
     │
     └── Services/
         ├── Identity/
-        │   ├── Identity.sln                  # only this service's own projects
+        │   ├── WordBuddy.Identity.slnx                  # only this service's own projects
         │   ├── nuget.config                  # local feed + GitHub Packages + nuget.org (self-sufficient)
         │   ├── Dockerfile                     # build context = this folder only
         │   ├── README.md
-        │   ├── Identity.Api/
-        │   ├── Identity.Application/
-        │   ├── Identity.Domain/
-        │   ├── Identity.Infrastructure/
-        │   ├── Identity.UnitTests/
-        │   └── Identity.IntegrationTests/
-        ├── Content/         # same shape — Content.Application owns Lessons, Vocabulary, Grammar, DailyPhrase, MediaAsset
+        │   ├── WordBuddy.Identity.Api/
+        │   ├── WordBuddy.Identity.Application/
+        │   ├── WordBuddy.Identity.Domain/
+        │   ├── WordBuddy.Identity.Infrastructure/
+        │   ├── WordBuddy.Identity.UnitTests/
+        │   └── WordBuddy.Identity.IntegrationTests/
+        ├── Content/         # same shape — WordBuddy.Content.Application owns Lessons, Vocabulary, Grammar, DailyPhrase, MediaAsset
         ├── Quiz/            # same shape
-        ├── Progress/        # same shape — Progress.Application owns LearnerProgress
+        ├── Progress/        # same shape — WordBuddy.Progress.Application owns LearnerProgress
         └── Notification/    # same shape
 ```
 

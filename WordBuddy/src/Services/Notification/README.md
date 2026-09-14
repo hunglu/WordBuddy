@@ -16,12 +16,12 @@ than serving requests._
 ## Running standalone
 
 ```bash
-dotnet run --project Notification.Api
+dotnet run --project WordBuddy.Notification.Api
 ```
 
 ## Configuration
 
-`Notification.Api/appsettings.Development.json` (added when this service gains real behavior)
+`WordBuddy.Notification.Api/appsettings.Development.json` (added when this service gains real behavior)
 will hold:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyNotification`),
   once it has entities to persist
@@ -30,9 +30,9 @@ will hold:
 
 | Project | Purpose |
 |---|---|
-| `Notification.Api` | Composition root (no controllers yet) |
-| `Notification.Application` | Commands/queries, DTOs, validators (empty for now) |
-| `Notification.Domain` | Domain entities (empty for now) |
-| `Notification.Infrastructure` | EF Core `NotificationDbContext`, repositories (empty for now) |
-| `Notification.UnitTests` | Handler/domain unit tests (Moq) |
-| `Notification.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |
+| `WordBuddy.Notification.Api` | Composition root (no controllers yet) |
+| `WordBuddy.Notification.Application` | Commands/queries, DTOs, validators (empty for now) |
+| `WordBuddy.Notification.Domain` | Domain entities (empty for now) |
+| `WordBuddy.Notification.Infrastructure` | EF Core `NotificationDbContext`, repositories (empty for now) |
+| `WordBuddy.Notification.UnitTests` | Handler/domain unit tests (Moq) |
+| `WordBuddy.Notification.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

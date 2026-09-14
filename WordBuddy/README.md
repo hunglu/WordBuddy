@@ -52,9 +52,9 @@ WordBuddy/
 
 ```bash
 # Build, run, and test one service at a time — there's no root solution
-dotnet build src/Services/Identity/Identity.slnx
-dotnet run --project src/Services/Identity/Identity.Api
-dotnet test src/Services/Identity/Identity.slnx
+dotnet build src/Services/Identity/WordBuddy.Identity.slnx
+dotnet run --project src/Services/Identity/WordBuddy.Identity.Api
+dotnet test src/Services/Identity/WordBuddy.Identity.slnx
 ```
 
 The shared libraries are already packed into `local-nuget-feed/` (see `src/Shared/`). If you

@@ -16,12 +16,12 @@ _None yet — added in Phase 2 (expect `GET /api/lessons`, `GET /api/lessons/{id
 ## Running standalone
 
 ```bash
-dotnet run --project Content.Api
+dotnet run --project WordBuddy.Content.Api
 ```
 
 ## Configuration
 
-`Content.Api/appsettings.Development.json` (added in Phase 2) will hold:
+`WordBuddy.Content.Api/appsettings.Development.json` (added in Phase 2) will hold:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyContent`)
 - `Jwt:Issuer` (validates tokens issued by Identity)
 - `FileStorage:BasePath` — local media storage path (added in Phase 4)
@@ -30,9 +30,9 @@ dotnet run --project Content.Api
 
 | Project | Purpose |
 |---|---|
-| `Content.Api` | Controllers, `Program.cs`, composition root |
-| `Content.Application` | Commands/queries, DTOs, validators, `IFileStorageService` |
-| `Content.Domain` | `Lesson`/`Vocabulary`/`Grammar`/`DailyPhrase`/`MediaAsset` entities |
-| `Content.Infrastructure` | EF Core `ContentDbContext`, repositories, `LocalFileStorageService` |
-| `Content.UnitTests` | Handler/domain unit tests (Moq) |
-| `Content.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |
+| `WordBuddy.Content.Api` | Controllers, `Program.cs`, composition root |
+| `WordBuddy.Content.Application` | Commands/queries, DTOs, validators, `IFileStorageService` |
+| `WordBuddy.Content.Domain` | `Lesson`/`Vocabulary`/`Grammar`/`DailyPhrase`/`MediaAsset` entities |
+| `WordBuddy.Content.Infrastructure` | EF Core `ContentDbContext`, repositories, `LocalFileStorageService` |
+| `WordBuddy.Content.UnitTests` | Handler/domain unit tests (Moq) |
+| `WordBuddy.Content.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

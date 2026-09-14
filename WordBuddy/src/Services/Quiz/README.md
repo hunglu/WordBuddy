@@ -13,12 +13,12 @@ _None yet — added in Phase 2 (expect `GET /api/quiz/{id}`, `POST /api/quiz/{id
 ## Running standalone
 
 ```bash
-dotnet run --project Quiz.Api
+dotnet run --project WordBuddy.Quiz.Api
 ```
 
 ## Configuration
 
-`Quiz.Api/appsettings.Development.json` (added in Phase 2) will hold:
+`WordBuddy.Quiz.Api/appsettings.Development.json` (added in Phase 2) will hold:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyQuiz`)
 - `Jwt:Issuer` (validates tokens issued by Identity)
 
@@ -26,9 +26,9 @@ dotnet run --project Quiz.Api
 
 | Project | Purpose |
 |---|---|
-| `Quiz.Api` | Controllers, `Program.cs`, composition root |
-| `Quiz.Application` | Commands/queries, DTOs, validators |
-| `Quiz.Domain` | `Quiz`/`QuizQuestion` entities, `QuizQuestionType` enum |
-| `Quiz.Infrastructure` | EF Core `QuizDbContext`, repositories |
-| `Quiz.UnitTests` | Handler/domain unit tests (Moq) |
-| `Quiz.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |
+| `WordBuddy.Quiz.Api` | Controllers, `Program.cs`, composition root |
+| `WordBuddy.Quiz.Application` | Commands/queries, DTOs, validators |
+| `WordBuddy.Quiz.Domain` | `Quiz`/`QuizQuestion` entities, `QuizQuestionType` enum |
+| `WordBuddy.Quiz.Infrastructure` | EF Core `QuizDbContext`, repositories |
+| `WordBuddy.Quiz.UnitTests` | Handler/domain unit tests (Moq) |
+| `WordBuddy.Quiz.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

@@ -37,9 +37,9 @@ same shape with the service name substituted, don't duplicate the detail 5 times
       token in an `ARG`/`ENV`/layer
 - [ ] Frontend Dockerfile (multi-stage, Nginx, SPA routing, path-based proxy to each service)
 - [ ] nginx.conf: SPA fallback, per-service path proxy, gzip, cache headers
-- [ ] `IFileStorageService` + `LocalFileStorageService` in `Content.Application`/
-      `Content.Infrastructure` (the only service handling media)
-- [ ] `MediaController` in `Content.Api`: POST /api/media/upload, GET /api/media/{id}
+- [ ] `IFileStorageService` + `LocalFileStorageService` in `WordBuddy.Content.Application`/
+      `WordBuddy.Content.Infrastructure` (the only service handling media)
+- [ ] `MediaController` in `WordBuddy.Content.Api`: POST /api/media/upload, GET /api/media/{id}
 - [ ] `docker-compose.yml` at the repo root: one shared sqlserver, all 5 service builds (each
       pointed at its own service folder as build context), wordbuddy-ui — for local dev only
 - [ ] `.env.example` committed, `.env` in `.gitignore`
@@ -67,8 +67,8 @@ COPY . .
 RUN --mount=type=secret,id=github_token \
     dotnet nuget add source https://nuget.pkg.github.com/hunglu/index.json \
       -n github-wordbuddy -u hunglu -p "$(cat /run/secrets/github_token)" --store-password-in-clear-text && \
-    dotnet restore ./<Service>.Api && \
-    dotnet publish ./<Service>.Api -c Release -o /app/publish --no-restore
+    dotnet restore ./WordBuddy.<Service>.Api && \
+    dotnet publish ./WordBuddy.<Service>.Api -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 RUN useradd -m appuser
@@ -79,7 +79,7 @@ EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 # Content only:
 # VOLUME /app/media
-ENTRYPOINT ["dotnet", "<Service>.Api.dll"]
+ENTRYPOINT ["dotnet", "WordBuddy.<Service>.Api.dll"]
 ```
 
 Build it with the token passed as a **BuildKit secret** (never `--build-arg`, which leaks into
@@ -110,17 +110,17 @@ no-cache for `index.html`.
 
 ### Step 3 — Local media storage (Content service only)
 
-In `Content.Application`, create `IFileStorageService`:
+In `WordBuddy.Content.Application`, create `IFileStorageService`:
 - `SaveAsync(Stream, fileName, contentType, ct)` → returns relative path
 - `GetAsync(filePath, ct)` → returns `Stream`
 - `DeleteAsync(filePath, ct)`
 
-In `Content.Infrastructure`, create `LocalFileStorageService`:
+In `WordBuddy.Content.Infrastructure`, create `LocalFileStorageService`:
 - Reads `FileStorage:BasePath` from config
 - `SaveAsync`: generates a `Guid` filename, saves to `BasePath/{type}/{year}/{month}/`
 - Inject `ILogger<LocalFileStorageService>`
 
-In `Content.Api`, create `MediaController`:
+In `WordBuddy.Content.Api`, create `MediaController`:
 - `POST /api/media/upload`: validate `IFormFile` (max 50MB), allowed types: image/jpeg,
   image/png, audio/mpeg, audio/wav, video/mp4; save via `IFileStorageService`, create
   `MediaAsset` record, return DTO
