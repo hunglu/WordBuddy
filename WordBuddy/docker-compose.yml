@@ -1,0 +1,141 @@
+# Local dev inner loop only — fast `docker compose up` iteration. The "real" deployment shape
+# (what actually runs in Kubernetes) lives in k8s/. Requires DOCKER_BUILDKIT=1 (default in
+# current Docker Desktop) since each service's Dockerfile restores WordBuddy.Shared.* from
+# GitHub Packages via a --secret, never a plaintext ARG — see .env.example for GITHUB_TOKEN.
+
+secrets:
+  github_token:
+    environment: GITHUB_TOKEN
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    entrypoint: >
+      bash -c '
+      for db in WordBuddyIdentity WordBuddyContent WordBuddyQuiz WordBuddyProgress WordBuddyNotification; do
+        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID(N'"'"'$$db'"'"') IS NULL CREATE DATABASE [$$db];";
+      done'
+    restart: "no"
+
+  identity-api:
+    build:
+      context: src/Services/Identity
+      dockerfile: Dockerfile
+      secrets:
+        - github_token
+    depends_on:
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: ${IDENTITY_CONNECTION_STRING}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES}
+    ports:
+      - "5080:8080"
+
+  content-api:
+    build:
+      context: src/Services/Content
+      dockerfile: Dockerfile
+      secrets:
+        - github_token
+    depends_on:
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: ${CONTENT_CONNECTION_STRING}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER}
+      FileStorage__BasePath: /app/media
+    ports:
+      - "5081:8080"
+    volumes:
+      - media-data:/app/media
+
+  quiz-api:
+    build:
+      context: src/Services/Quiz
+      dockerfile: Dockerfile
+      secrets:
+        - github_token
+    depends_on:
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: ${QUIZ_CONNECTION_STRING}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER}
+    ports:
+      - "5082:8080"
+
+  progress-api:
+    build:
+      context: src/Services/Progress
+      dockerfile: Dockerfile
+      secrets:
+        - github_token
+    depends_on:
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: ${PROGRESS_CONNECTION_STRING}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER}
+    ports:
+      - "5083:8080"
+
+  notification-api:
+    build:
+      context: src/Services/Notification
+      dockerfile: Dockerfile
+      secrets:
+        - github_token
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER}
+    ports:
+      - "5084:8080"
+
+  wordbuddy-ui:
+    build:
+      context: ../WordBuddy.UI
+      dockerfile: Dockerfile
+    depends_on:
+      - identity-api
+      - content-api
+      - quiz-api
+      - progress-api
+      - notification-api
+    ports:
+      - "3000:80"
+
+volumes:
+  sqlserver-data:
+  media-data:

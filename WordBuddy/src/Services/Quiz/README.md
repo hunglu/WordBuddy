@@ -26,6 +26,13 @@ never reference each other's data directly.
 dotnet run --project WordBuddy.Quiz.Api --urls http://localhost:5082
 ```
 
+## Running in Docker / Kubernetes
+
+`Dockerfile` lives in this folder (build context = this folder only, restores
+`WordBuddy.Shared.*` from GitHub Packages via a BuildKit `--secret`). Image:
+`wordbuddy-quiz:dev`. In the `k8s/` manifests: Deployment/Service `quiz-api`, database
+`WordBuddyQuiz`, Ingress path `/api/quiz`.
+
 ## Configuration
 
 Copy `WordBuddy.Quiz.Api/appsettings.Development.json.example` to

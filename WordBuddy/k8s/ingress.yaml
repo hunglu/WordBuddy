@@ -1,0 +1,56 @@
+# No rewrite-target: each service's controllers already expect the full /api/<prefix>/...
+# path (that's also what nginx.conf's proxy_pass does for docker-compose), so Ingress just
+# forwards paths through unchanged. Order matters — more specific prefixes before the
+# catch-all "/" for the SPA.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wordbuddy-ingress
+  namespace: wordbuddy
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: identity-api
+                port:
+                  number: 8080
+          - path: /api/lessons
+            pathType: Prefix
+            backend:
+              service:
+                name: content-api
+                port:
+                  number: 8080
+          - path: /api/media
+            pathType: Prefix
+            backend:
+              service:
+                name: content-api
+                port:
+                  number: 8080
+          - path: /api/quiz
+            pathType: Prefix
+            backend:
+              service:
+                name: quiz-api
+                port:
+                  number: 8080
+          - path: /api/progress
+            pathType: Prefix
+            backend:
+              service:
+                name: progress-api
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wordbuddy-ui
+                port:
+                  number: 80

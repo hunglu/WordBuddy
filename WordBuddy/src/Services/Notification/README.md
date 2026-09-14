@@ -21,6 +21,13 @@ even with zero controllers — ready to grow into real endpoints without re-deri
 dotnet run --project WordBuddy.Notification.Api --urls http://localhost:5084
 ```
 
+## Running in Docker / Kubernetes
+
+`Dockerfile` lives in this folder (build context = this folder only, restores
+`WordBuddy.Shared.*` from GitHub Packages via a BuildKit `--secret`). Image:
+`wordbuddy-notification:dev`. In the `k8s/` manifests: Deployment/Service `notification-api` —
+no database, no Ingress route yet (no public endpoints).
+
 ## Configuration
 
 Copy `WordBuddy.Notification.Api/appsettings.Development.json.example` to

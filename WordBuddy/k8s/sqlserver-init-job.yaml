@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sqlserver-init
+  namespace: wordbuddy
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: sqlserver-init
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          env:
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: SA_PASSWORD
+          command:
+            - /bin/bash
+            - -c
+            - |
+              for db in WordBuddyIdentity WordBuddyContent WordBuddyQuiz WordBuddyProgress WordBuddyNotification; do
+                /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID(N'$db') IS NULL CREATE DATABASE [$db];"
+              done

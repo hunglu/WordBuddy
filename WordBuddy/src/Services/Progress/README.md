@@ -27,6 +27,13 @@ frontend/a caller that needs titles looks them up from Content separately).
 dotnet run --project WordBuddy.Progress.Api --urls http://localhost:5083
 ```
 
+## Running in Docker / Kubernetes
+
+`Dockerfile` lives in this folder (build context = this folder only, restores
+`WordBuddy.Shared.*` from GitHub Packages via a BuildKit `--secret`). Image:
+`wordbuddy-progress:dev`. In the `k8s/` manifests: Deployment/Service `progress-api`, database
+`WordBuddyProgress`, Ingress path `/api/progress`.
+
 ## Configuration
 
 Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to

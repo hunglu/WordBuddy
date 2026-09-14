@@ -63,6 +63,21 @@ change one, repack it before the next `dotnet restore` in a consuming service:
 dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 ```
 
+## Running in Docker / local Kubernetes
+
+```bash
+cp .env.example .env          # fill in GITHUB_TOKEN (a PAT with read:packages)
+make up                       # docker-compose: sqlserver + all 5 APIs + ui
+
+make cluster-up               # kind cluster + ingress-nginx
+make k8s-build-load           # build & load all images
+cp k8s/secret.yaml.example k8s/secret.yaml   # fill in real values, never commit
+make k8s-apply                # namespace, config, secrets, sqlserver, all services, ingress
+```
+
+See [`CLAUDE.md`](./CLAUDE.md)'s "Running in Docker / local Kubernetes" section for the full
+service → image → deployment → ingress-path table and the independence-model rationale.
+
 ## Roadmap
 
 1. **Project Setup** *(this phase)* — independent per-service solution skeletons, shared NuGet

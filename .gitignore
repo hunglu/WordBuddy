@@ -1,6 +1,9 @@
 # Local environment secrets — copy .env.example → .env to get started
 .env
 
+## Kubernetes secrets — copy k8s/secret.yaml.example → k8s/secret.yaml to get started
+WordBuddy/k8s/secret.yaml
+
 ## .NET
 bin/
 obj/
