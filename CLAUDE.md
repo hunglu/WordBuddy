@@ -1,5 +1,11 @@
 # WordBuddy — Backend
 
+- Backend: .NET 8 Clean Architecture — `./WordBuddy`
+- Frontend: React 18 + TypeScript — `./WordBuddy.UI`
+
+@./WordBuddy/CLAUDE.md
+@./WordBuddy.UI/CLAUDE.md
+
 ## Project Overview
 
 WordBuddy is a microservices-based English learning web application built on .NET 8. It serves both children and adults with vocabulary lessons, grammar lessons, daily phrases, and quizzes. Content is delivered as text, images, audio pronunciations, and video clips. This repository contains all backend services; the frontend lives in a separate repository (TBD).

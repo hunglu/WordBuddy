@@ -29,3 +29,22 @@ project-root/
 ├── settings.json                # personal defaults (model, permissions)
 └── rules/
     └── preferences.md           # loads before project rules; project rules take precedence on conflict
+
+## Check list
+
+### WordBuddy monorepo — Claude Code config verification
+
+- [ ] Old `.claude/` folders removed from `WordBuddy/` and `WordBuddy.UI/` subfolders
+- [ ] Single `.claude/` exists at RootFolder only
+- [ ] `claude` started from RootFolder, not from a subfolder
+- [ ] `/permissions` in REPL shows merged deny/ask/allow list (both BE and FE entries present)
+- [ ] `dotnet build` runs without a permission prompt (allow rule works)
+- [ ] `npm run build` runs without a permission prompt (allow rule works)
+- [ ] `git push` stops and asks for confirmation (ask rule works)
+- [ ] Attempting to read `WordBuddy/appsettings.Production.json` is blocked (deny rule works)
+- [ ] Attempting to read `WordBuddy.UI/.env` is blocked (deny rule works)
+- [ ] `.claude/logs/audit.jsonl` contains entries after a few tool calls (hook works)
+- [ ] `/memory` shows `rules/safety-guardrails.md` loaded unconditionally
+- [ ] `/memory` shows `rules/backend.md` loaded only after touching a `.cs` file
+- [ ] `/memory` shows `rules/frontend.md` loaded only after touching a `.tsx` file
+- [ ] `.claude/settings.local.json` is NOT tracked by git (`git status` doesn't show it)
