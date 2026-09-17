@@ -1,8 +1,39 @@
 {
-  "Logging": {
-    "LogLevel": {
+  "Serilog": {
+    "Using": [ "Serilog.Sinks.Console", "Serilog.Sinks.File" ],
+    "MinimumLevel": {
       "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
+      "Override": {
+        "Microsoft.AspNetCore": "Warning",
+        "Microsoft.EntityFrameworkCore.Database.Command": "Information",
+        "System": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console",
+        "Args": {
+          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] ({CorrelationId}) {Message:lj}{NewLine}{Exception}"
+        }
+      },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/progress-.log",
+          "rollingInterval": "Day"
+        }
+      }
+    ],
+    "Enrich": [ "FromLogContext" ]
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=WordBuddyProgress;Trusted_Connection=true"
+  },
+  "Jwt": {
+    "Secret": "dev-secret-do-not-use-in-production-must-be-at-least-32-characters",
+    "Issuer": "WordBuddy"
+  },
+  "OpenTelemetry": {
+    "OtlpEndpoint": "http://localhost:4317"
   }
 }

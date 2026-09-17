@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordbuddy-ui
+  namespace: wordbuddy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordbuddy-ui
+  template:
+    metadata:
+      labels:
+        app: wordbuddy-ui
+    spec:
+      containers:
+        - name: wordbuddy-ui
+          image: wordbuddy-ui:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20

@@ -26,9 +26,9 @@ later with nothing to untangle. See [`CLAUDE.md`](./CLAUDE.md) for the full mode
 |---|---|---|---|---|
 | Identity | Implemented | Registration, login, JWT issuance | [src/Services/Identity](./src/Services/Identity/README.md) | `localhost:5080/swagger` |
 | Content | Implemented | Lessons, Vocabulary, Grammar, DailyPhrases, MediaAssets | [src/Services/Content](./src/Services/Content/README.md) | `localhost:5081/swagger` |
-| Quiz | Scaffold only | Quiz definitions, question banks, answer evaluation | [src/Services/Quiz](./src/Services/Quiz/README.md) | — |
-| Progress | Scaffold only | Learner progress tracking, streaks, completion history | [src/Services/Progress](./src/Services/Progress/README.md) | — |
-| Notification | Scaffold only | Push/email notifications for daily phrases and reminders | [src/Services/Notification](./src/Services/Notification/README.md) | — |
+| Quiz | Implemented | Quiz definitions, question banks, answer evaluation | [src/Services/Quiz](./src/Services/Quiz/README.md) | `localhost:5082/swagger` |
+| Progress | Implemented | Learner progress tracking, streaks, completion history | [src/Services/Progress](./src/Services/Progress/README.md) | `localhost:5083/swagger` |
+| Notification | Scaffold only | Push/email notifications for daily phrases and reminders | [src/Services/Notification](./src/Services/Notification/README.md) | `localhost:5084/swagger` |
 
 ## Folder structure
 
@@ -62,6 +62,21 @@ change one, repack it before the next `dotnet restore` in a consuming service:
 ```bash
 dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 ```
+
+## Running in Docker / local Kubernetes
+
+```bash
+cp .env.example .env          # fill in GITHUB_TOKEN (a PAT with read:packages)
+make up                       # docker-compose: sqlserver + all 5 APIs + ui
+
+make cluster-up               # kind cluster + ingress-nginx
+make k8s-build-load           # build & load all images
+cp k8s/secret.yaml.example k8s/secret.yaml   # fill in real values, never commit
+make k8s-apply                # namespace, config, secrets, sqlserver, all services, ingress
+```
+
+See [`CLAUDE.md`](./CLAUDE.md)'s "Running in Docker / local Kubernetes" section for the full
+service → image → deployment → ingress-path table and the independence-model rationale.
 
 ## Roadmap
 

@@ -28,6 +28,15 @@ issues its own.
 dotnet run --project WordBuddy.Content.Api --urls http://localhost:5081
 ```
 
+## Running in Docker / Kubernetes
+
+`Dockerfile` lives in this folder (build context = this folder only, restores
+`WordBuddy.Shared.*` from GitHub Packages via a BuildKit `--secret`). Image:
+`wordbuddy-content:dev`. In the `k8s/` manifests: Deployment/Service `content-api`, database
+`WordBuddyContent`, Ingress paths `/api/lessons` and `/api/media`. `FileStorage:BasePath` is set
+to `/app/media` in Docker/Kubernetes (an `emptyDir` volume in `k8s/content-deployment.yaml` — not
+yet a real PersistentVolume, so uploaded media does not survive a pod restart in this phase).
+
 ## Configuration
 
 Copy `WordBuddy.Content.Api/appsettings.Development.json.example` to

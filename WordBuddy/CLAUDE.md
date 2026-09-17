@@ -126,3 +126,48 @@ picks it up, or before a Docker build):
 ```bash
 dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 ```
+
+## Running in Docker / local Kubernetes (Phase 4)
+
+Hosting target is **local Kubernetes via `kind`**, not a cloud VM — a real cloud cluster
+(managed EKS vs. self-managed k3s) is a deliberately deferred decision, not yet made.
+`docker-compose.yml` stays as a fast inner-loop option for day-to-day dev; the `k8s/` manifests
+are the "real" deployment shape you test locally before any cloud target is chosen.
+
+**Why Docker builds need GitHub Packages, not `local-nuget-feed/`:** per the independence model
+above, each service's Dockerfile build context is that service's own folder only
+(`src/Services/<Service>/`) — consistent with "this folder could be its own repo." A Docker
+build therefore can't see `local-nuget-feed/` (it's outside the context) and instead restores
+`WordBuddy.Shared.*` from GitHub Packages (`nuget.pkg.github.com`), authenticated via a BuildKit
+`--secret` (never a plaintext `ARG`/`ENV` — that would bake the token into image history). Run
+`make publish-shared` once after changing a shared library and before rebuilding any image.
+
+| Service | Image | Deployment / Service (k8s) | Ingress path prefix |
+|---|---|---|---|
+| Identity | `wordbuddy-identity:dev` | `identity-api` | `/api/auth` |
+| Content | `wordbuddy-content:dev` | `content-api` | `/api/lessons`, `/api/media` |
+| Quiz | `wordbuddy-quiz:dev` | `quiz-api` | `/api/quiz` |
+| Progress | `wordbuddy-progress:dev` | `progress-api` | `/api/progress` |
+| Notification | `wordbuddy-notification:dev` | `notification-api` | *(no route yet — scaffold only)* |
+| WordBuddy.UI | `wordbuddy-ui:dev` | `wordbuddy-ui` | `/` (catch-all) |
+
+```bash
+# docker-compose (fast inner loop, needs .env from .env.example + GITHUB_TOKEN)
+make up
+
+# local Kubernetes
+make cluster-up                    # kind cluster + ingress-nginx
+make k8s-build-load                # build all 5 images + ui with the BuildKit secret, kind load
+make k8s-apply                     # namespace, configmap, secret.yaml (copy from secret.yaml.example first), sqlserver, all deployments/services, ingress
+kubectl -n wordbuddy get pods -w
+make k8s-migrate SERVICE=identity  # repeat per service with entities (skip notification)
+```
+
+**Known gap, left for the user to verify with their own credentials:** the GitHub Packages
+restore path inside a Docker build (`RUN --mount=type=secret,id=github_token ...`) has not been
+live-tested end-to-end with a real PAT in this environment — only that it *fails cleanly and
+correctly* when the secret is omitted (`docker build` without `--secret` errors at the
+`dotnet nuget add source` step with "Both UserName and Password must be specified", proving the
+token is never silently skipped or baked into a layer). The first real build needs the user's
+own PAT (`read:packages`, and `write:packages` if also running `make publish-shared`) exported as
+`GITHUB_TOKEN`.

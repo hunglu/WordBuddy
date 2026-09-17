@@ -22,6 +22,15 @@ Swagger UI: `http://localhost:5080/swagger` (Development only).
 dotnet run --project WordBuddy.Identity.Api
 ```
 
+## Running in Docker / Kubernetes
+
+`Dockerfile` lives in this folder; build context is this folder only (see root `CLAUDE.md`'s
+independence model — a Docker build restores `WordBuddy.Shared.*` from GitHub Packages via a
+BuildKit `--secret`, never `local-nuget-feed/`). Image: `wordbuddy-identity:dev`. In the `k8s/`
+manifests: Deployment/Service `identity-api`, database `WordBuddyIdentity`, Ingress path
+`/api/auth`. If you bumped a shared package version, run `make publish-shared` before rebuilding
+this image.
+
 ## Configuration
 
 Copy `WordBuddy.Identity.Api/appsettings.Development.json.example` to
