@@ -3,8 +3,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY . .
 RUN --mount=type=secret,id=github_token \
-    dotnet nuget add source https://nuget.pkg.github.com/hunglu/index.json \
-      -n github-wordbuddy -u hunglu -p "$(cat /run/secrets/github_token)" --store-password-in-clear-text && \
+    dotnet nuget remove source local-wordbuddy && \
+    dotnet nuget update source github-wordbuddy \
+      -u hunglu -p "$(cat /run/secrets/github_token)" --store-password-in-clear-text && \
     dotnet restore ./WordBuddy.Content.Api && \
     dotnet publish ./WordBuddy.Content.Api -c Release -o /app/publish --no-restore
 

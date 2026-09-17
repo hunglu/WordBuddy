@@ -16,7 +16,8 @@ obj/
 **/appsettings.Production.json
 
 ## NuGet
-local-nuget-feed/
+**/local-nuget-feed/*
+!**/local-nuget-feed/.gitkeep
 
 ## Serilog file sink output
 **/logs/

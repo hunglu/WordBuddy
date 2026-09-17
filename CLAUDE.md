@@ -490,3 +490,5 @@ Expired token → `logout()` + redirect, not just missing token check.
 If ./docs/local-overrides.md does not exist, tell the user explicitly:
 "No local-overrides.md found — create one from docs/local-overrides.md.example if you need personal config."
 @./docs/local-overrides.md
+
+After any runs, write output down to plans folder
