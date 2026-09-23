@@ -127,6 +127,11 @@ picks it up, or before a Docker build):
 dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 ```
 
+Cross-service API E2E coverage (blackbox HTTP, no project references to any service) lives
+outside this folder in `../e2e/api/WordBuddy.E2E.Api.Tests` — see that project's `README.md`.
+It's written/run by the `tester` subagent as part of the repo's `/test` workflow command, not
+part of this folder's own per-service `UnitTests`/`IntegrationTests`.
+
 ## Running in Docker / local Kubernetes (Phase 4)
 
 Hosting target is **local Kubernetes via `kind`**, not a cloud VM — a real cloud cluster

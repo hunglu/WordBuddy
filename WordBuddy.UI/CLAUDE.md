@@ -96,3 +96,11 @@ response it calls `logout()` and hard-redirects to `/login`.
 `ProtectedRoute` decodes the JWT's own `exp` claim (`src/utils/jwt.ts`) rather than trusting a
 separately-stored expiry value — the two could drift out of sync; the token itself is the source
 of truth. Expired or missing token → `logout()` + redirect to `/login`.
+
+### End-to-end / BDD testing
+
+This project has no in-tree test tooling of its own (no `test` script, no Vitest/Jest). Browser
+E2E coverage lives outside `src/`, in `../e2e/ui` (TypeScript Playwright + `playwright-bdd`,
+Gherkin `.feature` files) — see that project's `README.md`. It's written/run by the `tester`
+subagent as part of the repo's `/test` workflow command, driving the app the same way a learner
+would rather than testing components in isolation.

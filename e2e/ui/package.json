@@ -1,0 +1,16 @@
+{
+  "name": "wordbuddy-e2e-ui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UI end-to-end / BDD tests for WordBuddy.UI, using Playwright + playwright-bdd.",
+  "scripts": {
+    "test": "bddgen && playwright test",
+    "test:headed": "bddgen && playwright test --headed",
+    "report": "playwright show-report playwright-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "playwright-bdd": "^9.2.1",
+    "typescript": "^5.7.0"
+  }
+}

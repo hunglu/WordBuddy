@@ -2,9 +2,34 @@
 
 - Backend: .NET 8 Clean Architecture — `./WordBuddy`
 - Frontend: React 18 + TypeScript — `./WordBuddy.UI`
+- Cross-service end-to-end tests — `./e2e`
 
 @./WordBuddy/CLAUDE.md
 @./WordBuddy.UI/CLAUDE.md
+
+## Workflow: idea → plan → code → test
+
+Feature work in this repo follows a 4-stage workflow, each stage its own slash command backed by
+a dedicated subagent. State for each proposal lives in its own folder under `.claude/plans/<slug>/`
+as plain markdown — that folder *is* the visible tracker (check `status:` in each `proposal.md`).
+
+1. **`/propose <title>`** — Sam captures a business idea. Writes `proposal.md`
+   (`status: idea`). No analysis happens here.
+2. **`/plan <slug>`** — the `planner` subagent (`.claude/agents/planner.md`) analyzes the
+   proposal against this codebase's conventions and writes `plan.md` + `tasks.md`
+   (`status: planned`). **This is the approval gate** — implementation does not start
+   automatically.
+3. **`/code <slug>`** — Sam running this command is the approval. The `coder` subagent
+   (`.claude/agents/coder.md`) implements `tasks.md` top to bottom, checking off each task,
+   stopping rather than bypassing anything gated by `.claude/settings.json`'s `ask`/`deny`
+   lists (`status: implemented` once done).
+4. **`/test <slug>`** — the `tester` subagent (`.claude/agents/tester.md`) writes/extends unit
+   and integration tests in the touched service's existing test projects, plus E2E coverage in
+   `e2e/api` (.NET Playwright, API-level) and `e2e/ui` (TypeScript Playwright + `playwright-bdd`,
+   UI-level), and writes `test-report.md` (`status: done` or `needs-fixes`).
+
+`e2e/` sits at the repo root alongside `WordBuddy/` and `WordBuddy.UI/` because it spans both —
+it is not owned by, or a dependency of, either.
 
 ## Project Overview
 

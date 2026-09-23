@@ -28,6 +28,12 @@ dist/
 build/
 .env.local
 
+## Playwright (e2e/)
+test-results/
+playwright-report/
+playwright/.cache/
+e2e/ui/.features-gen/
+
 ## VS Code
 .vscode/*
 !.vscode/extensions.json
