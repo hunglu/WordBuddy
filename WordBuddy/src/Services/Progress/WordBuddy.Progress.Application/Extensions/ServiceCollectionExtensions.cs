@@ -4,6 +4,8 @@ using WordBuddy.Progress.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.Progress.Commands.RecordProgress;
 using WordBuddy.Progress.Application.Features.Progress.Queries.GetUserProgress;
+using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.SubmitVocabularyRecallCheck;
+using WordBuddy.Progress.Application.Features.VocabularyRecall.Queries.GetVocabularyRecallProgress;
 
 namespace WordBuddy.Progress.Application.Extensions;
 
@@ -16,6 +18,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<RecordProgressCommand>, RecordProgressCommandValidator>();
 
         services.AddScoped<IQueryHandler<GetUserProgressQuery, IReadOnlyList<LearnerProgressDto>>, GetUserProgressQueryHandler>();
+
+        services.AddScoped<ICommandHandler<SubmitVocabularyRecallCheckCommand>, SubmitVocabularyRecallCheckCommandHandler>();
+        services.AddScoped<IValidator<SubmitVocabularyRecallCheckCommand>, SubmitVocabularyRecallCheckCommandValidator>();
+
+        services.AddScoped<IQueryHandler<GetVocabularyRecallProgressQuery, VocabularyRecallProgressDto>, GetVocabularyRecallProgressQueryHandler>();
 
         return services;
     }

@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
         services.AddScoped<ILearnerProgressRepository, LearnerProgressRepository>();
+        services.AddScoped<IVocabularyRecallRepository, VocabularyRecallRepository>();
 
         return services;
     }

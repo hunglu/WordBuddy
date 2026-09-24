@@ -12,6 +12,10 @@ import { LessonsPage } from './pages/LessonsPage'
 import { LoginPage } from './pages/LoginPage'
 import { ProgressPage } from './pages/ProgressPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { VocabularyBuilderPage } from './pages/VocabularyBuilderPage'
+import { VocabularyCheckPage } from './pages/VocabularyCheckPage'
+import { VocabularyModerationPage } from './pages/VocabularyModerationPage'
+import { VocabularySharedPoolPage } from './pages/VocabularySharedPoolPage'
 
 const queryClient = new QueryClient()
 
@@ -37,6 +41,10 @@ function AnimatedRoutes(): ReactElement {
           <Route path="/lessons" element={<LessonsPage />} />
           <Route path="/lessons/:id" element={<LessonDetailPage />} />
           <Route path="/progress" element={<ProgressPage />} />
+          <Route path="/vocabulary" element={<VocabularyBuilderPage />} />
+          <Route path="/vocabulary/check" element={<VocabularyCheckPage />} />
+          <Route path="/vocabulary/shared" element={<VocabularySharedPoolPage />} />
+          <Route path="/vocabulary/moderation" element={<VocabularyModerationPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

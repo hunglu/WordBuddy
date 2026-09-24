@@ -22,7 +22,16 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ILessonRepository, LessonRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
+        services.AddScoped<IPersonalVocabularyWordRepository, PersonalVocabularyWordRepository>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+        // No Redis instance exists anywhere in this repo yet (docker-compose has no `redis`
+        // service, no service configures `IDistributedCache`) — registering the in-memory
+        // implementation satisfies the `IDistributedCache` contract CLAUDE.md's caching
+        // convention calls for without standing up new cross-cutting infrastructure as part of
+        // this feature. Swapping in `AddStackExchangeRedisCache` later is a DI-only change; no
+        // application code depends on which backend is registered here.
+        services.AddDistributedMemoryCache();
 
         return services;
     }

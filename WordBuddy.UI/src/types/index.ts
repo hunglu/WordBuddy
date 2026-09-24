@@ -9,6 +9,8 @@ export type LessonType = 'Vocabulary' | 'Grammar' | 'DailyPhrase'
 
 export type MediaAssetType = 'Text' | 'Image' | 'Audio' | 'Video'
 
+export type VocabularyShareStatus = 'Private' | 'PendingReview' | 'Shared' | 'Rejected'
+
 // ── Identity ────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -76,6 +78,21 @@ export interface LessonFilters {
   level?: Level
 }
 
+export interface PersonalVocabularyWord {
+  id: string
+  ownerUserId: string
+  word: string
+  definition: string
+  example: string | null
+  shareStatus: VocabularyShareStatus
+  visibleToChildren: boolean
+  createdAtUtc: string
+}
+
+/** A word as returned by the random-selection-for-check endpoint — same shape as
+ * {@link PersonalVocabularyWord}, aliased for readability at call sites. */
+export type VocabularyRecallCheckWord = PersonalVocabularyWord
+
 // ── Progress ────────────────────────────────────────────────────────────────
 
 export interface LearnerProgress {
@@ -85,4 +102,24 @@ export interface LearnerProgress {
   isCompleted: boolean
   scorePercent: number | null
   completedAtUtc: string | null
+}
+
+export interface VocabularyRecallResultItem {
+  vocabularyWordId: string
+  word: string
+  known: boolean
+}
+
+export interface VocabularyRecallSession {
+  id: string
+  checkedAtUtc: string
+  wordsChecked: number
+  wordsKnown: number
+}
+
+export interface VocabularyRecallProgress {
+  totalWordsTracked: number
+  knownCount: number
+  learningCount: number
+  recentSessions: VocabularyRecallSession[]
 }

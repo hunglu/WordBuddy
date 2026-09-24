@@ -50,6 +50,70 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
 
                     b.ToTable("LearnerProgressEntries", (string)null);
                 });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyRecallSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CheckedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("WordsChecked")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WordsKnown")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CheckedAtUtc");
+
+                    b.ToTable("VocabularyRecallSessions", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyRecallStat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("LastCheckedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TimesChecked")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TimesKnown")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VocabularyWordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Word")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "VocabularyWordId")
+                        .IsUnique();
+
+                    b.ToTable("VocabularyRecallStats", (string)null);
+                });
 #pragma warning restore 612, 618
         }
     }

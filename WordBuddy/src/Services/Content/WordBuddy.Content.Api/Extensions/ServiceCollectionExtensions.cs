@@ -38,7 +38,17 @@ internal static class ServiceCollectionExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminOnly", policy => policy.RequireClaim("is_admin", "true"));
+
+            // Child accounts cannot initiate sharing — this feature's first-principles
+            // child-safety gate on the write side. An admin may act on any word regardless of
+            // their own age group.
+            options.AddPolicy("CanShareVocabulary", policy => policy.RequireAssertion(context =>
+                string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
+        });
 
         return services;
     }

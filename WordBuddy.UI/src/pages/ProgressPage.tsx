@@ -4,12 +4,19 @@ import type { ReactElement } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserProgress } from '../api/progress'
 import { CountUpStat } from '../components/CountUpStat'
+import { useVocabularyRecallProgress } from '../hooks/useVocabulary'
 
 export function ProgressPage(): ReactElement {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['progress'],
     queryFn: getUserProgress,
   })
+
+  const {
+    data: recall,
+    isLoading: isRecallLoading,
+    isError: isRecallError,
+  } = useVocabularyRecallProgress()
 
   if (isLoading) {
     return <p className="text-lg text-sky-600">Loading your progress…</p>
@@ -73,6 +80,63 @@ export function ProgressPage(): ReactElement {
             </div>
           ))}
         </div>
+      )}
+
+      <h2 className="mt-10 text-2xl font-extrabold text-sky-900">Vocabulary Recall</h2>
+
+      {isRecallLoading && <p className="mt-4 text-lg text-sky-600">Loading your recall progress…</p>}
+      {isRecallError && (
+        <p className="mt-4 text-lg text-rose-600">Couldn't load your recall progress right now.</p>
+      )}
+
+      {recall && (
+        <>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
+              <p className="text-4xl font-extrabold text-sky-600">
+                <CountUpStat value={recall.totalWordsTracked} />
+              </p>
+              <p className="mt-1 text-sky-800">Words tracked</p>
+            </div>
+            <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
+              <p className="text-4xl font-extrabold text-emerald-600">
+                <CountUpStat value={recall.knownCount} />
+              </p>
+              <p className="mt-1 text-sky-800">Known</p>
+            </div>
+            <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
+              <p className="text-4xl font-extrabold text-amber-500">
+                <CountUpStat value={recall.learningCount} />
+              </p>
+              <p className="mt-1 text-sky-800">Still learning</p>
+            </div>
+          </div>
+
+          {recall.recentSessions.length === 0 ? (
+            <div className="mt-6 flex flex-col items-center gap-3 rounded-3xl bg-white p-10 text-center shadow-sm">
+              <span className="text-5xl">🧠</span>
+              <p className="text-lg font-semibold text-sky-900">No recall checks yet</p>
+              <p className="text-sky-600">Run your first check to see your history here!</p>
+              <Link
+                to="/vocabulary/check"
+                className="mt-2 rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow hover:bg-emerald-600"
+              >
+                Start a Check
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-6 flex flex-col gap-3">
+              {recall.recentSessions.map((session) => (
+                <div key={session.id} className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+                  <p className="text-sky-800">{new Date(session.checkedAtUtc).toLocaleString()}</p>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
+                    {session.wordsKnown} / {session.wordsChecked} known
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </motion.div>
   )

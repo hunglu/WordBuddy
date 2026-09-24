@@ -18,6 +18,7 @@ export default defineConfig({
       '/api/auth': { target: IDENTITY_URL, changeOrigin: true },
       '/api/lessons': { target: CONTENT_URL, changeOrigin: true },
       '/api/media': { target: CONTENT_URL, changeOrigin: true },
+      '/api/vocabulary': { target: CONTENT_URL, changeOrigin: true },
       '/api/quiz': { target: QUIZ_URL, changeOrigin: true },
       '/api/progress': { target: PROGRESS_URL, changeOrigin: true },
     },

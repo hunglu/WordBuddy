@@ -5,12 +5,17 @@ import { useAuthStore } from '../store/authStore'
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: '🏠', end: true },
   { to: '/lessons', label: 'Lessons', icon: '📚', end: false },
+  { to: '/vocabulary', label: 'My Vocabulary', icon: '📝', end: false },
+  { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: false },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
 ]
+
+const ADMIN_NAV_ITEM = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: false }
 
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
+  const navItems = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
 
   return (
     <div className="flex min-h-screen bg-sky-50">
@@ -20,7 +25,7 @@ export function AppLayout(): ReactElement {
           <span className="text-xl font-extrabold text-sky-700">WordBuddy</span>
         </div>
 
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
