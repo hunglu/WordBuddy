@@ -21,9 +21,12 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    status is `implemented` (or `needs-fixes`, for a re-run after fixes). If status is earlier
    than that, tell Sam to run `/code <slug>` first.
 
+   Also confirm the `feature/<slug>` branch exists locally or on `origin`. If it doesn't, tell
+   Sam to run `/code <slug>` first.
+
 2. **Invoke the `tester` subagent** (via the Agent tool, `subagent_type: tester`), passing it
    `plan.md` (to know what was built and which service(s)/frontend areas it touched) and the
-   slug.
+   slug. It switches to `feature/<slug>`, merges in the latest `main`, and tests that.
 
 3. The tester subagent writes and runs tests, and reports pass/fail. If it needed to run
    anything `ask`-gated (`docker compose up` to have live services for E2E, for example), it
@@ -34,13 +37,21 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    be done by the tester subagent directly, or by you from its report — either way it must exist
    after this command).
 
-5. **Update `proposal.md` frontmatter**: `status: done` if everything passed, `status: needs-fixes`
-   if anything failed — and in the failing case, summarize the failures for Sam so they know
-   whether to loop back to `/code <slug>` or `/plan <slug>`.
+5. **Status, approval, and merge are done by the tester subagent.** It sets `proposal.md` to
+   `status: done` or `status: needs-fixes`, commits and pushes `feature/<slug>`, and, only when
+   every suite ran and passed, merges `feature/<slug>` into `main` with `--no-ff` and pushes
+   `main`. Both pushes are ask-gated, so Sam approves each one. Don't repeat any of these steps
+   yourself. Just check that they happened.
+
+6. **Report back to Sam**: the verdict (merged into `main` or not, and why). In the failing or
+   skipped case, summarize the failures so Sam knows whether to loop back to `/code <slug>`
+   (fixes continue on the same `feature/<slug>` branch) or `/plan <slug>`.
 
 ## Verification
 
-- `.claude/plans/<slug>/test-report.md` exists and states a clear pass/fail outcome.
+- `.claude/plans/<slug>/test-report.md` exists and states a clear pass/fail outcome and verdict.
 - `proposal.md` status is `done` or `needs-fixes`, never left at `implemented`.
+- `status: done` ⇔ `feature/<slug>` is merged into `main`. Check with
+  `git branch --merged main`.
 - Nothing outside the touched service's test projects, `e2e/`, and `.claude/plans/<slug>/` was
-  modified.
+  modified by the tester, apart from the merge commit itself.

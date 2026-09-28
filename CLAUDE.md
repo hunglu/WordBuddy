@@ -20,13 +20,21 @@ as plain markdown — that folder *is* the visible tracker (check `status:` in e
    (`status: planned`). **This is the approval gate** — implementation does not start
    automatically.
 3. **`/code <slug>`** — Sam running this command is the approval. The `coder` subagent
-   (`.claude/agents/coder.md`) implements `tasks.md` top to bottom, checking off each task,
-   stopping rather than bypassing anything gated by `.claude/settings.json`'s `ask`/`deny`
-   lists (`status: implemented` once done).
-4. **`/test <slug>`** — the `tester` subagent (`.claude/agents/tester.md`) writes/extends unit
-   and integration tests in the touched service's existing test projects, plus E2E coverage in
-   `e2e/api` (.NET Playwright, API-level) and `e2e/ui` (TypeScript Playwright + `playwright-bdd`,
-   UI-level), and writes `test-report.md` (`status: done` or `needs-fixes`).
+   (`.claude/agents/coder.md`) first creates the `feature/<slug>` branch from an up-to-date
+   `main` and pushes it to GitHub. It then implements `tasks.md` top to bottom on that branch,
+   committing each task as it checks it off, and stops rather than bypassing anything gated by
+   `.claude/settings.json`'s `ask`/`deny` lists (`status: implemented` once done, branch pushed).
+4. **`/test <slug>`** — the `tester` subagent (`.claude/agents/tester.md`) switches to
+   `feature/<slug>` and merges in the latest `main`. It writes/extends unit and integration
+   tests in the touched service's existing test projects, plus E2E coverage in `e2e/api` (.NET
+   Playwright, API-level) and `e2e/ui` (TypeScript Playwright + `playwright-bdd`, UI-level), and
+   writes `test-report.md`. If every suite ran and passed, it approves the branch and merges it
+   into `main` with `--no-ff` (`status: done`). Otherwise the branch is not merged
+   (`status: needs-fixes`).
+
+Git rules for this workflow: all feature work happens on `feature/<slug>` and never directly on
+`main`. Only the tester merges into `main`, and only on a green run. Every `git push` stays
+`ask`-gated, so Sam approves each one. Force-push is denied.
 
 `e2e/` sits at the repo root alongside `WordBuddy/` and `WordBuddy.UI/` because it spans both —
 it is not owned by, or a dependency of, either.

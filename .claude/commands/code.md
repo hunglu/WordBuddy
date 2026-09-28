@@ -24,8 +24,10 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    starting.
 
 3. **Invoke the `coder` subagent** (via the Agent tool, `subagent_type: coder`), passing it the
-   full contents of `plan.md` and `tasks.md` and the slug. Tell it to work through unchecked
-   tasks in `tasks.md` in order, checking each one off as it lands.
+   full contents of `plan.md` and `tasks.md` and the slug. Tell it to first create (or resume)
+   the `feature/<slug>` branch and publish it to GitHub, as described in
+   `.claude/agents/coder.md`. It then works through unchecked tasks in `tasks.md` in order,
+   checking each one off and committing it to that branch as it lands.
 
 4. **If the coder subagent stops partway** because a task needs an `ask`-gated command
    (migrations, docker compose, git push — see `.claude/settings.json`) or hits a genuine
@@ -34,10 +36,15 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    `status: in-progress` — don't mark it `implemented` on a partial run.
 
 5. **Once every task in `tasks.md` is checked off**, edit `proposal.md` frontmatter to
-   `status: implemented`.
+   `status: implemented`. Confirm you're on `feature/<slug>` (`git branch --show-current`), then
+   commit `.claude/plans/<slug>/` (`git add .claude/plans/<slug>` then
+   `git commit -m "<slug>: mark implemented"`, ending with the Co-Authored-By line) and
+   `git push origin feature/<slug>` (ask-gated, so Sam approves it). On a partial run, commit and
+   push whatever the coder finished the same way so the branch on GitHub reflects progress.
 
-6. **Report back** with what was implemented (files touched, per the coder's own summary) and
-   tell Sam the next step is `/test <slug>`.
+6. **Report back** with what was implemented (files touched, per the coder's own summary), the
+   branch name, and whether it's pushed. Tell Sam the next step is `/test <slug>`, which tests
+   the branch and merges it into `main` if everything passes.
 
 ## Verification
 
@@ -45,3 +52,4 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 - `dotnet build`/`npm run build` succeed for whatever the coder touched (the coder subagent is
   responsible for checking this per task — spot-check if in doubt).
 - `proposal.md` status only reaches `implemented` when `tasks.md` has no remaining `- [ ]` items.
+- All commits are on `feature/<slug>`. `main` has no new commits from this run.
