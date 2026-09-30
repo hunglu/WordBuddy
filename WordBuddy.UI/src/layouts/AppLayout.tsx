@@ -18,11 +18,11 @@ export function AppLayout(): ReactElement {
   const navItems = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
 
   return (
-    <div className="flex min-h-screen bg-sky-50">
-      <aside className="flex w-64 flex-shrink-0 flex-col gap-2 bg-white p-4 shadow-md">
+    <div className="flex min-h-screen bg-wb-surface-page">
+      <aside className="flex w-64 flex-shrink-0 flex-col gap-2 bg-wb-surface-card p-4 shadow-wb-raised">
         <div className="mb-4 flex items-center gap-2 px-2">
           <span className="text-3xl">📚</span>
-          <span className="text-xl font-extrabold text-sky-700">WordBuddy</span>
+          <span className="text-xl font-extrabold text-wb-ink-muted">WordBuddy</span>
         </div>
 
         {navItems.map((item) => (
@@ -31,10 +31,10 @@ export function AppLayout(): ReactElement {
             to={item.to}
             end={item.end}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-semibold transition-colors ${
+              `flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
                 isActive
-                  ? 'bg-sky-500 text-white shadow'
-                  : 'text-sky-900 hover:bg-sky-100'
+                  ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
+                  : 'text-wb-ink hover:bg-wb-hover-tint'
               }`
             }
           >
@@ -43,16 +43,16 @@ export function AppLayout(): ReactElement {
           </NavLink>
         ))}
 
-        <div className="mt-auto flex items-center gap-3 rounded-2xl px-4 py-3">
+        <div className="mt-auto flex items-center gap-3 rounded-wb-lg px-4 py-3">
           <span className="text-2xl">👤</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-sky-900">{user?.displayName}</p>
+            <p className="text-sm font-semibold text-wb-ink">{user?.displayName}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={logout}
-          className="rounded-2xl px-4 py-3 text-left text-lg font-semibold text-rose-600 hover:bg-rose-50"
+          className="rounded-wb-lg px-4 py-3 text-left text-lg font-semibold text-wb-danger hover:bg-wb-danger-soft"
         >
           Log out
         </button>

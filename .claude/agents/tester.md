@@ -98,10 +98,13 @@ Write `.claude/plans/<slug>/test-report.md`:
 ## Commit, approve, and merge
 
 1. Set `.claude/plans/<slug>/proposal.md` frontmatter to `status: done` if the branch is approved
-   (see below), otherwise `status: needs-fixes`.
+   (see below), otherwise `status: needs-fixes`. Every edit to `proposal.md` also bumps `version`
+   and sets `updated` (see `docs/sdlc/workflow.md` → Proposal versioning).
    If approved, also update the living spec(s) named in `proposal.md`'s `affects:` field
    (`docs/features/<feature>.md`, created from `docs/features/_template.md` if missing) so they
    describe the feature *as it now behaves*, and append this slug to its `## Change history`.
+   Set `state: shipped` and `last-updated-by: <slug>`, remove this slug's line from
+   `## Pending changes`, and set its row in `docs/features/README.md` to `shipped`.
 2. Commit your work on `feature/<slug>`: `git add` the test files you wrote, `test-report.md`,
    `proposal.md`, and any `docs/features/*.md` you updated (specific paths, never
    `git add -A`/`.`), then
@@ -118,7 +121,7 @@ services are up, or merge by hand).
 ```bash
 git switch main
 git pull origin main
-git merge --no-ff feature/<slug> -m "Merge feature/<slug>: <title>"
+git merge --no-ff feature/<slug> -m "Merge feature/<slug>: <title>" -m "Closes #<issue>"   # omit -m "Closes …" when issue is none/pending
 git push origin main                 # ask-gated — Sam approves
 ```
 

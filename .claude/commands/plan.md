@@ -29,7 +29,8 @@ Argument: `$ARGUMENTS` is the slug. If missing, list the folders under `.claude/
    conversational back-and-forth of the rest of the workflow.
 
 3. **After the planner returns**, edit `.claude/plans/<slug>/proposal.md`'s frontmatter:
-   `status: idea` → `status: planned`.
+   `status: idea` → `status: planned`. Every edit to `proposal.md` also bumps `version` and sets
+   `updated` (see `docs/sdlc/workflow.md` → Proposal versioning).
 
 4. **Report back** with a short summary of the plan (not the full file — Sam can read
    `plan.md`) and the task count from `tasks.md`. End with: implementation will **not** start

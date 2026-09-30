@@ -24,7 +24,7 @@ version from the latest `git tag` and ask Sam to confirm.
    the first failure — never retry with a different command to get around a gate.
 4. **Smoke check.** `kubectl -n wordbuddy get pods` all `Running`; `GET /health` on each service
    via the ingress.
-5. **Record.** Set each released proposal to `status: released` and add `released: <version>`.
+5. **Record.** Set each released proposal to `status: released`, add `released: <version>`, and bump its `version` + `updated`.
    Commit (`release: <version>`), `git tag <version>`, then `git push origin main --tags`
    (ask-gated). If the proposal has an `issue`, remind Sam the issue closes via the release notes
    or close it with `gh issue close <n>`.

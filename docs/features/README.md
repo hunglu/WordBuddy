@@ -10,6 +10,7 @@ proposal's `affects:` field when it merges that proposal, so these always match 
 | Quiz | _to backfill_ | shipped |
 | Progress | _to backfill_ | shipped |
 | Vocabulary builder & check-up | `vocabulary-builder.md` (created on merge) | blocked |
+| UI theme tokens | `ui-theme.md` | shipped |
 
 Backfilling a shipped feature: ask Claude "backfill docs/features/<name>.md from the code" —
 read-only against code, writes only this folder.

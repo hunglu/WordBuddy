@@ -83,11 +83,25 @@ Page entrances use `motion.div` with a simple fade/slide; route transitions go t
 `AnimatePresence` in `App.tsx`. No CSS `transition`/`animation` for anything interactive, no
 inline `style` for animation values.
 
-### Styling — TailwindCSS only
+### Styling — Tailwind utilities + CSS Modules
 
-No inline `style={{}}` (animation values via Framer Motion's `style`/`animate` props are the one
-exception — those aren't CSS). No CSS Modules, no plain CSS files beyond `src/index.css`
-(`@import "tailwindcss";` only).
+- **Tailwind utilities first** for layout, spacing and one-off styling in JSX.
+- **CSS Modules** (`Component.module.css`, next to the component) for component-scoped styles
+  that would be unreadable as a long class string. Import as `styles` and use
+  `className={styles.card}`; class names are camelCase. A module that uses Tailwind (`@apply`,
+  `theme()`, `--color-*`) starts with `@reference "<relative path>/index.css";` — never
+  `@import "tailwindcss"` again (that duplicates the whole framework per module).
+- **Global CSS lives only in `src/index.css`**: `@import "tailwindcss"`, the `@theme` design
+  tokens, and base element rules. No other global `.css` files; no `:global` in modules except
+  for a documented third-party override.
+- Colours, radii, shadows and fonts always come from theme tokens (`var(--color-primary)` in a
+  module, `bg-primary` in JSX) — never raw hex or palette classes.
+- No inline `style={{}}` (animation values via Framer Motion's `style`/`animate` props are the one
+  exception — those aren't CSS). No Sass/Less/Stylus (unsupported with Tailwind v4).
+- **Bundling:** `vite build` emits **one minified CSS file** for the whole app
+  (`build.cssCodeSplit: false` in `vite.config.ts`) — every module and `index.css` concatenated,
+  scoped class names hashed, unused Tailwind utilities never generated. Don't add per-route CSS
+  splitting without an ADR.
 
 ### Auth
 

@@ -24,17 +24,17 @@ export function LessonDetailPage(): ReactElement {
   })
 
   if (isLoading) {
-    return <p className="text-lg text-sky-600">Loading lesson…</p>
+    return <p className="text-lg text-wb-ink-muted">Loading lesson…</p>
   }
 
   if (isError || !lesson) {
-    return <p className="text-lg text-rose-600">Couldn't load this lesson right now.</p>
+    return <p className="text-lg text-wb-danger">Couldn't load this lesson right now.</p>
   }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-sky-900">{lesson.title}</h1>
-      <p className="mt-1 text-lg text-sky-700">{lesson.description}</p>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{lesson.title}</h1>
+      <p className="mt-1 text-lg text-wb-ink-muted">{lesson.description}</p>
 
       <div className="mt-6">
         {lesson.type === 'Vocabulary' && <VocabularyList items={lesson.vocabularyItems} />}
@@ -46,7 +46,7 @@ export function LessonDetailPage(): ReactElement {
         type="button"
         onClick={() => completeMutation.mutate()}
         disabled={completeMutation.isPending || completeMutation.isSuccess}
-        className="mt-8 rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow transition-colors hover:bg-emerald-600 disabled:opacity-60"
+        className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card disabled:opacity-60"
       >
         {completeMutation.isSuccess ? 'Completed! 🎉' : completeMutation.isPending ? 'Saving…' : 'Mark as Complete'}
       </button>

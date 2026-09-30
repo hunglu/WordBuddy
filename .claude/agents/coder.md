@@ -53,7 +53,7 @@ For each unchecked `- [ ]` task, top to bottom:
    line so the checklist stays useful as a change log.
 4. Commit the task on the feature branch: `git add` the specific files you touched plus
    `tasks.md` (never `git add -A`/`.`), then
-   `git commit -m "<slug>: <short task summary>"` ending with the Co-Authored-By attribution line.
+   `git commit -m "<slug>: <short task summary>"` ending with the author and never adding Co-Authored-By any AI tools except the human author.
 5. Move to the next task.
 
 ## When to stop and ask instead of proceeding

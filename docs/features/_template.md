@@ -2,6 +2,7 @@
 feature: <Feature name>
 services: <Identity | Content | Quiz | Progress | Notification | UI>
 audience: <Child | Adult | Both>
+state: <proposed | shipped>
 last-updated-by: <slug>
 ---
 
@@ -23,6 +24,12 @@ last-updated-by: <slug>
 ## UI
 
 <Routes/pages involved.>
+
+## Pending changes
+
+<Proposals not yet merged that will change this feature — added by `/propose`, removed by `/test` on merge.>
+
+- `<slug>` — <one-line goal> (#<issue>)
 
 ## Change history
 
