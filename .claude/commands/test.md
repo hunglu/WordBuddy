@@ -1,25 +1,28 @@
 ---
 title: Test — verify an implemented plan
-description: Stage 4 of the idea → plan → code → test workflow. Invokes the tester subagent to write/extend unit, integration, and E2E tests and report results.
+description: Stage 5 of the propose → plan → code → review → test → release workflow. Invokes the tester subagent to write/extend unit, integration, and E2E tests and report results.
 status: draft
 ---
 
 ## Context
 
-Stage 4 of 4: **propose → plan → code → test**. Verification is done by the `tester` subagent
+Stage 5 of 6: **propose → plan → code → review → test → release**. Verification is done by the `tester` subagent
 (`.claude/agents/tester.md`), which owns unit/integration tests inside each touched service's
 existing `UnitTests`/`IntegrationTests` projects, plus the cross-cutting E2E projects
 `e2e/api/WordBuddy.E2E.Api.Tests` (.NET Playwright, API-level) and `e2e/ui` (TypeScript
 Playwright + playwright-bdd, UI-level).
 
 Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plans/` with
-`status: implemented` and ask Sam which one.
+`status: reviewed` and ask Sam which one.
 
 ## Steps
 
 1. **Validate.** Confirm `.claude/plans/<slug>/plan.md` and `tasks.md` exist and `proposal.md`'s
-   status is `implemented` (or `needs-fixes`, for a re-run after fixes). If status is earlier
-   than that, tell Sam to run `/code <slug>` first.
+   status is `reviewed`. If it's `implemented` or `changes-requested`, tell Sam to run
+   `/review <slug>` (or `/code <slug>` to fix findings) first — code is never merged unreviewed.
+   A `needs-fixes` branch goes back through `/code` → `/review` before `/test` again. Exception:
+   Sam explicitly says to re-test without code changes (e.g. services were down) — then
+   `needs-fixes` is accepted.
 
    Also confirm the `feature/<slug>` branch exists locally or on `origin`. If it doesn't, tell
    Sam to run `/code <slug>` first.

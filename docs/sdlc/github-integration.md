@@ -49,7 +49,7 @@ sang được.
 
 1. GitHub → avatar → **Your projects** → **New project** → template **Board** → tên `WordBuddy`.
 2. Field **Status**: đổi options thành
-   `Backlog · Ready · Planned · In progress · Done · Released` (khớp `status:` trong proposal —
+   `Backlog · Ready · Planned · In progress · In review · Done · Released` (khớp `status:` trong proposal —
    bảng mapping ở `workflow.md`).
 3. (Tùy chọn) thêm field `Service` (single select) và `Size` (S/M/L).
 4. Project → **⋯ → Workflows** (built-in, free) — bật:
@@ -69,8 +69,9 @@ Lấy số project cho CLI: `gh project list --owner hunglu`.
 | Chọn việc | Kéo card sang **Ready** |
 | Capture | Claude Code: `/propose #42` — Claude chạy `gh issue view 42`, điền `proposal.md` (`issue: 42`). Gõ `/propose <title>` không kèm số issue thì Claude tự tạo issue (`gh issue create --project WordBuddy`, cần Sam duyệt) và ghi số vào `issue:`; không có `gh` thì ghi `issue: pending` |
 | Plan | `/plan <slug>` → `gh issue comment 42 -F .claude/plans/<slug>/plan.md` → kéo **Planned** |
-| Code | `/code <slug>` → `gh pr create --base main --head feature/<slug> --body "Refs #42"` → **In progress** |
-| Test | `/test <slug>` merge vào `main`; merge commit chứa `Closes #42` → issue tự đóng → **Done** |
+| Code | `/code <slug>` → khi xong, Claude mở PR `gh pr create --base main --head feature/<slug>` (body có `Closes #42`, cần Sam duyệt) và ghi `pr:` vào proposal → **In progress** |
+| Review | `/review <slug>` → reviewer đọc diff PR, ghi `review.md`, đăng lên PR bằng `gh pr review --comment` → kéo **In review**. `changes-requested` thì quay lại `/code` rồi `/review` |
+| Test | `/test <slug>` (chỉ khi `reviewed`) → `gh pr merge <pr> --merge`; PR có `Closes #42` → issue tự đóng → **Done** |
 | Release | `/release` → kéo card sang **Released** |
 | Xem tổng | `/status` (local) hoặc mở board |
 

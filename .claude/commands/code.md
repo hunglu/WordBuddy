@@ -17,7 +17,8 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 ## Steps
 
 1. **Validate.** Confirm `.claude/plans/<slug>/plan.md` and `tasks.md` exist and
-   `proposal.md`'s status is `planned` or `in-progress`. If status is still `idea`, refuse and
+   `proposal.md`'s status is `planned` or `in-progress` (or `changes-requested` / `needs-fixes`
+   for a fix round — see the end of Steps). If status is still `idea`, refuse and
    tell Sam to run `/plan <slug>` first. Never fabricate a plan to get around this check.
 
 2. If status is `planned`, edit `proposal.md` frontmatter to `status: in-progress` before
@@ -43,9 +44,27 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    `git push origin feature/<slug>` (ask-gated, so Sam approves it). On a partial run, commit and
    push whatever the coder finished the same way so the branch on GitHub reflects progress.
 
-6. **Report back** with what was implemented (files touched, per the coder's own summary), the
-   branch name, and whether it's pushed. Tell Sam the next step is `/test <slug>`, which tests
-   the branch and merges it into `main` if everything passes.
+6. **Open or update the pull request** (only once `status: implemented`, not on a partial run):
+   - `pr:` is `none`/missing → create it (ask-gated):
+     ```bash
+     gh pr create -R hunglu/WordBuddy --base main --head feature/<slug> \
+       --title "<title>" --body-file <tmp body>
+     ```
+     Body (temp file in the scratchpad): `Plan: .claude/plans/<slug>/`, a short summary of what
+     changed (from the coder's report), the task checklist status, and `Closes #<issue>` (omit
+     when `issue` is none/pending). Write the PR number to `proposal.md` as `pr: <n>` (bump
+     `version` + `updated`), commit and push that.
+   - `pr:` already set (fix round after review or test) → `gh pr comment <pr> --body "<what
+     was fixed, which findings>"` (ask-gated).
+   If `gh` is unavailable or Sam declines, leave `pr: none`, say so; `/review` can open it later.
+
+7. **Report back** with what was implemented (files touched, per the coder's own summary), the
+   branch name, whether it's pushed, and the PR link. Tell Sam the next step is
+   `/review <slug>`, which reviews the PR before `/test` can merge it.
+
+**Fix rounds.** If status is `changes-requested` (from `/review`) or `needs-fixes` (from
+`/test`), pass `review.md` / `test-report.md` to the coder as the task list for this round; it
+fixes only those findings on the same branch. Status goes back to `implemented` when done.
 
 ## Verification
 

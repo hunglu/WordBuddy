@@ -1,10 +1,12 @@
 # SDLC workflow
 
 ```
-GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─▶ /code ─▶ /test ─▶ /release
-        idea                 idea         planned               in-progress  done     released
-                                                                implemented  needs-fixes ─┐
-                                                                     ▲────────────────────┘
+Issue ─▶ /propose ─▶ /plan ─▶ [Sam reads plan] ─▶ /code ──────▶ /review ──────▶ /test ──────▶ /release
+ idea      idea      planned                      in-progress    reviewed         done           released
+                                                  implemented +  changes-         needs-fixes
+                                                  PR opened      requested
+                                                     ▲               │                │
+                                                     └── /code fix ◀─┴────────────────┘
 ```
 
 | Stage | Command | Output | Board column |
@@ -12,14 +14,21 @@ GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─�
 | Intake | new GitHub issue (form) | issue `#n` | Backlog |
 | Capture | `/propose [#n] <title>` | `proposal.md`, living spec stub or pending line in `docs/features/`, GitHub issue created if none given | Ready |
 | Plan | `/plan <slug>` | `plan.md`, `tasks.md` | Planned |
-| Build | `/code <slug>` | `feature/<slug>` branch, commits, PR | In progress |
-| Verify | `/test <slug>` | `test-report.md`, living spec update, merge | Done |
+| Build | `/code <slug>` | `feature/<slug>` branch, commits, **pull request** `feature/<slug>` → `main` (`pr:` in proposal) | In progress |
+| Review | `/review <slug>` | `review.md` (findings: blocker / major / nit), review posted on the PR | In review |
+| Verify | `/test <slug>` | `test-report.md`, living spec update, **PR merged** (`gh pr merge --merge`, `Closes #n`) | Done |
 | Ship | `/release` | `docs/releases/<v>.md`, git tag, kind deploy | Released |
 | Look | `/status` | table of all proposals + next step | — |
 
 **Entry point:** an issue on GitHub (or `/propose` directly for quick ideas).
 **Loop:** nothing runs on its own. Each session: `/status` → take the top item → run its next
-command. Human gates: reviewing `plan.md` before `/code`, and approving every `git push`.
+command. Human gates: reviewing `plan.md` before `/code`, reading `review.md` before `/test`,
+and approving every `git push`, PR post and PR merge.
+
+**Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed`; any code
+change after a review (review fixes or test fixes) goes back through `/review`. The reviewer
+can't approve its own account's PR on GitHub, so the verdict lives in `review.md` and a PR
+comment; branch protection that requires an approving review needs a second GitHub account.
 
 ## Proposal versioning
 

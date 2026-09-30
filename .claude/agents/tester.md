@@ -116,14 +116,28 @@ suite reported as `Skipped` is not a pass: in that case don't merge — report w
 skipped and why, set `status: needs-fixes`, and let Sam decide (re-run `/test <slug>` once
 services are up, or merge by hand).
 
-**If approved**, merge into `main`:
+**If approved**, merge into `main` **through the pull request** (`pr:` in `proposal.md`), so
+GitHub records the merge, links the review, and closes the issue:
+
+```bash
+gh pr merge <pr> -R hunglu/WordBuddy --merge \
+  --subject "Merge feature/<slug>: <title>" --body "Closes #<issue>"   # omit Closes when issue is none/pending; ask-gated
+git switch main && git pull origin main
+```
+
+`--merge` makes a merge commit (the same shape as `--no-ff`); never `--squash`/`--rebase`, and
+never `--delete-branch`. Only if `pr:` is `none` (no PR could be opened) fall back to:
 
 ```bash
 git switch main
 git pull origin main
-git merge --no-ff feature/<slug> -m "Merge feature/<slug>: <title>" -m "Closes #<issue>"   # omit -m "Closes …" when issue is none/pending
+git merge --no-ff feature/<slug> -m "Merge feature/<slug>: <title>" -m "Closes #<issue>"
 git push origin main                 # ask-gated — Sam approves
 ```
+
+Before merging, confirm `proposal.md` was `reviewed` when you started and `review.md`'s verdict
+is Approve; if not, don't merge. Post the verdict on the PR too:
+`gh pr comment <pr> --body-file .claude/plans/<slug>/test-report.md` (ask-gated).
 
 - If the merge conflicts, `git merge --abort`, switch back to `feature/<slug>`, set the verdict
   to "Not merged — conflicts with main", and stop.

@@ -57,6 +57,7 @@ anything else.
    status: idea
    type: <new | change | bugfix>
    issue: <GitHub issue number, e.g. 42 — or "none">
+   pr: none            # set by /code when it opens the pull request
    affects: <docs/features/<feature>.md paths this changes, comma-separated — or "none">
    supersedes: <slug of an earlier proposal this changes — or "none">
    version: 1.0
