@@ -16,6 +16,9 @@ edits any file, never changes a status.
    `needs-fixes`, `implemented`, `in-progress`, `planned`, `idea`, `blocked`, `released`, `done`,
    `untracked`.
    Columns: slug · title · type · issue · next step.
+   Under the table, warn about: any issue number used by more than one proposal (a duplicate
+   link — Sam picks which folder keeps it), and every proposal with `issue: pending` or `none`
+   (not yet on the board).
 3. Next step per status:
    | status | next |
    |---|---|

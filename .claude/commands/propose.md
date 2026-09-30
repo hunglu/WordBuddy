@@ -38,8 +38,12 @@ anything else.
      always gets its own new folder.
    - GitHub issue number, if the idea came from the Kanban board (see
      `docs/sdlc/github-integration.md`). If `$ARGUMENTS` starts with `#<n>`, that is the issue:
-     run `gh issue view <n> --json title,body,labels` and fill the fields from it before asking
+     run `gh issue view <n> --json title,body,labels,state` and fill the fields from it before asking
      Sam anything. If `gh` is missing or not authenticated, say so and continue with what Sam typed.
+     **One issue ↔ one proposal:** before going further, check that no existing
+     `.claude/plans/*/proposal.md` already has `issue: <n>`. If one does, stop and tell Sam which
+     slug owns it (suggest `/plan <that-slug>` or a `type: change` proposal) — never create a
+     second folder for the same issue. If the issue is closed, say so and ask before continuing.
 
    If Sam gives a terse one-liner and says "that's enough, go", don't push back — capture what
    you have and leave the rest as `_Not specified._` in the template. This command must not block
@@ -81,11 +85,66 @@ anything else.
    <constraints, or "_Not specified._">
    ```
 
-4. **Report back** with the slug and file path, and tell Sam the next step is
+4. **Living spec (`docs/features/`).** Every proposal points at one or more living specs via
+   `affects:`:
+   - `type: new` → `affects: docs/features/<slug>.md`. Create that file from
+     `docs/features/_template.md` with `state: proposed`, `last-updated-by: <slug>`, the title,
+     and "What it does" filled from the proposal's Goal (marked _Proposed — not on main yet_).
+     Add a row to `docs/features/README.md` with status `proposed`.
+   - `type: change` / `bugfix` → `affects:` names the existing spec(s). Don't rewrite them; append
+     one line under their `## Pending changes` section:
+     `- <slug> — <one-line goal> (#<issue>)`. If no spec exists yet for that feature, create one
+     as for `new` and say so.
+   The tester turns `proposed` into `shipped` (and removes the pending line) when it merges.
+
+5. **GitHub issue — link first, create only if nothing matches.** Issues arrive two ways: typed
+   on the GitHub website (then `/propose #<n>`), or created here. Never end up with two.
+
+   a. **`#<n>` given** → link only (step 2 already checked it). Never run `gh issue create`.
+
+   b. **No `#<n>`** → search before creating (read-only, not gated):
+      ```bash
+      gh issue list -R hunglu/WordBuddy --state all --limit 20 \
+        --search "wordbuddy-slug:<slug> in:body" --json number,title,state,url
+      gh issue list -R hunglu/WordBuddy --state open --limit 20 \
+        --search "<title> in:title" --json number,title,state,url
+      ```
+      - The first search finds issues this command created before (the marker below) — an exact
+        match. If found, link it (`issue: <n>`) and **don't** create.
+      - The second finds website-created issues with a similar title. If any look like the same
+        idea, list them and ask Sam: link one (`issue: <n>`, then the step-2 ownership check) or
+        create a new one. Don't decide for him.
+      - Only when both searches are empty (or Sam says "new"), create:
+      ```bash
+      gh issue create -R hunglu/WordBuddy --title "<title>" --label "type:<type>" \
+        --body-file <tmp body> --project "WordBuddy"
+      ```
+      The body is `Plan: .claude/plans/<slug>/`, a blank line, the proposal's Problem/Goal/
+      Success criteria, and a last line `<!-- wordbuddy-slug: <slug> -->` (the dedup marker —
+      always include it). Write the body to a temp file in the scratchpad, not the repo.
+
+   c. `gh issue create` is ask-gated — Sam approves it. Put the number in `issue:` (part of the
+      creation edit, no version bump). If `--project` fails (board not set up), retry once
+      without it and tell Sam. If `gh` is missing, unauthenticated, or Sam declines, write
+      `issue: pending`, say why, and continue — never block the proposal on GitHub.
+
+   d. **Linking a website issue** (a, or b's "link"): if its body lacks the marker, append
+      `Plan: .claude/plans/<slug>/` and `<!-- wordbuddy-slug: <slug> -->` with
+      `gh issue edit <n> --body-file` (ask-gated), so later runs find it by marker.
+
+   To link an `issue: pending` proposal later, re-run the searches in b by hand (or ask Claude);
+   `/status` lists pending ones so they aren't forgotten.
+
+6. **Report back** with the slug, file paths, and the issue link, and tell Sam the next step is
    `/plan <slug>` — do not start planning yourself.
 
 ## Verification
 
 - `.claude/plans/<slug>/proposal.md` exists with `status: idea`, `version: 1.0`, and `created` = `updated` = the current local timestamp (get it with
   `date +%Y-%m-%dT%H:%M:%S%:z` — never guess the time).
-- No files outside `.claude/plans/<slug>/` were touched.
+- `issue:` is a number, or `pending` with the reason reported.
+- That issue number appears in exactly one `.claude/plans/*/proposal.md`, and its body carries
+  `<!-- wordbuddy-slug: <slug> -->`.
+- `gh issue create` ran at most once, and only after both searches came back empty or Sam chose "new".
+- Every path in `affects:` exists under `docs/features/` (new stub or a `## Pending changes` line).
+- Nothing outside `.claude/plans/<slug>/` and `docs/features/` was touched.

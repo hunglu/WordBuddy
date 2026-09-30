@@ -10,7 +10,7 @@ GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─�
 | Stage | Command | Output | Board column |
 | --- | --- | --- | --- |
 | Intake | new GitHub issue (form) | issue `#n` | Backlog |
-| Capture | `/propose #n <title>` | `.claude/plans/<slug>/proposal.md` | Ready |
+| Capture | `/propose [#n] <title>` | `proposal.md`, living spec stub or pending line in `docs/features/`, GitHub issue created if none given | Ready |
 | Plan | `/plan <slug>` | `plan.md`, `tasks.md` | Planned |
 | Build | `/code <slug>` | `feature/<slug>` branch, commits, PR | In progress |
 | Verify | `/test <slug>` | `test-report.md`, living spec update, merge | Done |

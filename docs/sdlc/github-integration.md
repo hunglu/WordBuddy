@@ -67,7 +67,7 @@ Lấy số project cho CLI: `gh project list --owner hunglu`.
 | --- | --- |
 | Có ý tưởng | Tạo issue bằng form (web hoặc app điện thoại) → tự vào **Backlog** |
 | Chọn việc | Kéo card sang **Ready** |
-| Capture | Claude Code: `/propose #42` — Claude chạy `gh issue view 42`, điền `proposal.md` (`issue: 42`) |
+| Capture | Claude Code: `/propose #42` — Claude chạy `gh issue view 42`, điền `proposal.md` (`issue: 42`). Gõ `/propose <title>` không kèm số issue thì Claude tự tạo issue (`gh issue create --project WordBuddy`, cần Sam duyệt) và ghi số vào `issue:`; không có `gh` thì ghi `issue: pending` |
 | Plan | `/plan <slug>` → `gh issue comment 42 -F .claude/plans/<slug>/plan.md` → kéo **Planned** |
 | Code | `/code <slug>` → `gh pr create --base main --head feature/<slug> --body "Refs #42"` → **In progress** |
 | Test | `/test <slug>` merge vào `main`; merge commit chứa `Closes #42` → issue tự đóng → **Done** |

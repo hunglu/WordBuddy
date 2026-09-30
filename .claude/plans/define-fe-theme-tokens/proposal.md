@@ -2,12 +2,12 @@
 title: Define FE theme tokens
 status: implemented
 type: change
-issue: none
+issue: 2
 affects: docs/features/ui-theme.md
 supersedes: none
-version: 8.0
+version: 9.0
 created: 2026-09-30T00:00:00+07:00
-updated: 2026-10-01T00:08:59+07:00
+updated: 2026-10-01T00:31:45+07:00
 ---
 
 ## Problem
