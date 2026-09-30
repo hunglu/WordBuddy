@@ -99,8 +99,12 @@ Write `.claude/plans/<slug>/test-report.md`:
 
 1. Set `.claude/plans/<slug>/proposal.md` frontmatter to `status: done` if the branch is approved
    (see below), otherwise `status: needs-fixes`.
+   If approved, also update the living spec(s) named in `proposal.md`'s `affects:` field
+   (`docs/features/<feature>.md`, created from `docs/features/_template.md` if missing) so they
+   describe the feature *as it now behaves*, and append this slug to its `## Change history`.
 2. Commit your work on `feature/<slug>`: `git add` the test files you wrote, `test-report.md`,
-   and `proposal.md` (specific paths, never `git add -A`/`.`), then
+   `proposal.md`, and any `docs/features/*.md` you updated (specific paths, never
+   `git add -A`/`.`), then
    `git commit -m "<slug>: tests and test report"` ending with the Co-Authored-By attribution line.
 3. `git push origin feature/<slug>` (ask-gated — Sam approves).
 

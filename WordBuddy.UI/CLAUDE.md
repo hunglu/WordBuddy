@@ -1,9 +1,10 @@
-# WordBuddy.UI — CLAUDE.md
+<!-- Frontend-specific rules only. Project-wide context (domain, workflow, docs map) is in
+     ../CLAUDE.md; backend rules in ../WordBuddy/CLAUDE.md. Stable rules only — no run logs. -->
 
-Frontend for WordBuddy — an English learning app for children and adults. React 19 + TypeScript
-SPA served by Vite, talking to the WordBuddy backend (separate repo:
-`https://github.com/hunglu/WordBuddy`, 5 independent microservices — see that repo's
-`CLAUDE.md` for the independence model, domain concepts, and conventions).
+# WordBuddy.UI
+
+React + TypeScript SPA served by Vite (versions: `package.json`), talking to the 5 backend
+microservices in `../WordBuddy`.
 
 ## Stack (as actually installed)
 
