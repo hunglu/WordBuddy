@@ -23,7 +23,7 @@ Work top to bottom, one commit per item. "Verify" means run `npm run build && np
 In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/active movement. Keep colour hovers, which are now instant. Move lift and press motion to `motion.*` `whileHover`/`whileTap`.
 
 - [x] Migrate `layouts/PublicLayout.tsx` and `layouts/AppLayout.tsx`. Verify: no palette or `transition` classes remain, and the sidebar looks unchanged in light. — `layouts/PublicLayout.tsx`, `layouts/AppLayout.tsx` (unmapped left in place, see Gaps)
-- [ ] Migrate `pages/LoginPage.tsx`. Verify: the primary button uses `bg-wb-primary text-wb-on-primary hover:bg-wb-primary-hover`, and inputs use `border-wb-border-control`.
+- [x] Migrate `pages/LoginPage.tsx`. Verify: the primary button uses `bg-wb-primary text-wb-on-primary hover:bg-wb-primary-hover`, and inputs use `border-wb-border-control`. — `pages/LoginPage.tsx`
 - [ ] Migrate `pages/RegisterPage.tsx`. Verify: the same checks as Login pass, and the AgeGroup selector still works.
 - [ ] Migrate `pages/DashboardPage.tsx`. Verify: streak numbers use `text-wb-highlight`, cards use `shadow-wb-card`/`rounded-wb-card`, and any card lift is done with `whileHover`.
 - [ ] Migrate `pages/LessonsPage.tsx`, applying `levelClasses` to level badges. Verify: cards use `wb-vocab-*`/`wb-grammar-*`, the active tab uses `bg-wb-primary`, card hover lift uses Framer Motion, and no `hover:-translate`/`hover:shadow` remains.
