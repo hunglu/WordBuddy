@@ -9,7 +9,7 @@ microservices in `../WordBuddy`.
 ## Stack (as actually installed)
 
 | Layer | Library | Version |
-|---|---|---|
+| --- | --- | --- |
 | Build | Vite | 8.x |
 | UI | React | 19.x |
 | Routing | React Router | 7.x |
@@ -25,6 +25,7 @@ microservices in `../WordBuddy`.
 The backend is 5 independent microservices with no shared origin — there is no single "backend
 URL" to point at. Instead, `apiClient` (`src/api/client.ts`) uses a **relative** base URL
 (`/api`), and routing to the right service happens by path prefix:
+
 - **Dev**: `vite.config.ts`'s `server.proxy` maps `/api/auth` → Identity (`:5080`),
   `/api/lessons`+`/api/media` → Content (`:5081`), `/api/quiz` → Quiz (`:5082`),
   `/api/progress` → Progress (`:5083`).

@@ -1,7 +1,7 @@
 # WordBuddy docs
 
 | Folder | What lives here | Mutability |
-|---|---|---|
+| --- | --- | --- |
 | `product/roadmap.md` | Themes and priorities — the *why* behind the backlog | edited freely |
 | `features/<feature>.md` | **Living spec** — how a feature behaves *today* | updated by `/test` on every merge |
 | `adr/NNNN-*.md` | Architecture Decision Records | append-only; supersede, never rewrite |

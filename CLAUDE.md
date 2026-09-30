@@ -8,7 +8,7 @@ English learning web app for children and adults — vocabulary lessons, grammar
 phrases, and quizzes, delivered as text, images, audio pronunciations, and video clips.
 
 | Part | Folder | Specific rules |
-|---|---|---|
+| --- | --- | --- |
 | Backend — 5 independent .NET microservices | `./WordBuddy` | `WordBuddy/CLAUDE.md` |
 | Frontend — React + TypeScript SPA | `./WordBuddy.UI` | `WordBuddy.UI/CLAUDE.md` |
 | Cross-service E2E tests (API + UI) | `./e2e` | each project's `README.md` |
@@ -22,7 +22,7 @@ Versions are not repeated here — the source of truth is `WordBuddy/global.json
 ## Domain concepts
 
 | Concept | Description | Owning service |
-|---|---|---|
+| --- | --- | --- |
 | `User` | Learner or admin account with profile, role, `AgeGroup` (Child/Adult) | Identity |
 | `Lesson` | A structured learning unit (vocabulary or grammar) | Content |
 | `Vocabulary` | A word entry with definition, examples, and media | Content |
@@ -38,7 +38,7 @@ authorization policies and UI alike. Every feature must state its child vs. adul
 ## Where things live
 
 | What | Where | Mutability |
-|---|---|---|
+| --- | --- | --- |
 | Stable rules for Claude | `CLAUDE.md` files (this + per-folder) | rarely; ask-gated |
 | Current behaviour of each feature (living spec) | `docs/features/<feature>.md` | updated on every merge |
 | Architecture decisions | `docs/adr/NNNN-*.md` | append-only |
@@ -56,7 +56,7 @@ Output of any workflow run is written into its `.claude/plans/<slug>/` folder �
 Full description: `docs/sdlc/workflow.md`. GitHub integration: `docs/sdlc/github-integration.md`.
 
 | Command | Agent | Result (`status:` in `proposal.md`) |
-|---|---|---|
+| --- | --- | --- |
 | `/status` | — | read-only board of all proposals + next step |
 | `/propose [#issue] <title>` | — | `proposal.md` → `idea` |
 | `/plan <slug>` | `planner` | `plan.md` + `tasks.md` → `planned` — **approval gate** |

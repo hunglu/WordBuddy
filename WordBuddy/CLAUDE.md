@@ -35,7 +35,7 @@ WordBuddy/
 ```
 
 | Service | Owns | Enums |
-|---|---|---|
+| --- | --- | --- |
 | Identity | `User` | `AgeGroup` |
 | Content | `Lesson`, `Vocabulary`, `Grammar`, `DailyPhrase`, `MediaAsset` | `Level`, `LessonType`, `MediaAssetType` |
 | Quiz | `Quiz`, `QuizQuestion` | `QuizQuestionType` |
@@ -117,7 +117,7 @@ dotnet run --project src/Services/<Service>/WordBuddy.<Service>.Api
 target not chosen yet). Rebuild images only after `make publish-shared` if a shared lib changed.
 
 | Service | Image | k8s Deployment | Ingress prefix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Identity | `wordbuddy-identity:dev` | `identity-api` | `/api/auth` |
 | Content | `wordbuddy-content:dev` | `content-api` | `/api/lessons`, `/api/media` |
 | Quiz | `wordbuddy-quiz:dev` | `quiz-api` | `/api/quiz` |

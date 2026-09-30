@@ -3,7 +3,7 @@
 ## Chi phí — cái gì free, cái gì không
 
 | Thành phần | Giá | Ghi chú |
-|---|---|---|
+| --- | --- | --- |
 | GitHub Issues, Labels, Milestones | Free | public và private repo |
 | GitHub Projects v2 (board/table/roadmap) + built-in workflows | Free | auto-add, auto-move khi close/merge |
 | Issue forms (`.github/ISSUE_TEMPLATE/*.yml`) | Free | |
@@ -64,7 +64,7 @@ Lấy số project cho CLI: `gh project list --owner hunglu`.
 ## Bước 5 — Vòng làm việc hằng ngày
 
 | Việc | Ai / lệnh |
-|---|---|
+| --- | --- |
 | Có ý tưởng | Tạo issue bằng form (web hoặc app điện thoại) → tự vào **Backlog** |
 | Chọn việc | Kéo card sang **Ready** |
 | Capture | Claude Code: `/propose #42` — Claude chạy `gh issue view 42`, điền `proposal.md` (`issue: 42`) |
@@ -98,6 +98,7 @@ fine-grained PAT (quyền Issues / Pull requests / Projects read-write). Thêm v
 `"enabledMcpjsonServers": ["github"]` trong `.claude/settings.json`.
 
 ## Không nên làm
+
 - Không chạy Claude trong GitHub Actions (tốn phí API).
 - Không quản lý status song song ở cả label lẫn Project field.
 - Không sửa issue đã đóng để "đổi tính năng" — mở issue mới `type:change`, link issue cũ.

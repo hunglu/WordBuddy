@@ -8,7 +8,7 @@ GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─�
 ```
 
 | Stage | Command | Output | Board column |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Intake | new GitHub issue (form) | issue `#n` | Backlog |
 | Capture | `/propose #n <title>` | `.claude/plans/<slug>/proposal.md` | Ready |
 | Plan | `/plan <slug>` | `plan.md`, `tasks.md` | Planned |
@@ -22,9 +22,11 @@ GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─�
 command. Human gates: reviewing `plan.md` before `/code`, and approving every `git push`.
 
 ## Changing an existing feature
+
 1. Read `docs/features/<feature>.md` (current behaviour).
 2. `/propose` with `type: change`, `affects: docs/features/<feature>.md`, `supersedes: <old-slug>`.
 3. Normal flow. `/test` rewrites the living spec on merge. The old plan folder is never edited.
 
 ## Bugs
+
 `type: bugfix`. Small fixes may keep `plan.md` short but still get a folder + `test-report.md`.
