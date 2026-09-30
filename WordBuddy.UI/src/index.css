@@ -1,1 +1,218 @@
 @import "tailwindcss";
+
+/* Theme tokens — source of truth: .claude/skills/frontend-design/design-tokens.json (v2).
+   Every custom token is wb- prefixed; Tailwind built-ins are never overridden. */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --color-wb-surface-page: var(--wb-surface-page);
+  --color-wb-surface-card: var(--wb-surface-card);
+  --color-wb-ink: var(--wb-ink);
+  --color-wb-ink-muted: var(--wb-ink-muted);
+  --color-wb-primary: var(--wb-primary);
+  --color-wb-primary-hover: var(--wb-primary-hover);
+  --color-wb-on-primary: var(--wb-on-primary);
+  --color-wb-brand-sky: var(--wb-brand-sky);
+  --color-wb-border-subtle: var(--wb-border-subtle);
+  --color-wb-border-control: var(--wb-border-control);
+  --color-wb-focus-ring: var(--wb-focus-ring);
+  --color-wb-vocab-bg: var(--wb-vocab-bg);
+  --color-wb-vocab-ink: var(--wb-vocab-ink);
+  --color-wb-vocab-border: var(--wb-vocab-border);
+  --color-wb-grammar-bg: var(--wb-grammar-bg);
+  --color-wb-grammar-ink: var(--wb-grammar-ink);
+  --color-wb-grammar-border: var(--wb-grammar-border);
+  --color-wb-phrase-bg: var(--wb-phrase-bg);
+  --color-wb-phrase-ink: var(--wb-phrase-ink);
+  --color-wb-phrase-border: var(--wb-phrase-border);
+  --color-wb-success: var(--wb-success);
+  --color-wb-on-success: var(--wb-on-success);
+  --color-wb-danger: var(--wb-danger);
+  --color-wb-danger-soft: var(--wb-danger-soft);
+  --color-wb-share-private-bg: var(--wb-share-private-bg);
+  --color-wb-share-private-ink: var(--wb-share-private-ink);
+  --color-wb-share-private-border: var(--wb-share-private-border);
+  --color-wb-share-pending-bg: var(--wb-share-pending-bg);
+  --color-wb-share-pending-ink: var(--wb-share-pending-ink);
+  --color-wb-share-pending-border: var(--wb-share-pending-border);
+  --color-wb-share-shared-bg: var(--wb-share-shared-bg);
+  --color-wb-share-shared-ink: var(--wb-share-shared-ink);
+  --color-wb-share-shared-border: var(--wb-share-shared-border);
+  --color-wb-share-rejected-bg: var(--wb-share-rejected-bg);
+  --color-wb-share-rejected-ink: var(--wb-share-rejected-ink);
+  --color-wb-share-rejected-border: var(--wb-share-rejected-border);
+  --color-wb-level-beginner-bg: var(--wb-level-beginner-bg);
+  --color-wb-level-beginner-ink: var(--wb-level-beginner-ink);
+  --color-wb-level-intermediate-bg: var(--wb-level-intermediate-bg);
+  --color-wb-level-intermediate-ink: var(--wb-level-intermediate-ink);
+  --color-wb-level-advanced-bg: var(--wb-level-advanced-bg);
+  --color-wb-level-advanced-ink: var(--wb-level-advanced-ink);
+  --color-wb-secondary: var(--wb-secondary);
+  --color-wb-secondary-hover: var(--wb-secondary-hover);
+  --color-wb-on-secondary: var(--wb-on-secondary);
+  --color-wb-highlight: var(--wb-highlight);
+
+  --radius-wb-md: 12px;
+  --radius-wb-lg: 16px;
+  --radius-wb-card: 24px;
+  --radius-wb-pill: 9999px;
+
+  --shadow-wb-card: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a;
+  --shadow-wb-raised: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
+
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+:root {
+  --wb-surface-page: #f0f9ff;
+  --wb-surface-card: #ffffff;
+  --wb-ink: #0c4a6e;
+  --wb-ink-muted: #0369a1;
+  --wb-primary: #0369a1;
+  --wb-primary-hover: #075985;
+  --wb-on-primary: #ffffff;
+  --wb-brand-sky: #0ea5e9;
+  --wb-border-subtle: #bae6fd;
+  --wb-border-control: #0284c7;
+  --wb-focus-ring: #0284c7;
+  --wb-vocab-bg: #e0f2fe;
+  --wb-vocab-ink: #075985;
+  --wb-vocab-border: #7dd3fc;
+  --wb-grammar-bg: #d1fae5;
+  --wb-grammar-ink: #065f46;
+  --wb-grammar-border: #6ee7b7;
+  --wb-phrase-bg: #fef3c7;
+  --wb-phrase-ink: #92400e;
+  --wb-phrase-border: #fcd34d;
+  --wb-success: #047857;
+  --wb-on-success: #ffffff;
+  --wb-danger: #be123c;
+  --wb-danger-soft: #ffe4e6;
+  --wb-share-private-bg: #e0f2fe;
+  --wb-share-private-ink: #075985;
+  --wb-share-private-border: #7dd3fc;
+  --wb-share-pending-bg: #fef3c7;
+  --wb-share-pending-ink: #92400e;
+  --wb-share-pending-border: #fcd34d;
+  --wb-share-shared-bg: #d1fae5;
+  --wb-share-shared-ink: #065f46;
+  --wb-share-shared-border: #6ee7b7;
+  --wb-share-rejected-bg: #ffe4e6;
+  --wb-share-rejected-ink: #9f1239;
+  --wb-share-rejected-border: #fda4af;
+  --wb-level-beginner-bg: #d1fae5;
+  --wb-level-beginner-ink: #065f46;
+  --wb-level-intermediate-bg: #e0f2fe;
+  --wb-level-intermediate-ink: #075985;
+  --wb-level-advanced-bg: #ede9fe;
+  --wb-level-advanced-ink: #5b21b6;
+  --wb-secondary: #b45309;
+  --wb-secondary-hover: #92400e;
+  --wb-on-secondary: #ffffff;
+  --wb-highlight: #b45309;
+  color-scheme: light;
+}
+
+/* Dark values appear twice (OS preference + explicit attribute) — keep both blocks in the same order. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wb-surface-page: #0f172a;
+    --wb-surface-card: #1e293b;
+    --wb-ink: #e0f2fe;
+    --wb-ink-muted: #7dd3fc;
+    --wb-primary: #38bdf8;
+    --wb-primary-hover: #7dd3fc;
+    --wb-on-primary: #0f172a;
+    --wb-brand-sky: #0ea5e9;
+    --wb-border-subtle: #334155;
+    --wb-border-control: #64748b;
+    --wb-focus-ring: #38bdf8;
+    --wb-vocab-bg: #082f49;
+    --wb-vocab-ink: #bae6fd;
+    --wb-vocab-border: #0369a1;
+    --wb-grammar-bg: #022c22;
+    --wb-grammar-ink: #a7f3d0;
+    --wb-grammar-border: #047857;
+    --wb-phrase-bg: #451a03;
+    --wb-phrase-ink: #fde68a;
+    --wb-phrase-border: #b45309;
+    --wb-success: #34d399;
+    --wb-on-success: #0f172a;
+    --wb-danger: #fb7185;
+    --wb-danger-soft: #4c0519;
+    --wb-share-private-bg: #082f49;
+    --wb-share-private-ink: #bae6fd;
+    --wb-share-private-border: #0369a1;
+    --wb-share-pending-bg: #451a03;
+    --wb-share-pending-ink: #fde68a;
+    --wb-share-pending-border: #b45309;
+    --wb-share-shared-bg: #022c22;
+    --wb-share-shared-ink: #a7f3d0;
+    --wb-share-shared-border: #047857;
+    --wb-share-rejected-bg: #4c0519;
+    --wb-share-rejected-ink: #fecdd3;
+    --wb-share-rejected-border: #be123c;
+    --wb-level-beginner-bg: #022c22;
+    --wb-level-beginner-ink: #a7f3d0;
+    --wb-level-intermediate-bg: #082f49;
+    --wb-level-intermediate-ink: #bae6fd;
+    --wb-level-advanced-bg: #2e1065;
+    --wb-level-advanced-ink: #ddd6fe;
+    --wb-secondary: #fbbf24;
+    --wb-secondary-hover: #fcd34d;
+    --wb-on-secondary: #0f172a;
+    --wb-highlight: #fbbf24;
+    color-scheme: dark;
+  }
+}
+
+[data-theme="dark"] {
+  --wb-surface-page: #0f172a;
+  --wb-surface-card: #1e293b;
+  --wb-ink: #e0f2fe;
+  --wb-ink-muted: #7dd3fc;
+  --wb-primary: #38bdf8;
+  --wb-primary-hover: #7dd3fc;
+  --wb-on-primary: #0f172a;
+  --wb-brand-sky: #0ea5e9;
+  --wb-border-subtle: #334155;
+  --wb-border-control: #64748b;
+  --wb-focus-ring: #38bdf8;
+  --wb-vocab-bg: #082f49;
+  --wb-vocab-ink: #bae6fd;
+  --wb-vocab-border: #0369a1;
+  --wb-grammar-bg: #022c22;
+  --wb-grammar-ink: #a7f3d0;
+  --wb-grammar-border: #047857;
+  --wb-phrase-bg: #451a03;
+  --wb-phrase-ink: #fde68a;
+  --wb-phrase-border: #b45309;
+  --wb-success: #34d399;
+  --wb-on-success: #0f172a;
+  --wb-danger: #fb7185;
+  --wb-danger-soft: #4c0519;
+  --wb-share-private-bg: #082f49;
+  --wb-share-private-ink: #bae6fd;
+  --wb-share-private-border: #0369a1;
+  --wb-share-pending-bg: #451a03;
+  --wb-share-pending-ink: #fde68a;
+  --wb-share-pending-border: #b45309;
+  --wb-share-shared-bg: #022c22;
+  --wb-share-shared-ink: #a7f3d0;
+  --wb-share-shared-border: #047857;
+  --wb-share-rejected-bg: #4c0519;
+  --wb-share-rejected-ink: #fecdd3;
+  --wb-share-rejected-border: #be123c;
+  --wb-level-beginner-bg: #022c22;
+  --wb-level-beginner-ink: #a7f3d0;
+  --wb-level-intermediate-bg: #082f49;
+  --wb-level-intermediate-ink: #bae6fd;
+  --wb-level-advanced-bg: #2e1065;
+  --wb-level-advanced-ink: #ddd6fe;
+  --wb-secondary: #fbbf24;
+  --wb-secondary-hover: #fcd34d;
+  --wb-on-secondary: #0f172a;
+  --wb-highlight: #fbbf24;
+  color-scheme: dark;
+}
