@@ -20,14 +20,14 @@ export function VocabularyModerationPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-sky-900">Vocabulary Moderation</h1>
-      <p className="mt-2 text-sky-700">Words awaiting approval before they join the shared pool.</p>
+      <h1 className="text-3xl font-extrabold text-wb-ink">Vocabulary Moderation</h1>
+      <p className="mt-2 text-wb-ink-muted">Words awaiting approval before they join the shared pool.</p>
 
-      {isLoading && <p className="mt-8 text-lg text-sky-600">Loading the moderation queue…</p>}
-      {isError && <p className="mt-8 text-lg text-rose-600">Couldn't load the moderation queue right now.</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading the moderation queue…</p>}
+      {isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load the moderation queue right now.</p>}
 
       {words && words.length === 0 && (
-        <p className="mt-8 text-lg text-sky-600">Nothing pending review right now.</p>
+        <p className="mt-8 text-lg text-wb-ink-muted">Nothing pending review right now.</p>
       )}
 
       {words && words.length > 0 && (
@@ -36,12 +36,12 @@ export function VocabularyModerationPage(): ReactElement {
             const visibleToChildren = visibleToChildrenByWord[word.id] ?? false
 
             return (
-              <div key={word.id} className="rounded-3xl bg-white p-5 shadow-sm">
-                <p className="text-xl font-bold text-sky-900">{word.word}</p>
-                <p className="text-sky-700">{word.definition}</p>
-                {word.example && <p className="text-sm italic text-sky-500">"{word.example}"</p>}
+              <div key={word.id} className="rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card">
+                <p className="text-xl font-bold text-wb-ink">{word.word}</p>
+                <p className="text-wb-ink-muted">{word.definition}</p>
+                {word.example && <p className="text-sm italic text-wb-ink-muted">"{word.example}"</p>}
 
-                <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-sky-900">
+                <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-wb-ink">
                   <input
                     type="checkbox"
                     checked={visibleToChildren}
@@ -57,7 +57,7 @@ export function VocabularyModerationPage(): ReactElement {
                     type="button"
                     onClick={() => moderate.mutate({ id: word.id, payload: { approve: true, visibleToChildren } })}
                     disabled={moderate.isPending}
-                    className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white shadow hover:bg-emerald-600 disabled:opacity-60"
+                    className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success shadow disabled:opacity-60"
                   >
                     Approve
                   </button>
@@ -65,7 +65,7 @@ export function VocabularyModerationPage(): ReactElement {
                     type="button"
                     onClick={() => moderate.mutate({ id: word.id, payload: { approve: false, visibleToChildren: false } })}
                     disabled={moderate.isPending}
-                    className="rounded-xl bg-rose-100 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-200 disabled:opacity-60"
+                    className="rounded-wb-md bg-wb-danger-soft px-4 py-2 text-sm font-bold text-wb-danger hover:bg-rose-200 disabled:opacity-60"
                   >
                     Reject
                   </button>
