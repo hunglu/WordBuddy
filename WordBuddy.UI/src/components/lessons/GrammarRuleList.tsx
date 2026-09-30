@@ -5,7 +5,7 @@ export function GrammarRuleList({ rules }: { rules: GrammarRule[] }): ReactEleme
   return (
     <ul className="flex flex-col gap-4">
       {rules.map((rule) => (
-        <li key={rule.id} className="rounded-wb-lg bg-emerald-50 p-4">
+        <li key={rule.id} className="rounded-wb-lg bg-wb-grammar-surface p-4">
           <p className="text-xl font-bold text-wb-grammar-ink">{rule.title}</p>
           <p className="mt-1 text-wb-grammar-ink">{rule.explanation}</p>
           <div className="mt-2 flex flex-wrap gap-2">

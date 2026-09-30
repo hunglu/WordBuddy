@@ -46,7 +46,7 @@ export function LessonDetailPage(): ReactElement {
         type="button"
         onClick={() => completeMutation.mutate()}
         disabled={completeMutation.isPending || completeMutation.isSuccess}
-        className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow disabled:opacity-60"
+        className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card disabled:opacity-60"
       >
         {completeMutation.isSuccess ? 'Completed! 🎉' : completeMutation.isPending ? 'Saving…' : 'Mark as Complete'}
       </button>

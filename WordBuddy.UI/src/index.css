@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Theme tokens — source of truth: .claude/skills/frontend-design/design-tokens.json (v2).
+/* Theme tokens — source of truth: .claude/skills/frontend-design/design-tokens.json (v3).
    Every custom token is wb- prefixed; Tailwind built-ins are never overridden. */
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -52,6 +52,19 @@
   --color-wb-secondary-hover: var(--wb-secondary-hover);
   --color-wb-on-secondary: var(--wb-on-secondary);
   --color-wb-highlight: var(--wb-highlight);
+  --color-wb-hover-tint: var(--wb-hover-tint);
+  --color-wb-primary-soft: var(--wb-primary-soft);
+  --color-wb-primary-soft-hover: var(--wb-primary-soft-hover);
+  --color-wb-success-soft: var(--wb-success-soft);
+  --color-wb-success-soft-ink: var(--wb-success-soft-ink);
+  --color-wb-success-soft-hover: var(--wb-success-soft-hover);
+  --color-wb-success-hover: var(--wb-success-hover);
+  --color-wb-danger-soft-ink: var(--wb-danger-soft-ink);
+  --color-wb-danger-soft-hover: var(--wb-danger-soft-hover);
+  --color-wb-grammar-surface: var(--wb-grammar-surface);
+  --color-wb-auth-from: var(--wb-auth-from);
+  --color-wb-auth-via: var(--wb-auth-via);
+  --color-wb-auth-to: var(--wb-auth-to);
 
   --radius-wb-md: 12px;
   --radius-wb-lg: 16px;
@@ -60,6 +73,7 @@
 
   --shadow-wb-card: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a;
   --shadow-wb-raised: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
+  --shadow-wb-overlay: 0 20px 25px -5px #0000001a, 0 8px 10px -6px #0000001a;
 
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 }
@@ -111,6 +125,19 @@
   --wb-secondary-hover: #92400e;
   --wb-on-secondary: #ffffff;
   --wb-highlight: #b45309;
+  --wb-hover-tint: #e0f2fe;
+  --wb-primary-soft: #e0f2fe;
+  --wb-primary-soft-hover: #bae6fd;
+  --wb-success-soft: #d1fae5;
+  --wb-success-soft-ink: #065f46;
+  --wb-success-soft-hover: #a7f3d0;
+  --wb-success-hover: #065f46;
+  --wb-danger-soft-ink: #9f1239;
+  --wb-danger-soft-hover: #fecdd3;
+  --wb-grammar-surface: #ecfdf5;
+  --wb-auth-from: #e0f2fe;
+  --wb-auth-via: #ffffff;
+  --wb-auth-to: #fef3c7;
   color-scheme: light;
 }
 
@@ -163,6 +190,19 @@
     --wb-secondary-hover: #fcd34d;
     --wb-on-secondary: #0f172a;
     --wb-highlight: #fbbf24;
+    --wb-hover-tint: #0c4a6e;
+    --wb-primary-soft: #082f49;
+    --wb-primary-soft-hover: #0c4a6e;
+    --wb-success-soft: #022c22;
+    --wb-success-soft-ink: #a7f3d0;
+    --wb-success-soft-hover: #064e3b;
+    --wb-success-hover: #6ee7b7;
+    --wb-danger-soft-ink: #fecdd3;
+    --wb-danger-soft-hover: #881337;
+    --wb-grammar-surface: #041f19;
+    --wb-auth-from: #0f172a;
+    --wb-auth-via: #1e293b;
+    --wb-auth-to: #451a03;
     color-scheme: dark;
   }
 }
@@ -214,6 +254,19 @@
   --wb-secondary-hover: #fcd34d;
   --wb-on-secondary: #0f172a;
   --wb-highlight: #fbbf24;
+  --wb-hover-tint: #0c4a6e;
+  --wb-primary-soft: #082f49;
+  --wb-primary-soft-hover: #0c4a6e;
+  --wb-success-soft: #022c22;
+  --wb-success-soft-ink: #a7f3d0;
+  --wb-success-soft-hover: #064e3b;
+  --wb-success-hover: #6ee7b7;
+  --wb-danger-soft-ink: #fecdd3;
+  --wb-danger-soft-hover: #881337;
+  --wb-grammar-surface: #041f19;
+  --wb-auth-from: #0f172a;
+  --wb-auth-via: #1e293b;
+  --wb-auth-to: #451a03;
   color-scheme: dark;
 }
 

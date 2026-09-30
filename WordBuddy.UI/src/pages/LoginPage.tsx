@@ -85,7 +85,7 @@ export function LoginPage(): ReactElement {
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-wb-md bg-wb-primary py-3 text-lg font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover disabled:opacity-60"
+          className="rounded-wb-md bg-wb-primary py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
         >
           {mutation.isPending ? 'Logging in…' : 'Log in'}
         </button>

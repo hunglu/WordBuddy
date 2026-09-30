@@ -30,7 +30,7 @@ export function VocabularySharedPoolPage(): ReactElement {
                 type="button"
                 onClick={() => addToMyList.mutate(word.id)}
                 disabled={addToMyList.isPending}
-                className="mt-2 self-start rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover disabled:opacity-60"
+                className="mt-2 self-start rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
               >
                 Add to My List
               </button>

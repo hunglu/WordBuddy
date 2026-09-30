@@ -56,8 +56,8 @@ export function LessonsPage(): ReactElement {
             onClick={() => setType(tab.value)}
             className={`rounded-wb-pill px-5 py-2 text-base font-bold ${
               type === tab.value
-                ? 'bg-wb-primary text-wb-on-primary shadow'
-                : 'bg-wb-surface-card text-wb-ink hover:bg-sky-100'
+                ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
+                : 'bg-wb-surface-card text-wb-ink hover:bg-wb-hover-tint'
             }`}
           >
             {tab.label}

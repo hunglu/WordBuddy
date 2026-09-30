@@ -33,8 +33,8 @@ export function AppLayout(): ReactElement {
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
                 isActive
-                  ? 'bg-wb-primary text-wb-on-primary shadow'
-                  : 'text-wb-ink hover:bg-sky-100'
+                  ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
+                  : 'text-wb-ink hover:bg-wb-hover-tint'
               }`
             }
           >

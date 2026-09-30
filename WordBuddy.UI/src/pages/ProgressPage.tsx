@@ -62,7 +62,7 @@ export function ProgressPage(): ReactElement {
           <p className="text-wb-ink-muted">Finish your first lesson to see it here!</p>
           <Link
             to="/lessons"
-            className="mt-2 rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover"
+            className="mt-2 rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
           >
             Browse Lessons
           </Link>
@@ -73,7 +73,7 @@ export function ProgressPage(): ReactElement {
             <div key={entry.id} className="rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card">
               <p className="text-lg font-bold text-wb-ink">{entry.lessonTitle}</p>
               {entry.scorePercent !== null && (
-                <span className="mt-2 inline-block rounded-wb-pill bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
+                <span className="mt-2 inline-block rounded-wb-pill bg-wb-success-soft px-3 py-1 text-sm font-semibold text-wb-success-soft-ink">
                   {entry.scorePercent}%
                 </span>
               )}
@@ -119,7 +119,7 @@ export function ProgressPage(): ReactElement {
               <p className="text-wb-ink-muted">Run your first check to see your history here!</p>
               <Link
                 to="/vocabulary/check"
-                className="mt-2 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow"
+                className="mt-2 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
               >
                 Start a Check
               </Link>
@@ -129,7 +129,7 @@ export function ProgressPage(): ReactElement {
               {recall.recentSessions.map((session) => (
                 <div key={session.id} className="flex items-center justify-between rounded-wb-lg bg-wb-surface-card p-4 shadow-wb-card">
                   <p className="text-wb-ink">{new Date(session.checkedAtUtc).toLocaleString()}</p>
-                  <span className="rounded-wb-pill bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
+                  <span className="rounded-wb-pill bg-wb-success-soft px-3 py-1 text-sm font-semibold text-wb-success-soft-ink">
                     {session.wordsKnown} / {session.wordsChecked} known
                   </span>
                 </div>

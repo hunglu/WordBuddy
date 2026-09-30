@@ -69,7 +69,7 @@ export function VocabularyCheckPage(): ReactElement {
               type="button"
               onClick={() => setLastUsedCount(option)}
               className={`rounded-wb-pill px-5 py-2 text-base font-bold ${
-                lastUsedCount === option ? 'bg-wb-primary text-wb-on-primary shadow' : 'bg-wb-surface-card text-wb-ink hover:bg-sky-100'
+                lastUsedCount === option ? 'bg-wb-primary text-wb-on-primary shadow-wb-card' : 'bg-wb-surface-card text-wb-ink hover:bg-wb-hover-tint'
               }`}
             >
               {option} words
@@ -80,7 +80,7 @@ export function VocabularyCheckPage(): ReactElement {
         <button
           type="button"
           onClick={handleStart}
-          className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow"
+          className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
         >
           Start Check
         </button>
@@ -128,13 +128,13 @@ export function VocabularyCheckPage(): ReactElement {
           <button
             type="button"
             onClick={handleRestart}
-            className="rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover"
+            className="rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
           >
             Check Again
           </button>
           <Link
             to="/progress"
-            className="rounded-wb-md bg-sky-100 px-6 py-3 text-lg font-bold text-wb-ink hover:bg-sky-200"
+            className="rounded-wb-md bg-wb-primary-soft px-6 py-3 text-lg font-bold text-wb-ink hover:bg-wb-primary-soft-hover"
           >
             View Progress
           </Link>
@@ -170,14 +170,14 @@ export function VocabularyCheckPage(): ReactElement {
         <button
           type="button"
           onClick={() => handleAnswer(false)}
-          className="rounded-wb-md bg-wb-secondary px-6 py-3 text-lg font-bold text-wb-on-secondary shadow hover:bg-wb-secondary-hover"
+          className="rounded-wb-md bg-wb-secondary px-6 py-3 text-lg font-bold text-wb-on-secondary shadow-wb-card hover:bg-wb-secondary-hover"
         >
           Still Learning
         </button>
         <button
           type="button"
           onClick={() => handleAnswer(true)}
-          className="rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow"
+          className="rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
         >
           I Know This
         </button>

@@ -50,13 +50,13 @@ export function VocabularyBuilderPage(): ReactElement {
         <div className="flex gap-2">
           <Link
             to="/vocabulary/check"
-            className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success shadow"
+            className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
           >
             Start Recall Check
           </Link>
           <Link
             to="/vocabulary/shared"
-            className="rounded-wb-md bg-sky-100 px-4 py-2 text-sm font-bold text-wb-ink hover:bg-sky-200"
+            className="rounded-wb-md bg-wb-primary-soft px-4 py-2 text-sm font-bold text-wb-ink hover:bg-wb-primary-soft-hover"
           >
             Browse Shared Pool
           </Link>
@@ -107,7 +107,7 @@ export function VocabularyBuilderPage(): ReactElement {
         <button
           type="submit"
           disabled={addWord.isPending}
-          className="self-start rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover disabled:opacity-60"
+          className="self-start rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
         >
           {addWord.isPending ? 'Adding…' : 'Add word'}
         </button>
@@ -141,7 +141,7 @@ export function VocabularyBuilderPage(): ReactElement {
                     type="button"
                     onClick={() => requestShare.mutate(word.id)}
                     disabled={requestShare.isPending}
-                    className="rounded-wb-md bg-emerald-100 px-3 py-1.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-200 disabled:opacity-60"
+                    className="rounded-wb-md bg-wb-success-soft px-3 py-1.5 text-sm font-semibold text-wb-success-soft-ink hover:bg-wb-success-soft-hover disabled:opacity-60"
                   >
                     Share
                   </button>
@@ -150,7 +150,7 @@ export function VocabularyBuilderPage(): ReactElement {
                   type="button"
                   onClick={() => deleteWord.mutate(word.id)}
                   disabled={deleteWord.isPending}
-                  className="rounded-wb-md bg-wb-danger-soft px-3 py-1.5 text-sm font-semibold text-wb-danger hover:bg-rose-200 disabled:opacity-60"
+                  className="rounded-wb-md bg-wb-danger-soft px-3 py-1.5 text-sm font-semibold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
                 >
                   Delete
                 </button>

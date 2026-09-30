@@ -57,7 +57,7 @@ export function VocabularyModerationPage(): ReactElement {
                     type="button"
                     onClick={() => moderate.mutate({ id: word.id, payload: { approve: true, visibleToChildren } })}
                     disabled={moderate.isPending}
-                    className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success shadow disabled:opacity-60"
+                    className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card disabled:opacity-60"
                   >
                     Approve
                   </button>
@@ -65,7 +65,7 @@ export function VocabularyModerationPage(): ReactElement {
                     type="button"
                     onClick={() => moderate.mutate({ id: word.id, payload: { approve: false, visibleToChildren: false } })}
                     disabled={moderate.isPending}
-                    className="rounded-wb-md bg-wb-danger-soft px-4 py-2 text-sm font-bold text-wb-danger hover:bg-rose-200 disabled:opacity-60"
+                    className="rounded-wb-md bg-wb-danger-soft px-4 py-2 text-sm font-bold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
                   >
                     Reject
                   </button>
