@@ -59,8 +59,8 @@ export function VocabularyCheckPage(): ReactElement {
   if (!started) {
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <h1 className="text-3xl font-extrabold text-sky-900">Recall Check</h1>
-        <p className="mt-2 text-sky-700">Pick how many words to check today.</p>
+        <h1 className="text-3xl font-extrabold text-wb-ink">Recall Check</h1>
+        <p className="mt-2 text-wb-ink-muted">Pick how many words to check today.</p>
 
         <div className="mt-6 flex flex-wrap gap-2">
           {COUNT_OPTIONS.map((option) => (
@@ -68,8 +68,8 @@ export function VocabularyCheckPage(): ReactElement {
               key={option}
               type="button"
               onClick={() => setLastUsedCount(option)}
-              className={`rounded-full px-5 py-2 text-base font-bold transition-colors ${
-                lastUsedCount === option ? 'bg-sky-500 text-white shadow' : 'bg-white text-sky-900 hover:bg-sky-100'
+              className={`rounded-wb-pill px-5 py-2 text-base font-bold ${
+                lastUsedCount === option ? 'bg-wb-primary text-wb-on-primary shadow' : 'bg-wb-surface-card text-wb-ink hover:bg-sky-100'
               }`}
             >
               {option} words
@@ -80,7 +80,7 @@ export function VocabularyCheckPage(): ReactElement {
         <button
           type="button"
           onClick={handleStart}
-          className="mt-8 rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow hover:bg-emerald-600"
+          className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow"
         >
           Start Check
         </button>
@@ -89,18 +89,18 @@ export function VocabularyCheckPage(): ReactElement {
   }
 
   if (isLoading) {
-    return <p className="text-lg text-sky-600">Picking words for your check…</p>
+    return <p className="text-lg text-wb-ink-muted">Picking words for your check…</p>
   }
 
   if (isError || !words) {
-    return <p className="text-lg text-rose-600">Couldn't start a check right now. Please try again.</p>
+    return <p className="text-lg text-wb-danger">Couldn't start a check right now. Please try again.</p>
   }
 
   if (words.length === 0) {
     return (
       <div>
-        <p className="text-lg text-sky-600">Add some words to your list first!</p>
-        <Link to="/vocabulary" className="mt-4 inline-block font-semibold text-sky-600 hover:underline">
+        <p className="text-lg text-wb-ink-muted">Add some words to your list first!</p>
+        <Link to="/vocabulary" className="mt-4 inline-block font-semibold text-wb-ink-muted hover:underline">
           Back to My Vocabulary
         </Link>
       </div>
@@ -117,24 +117,24 @@ export function VocabularyCheckPage(): ReactElement {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col items-center gap-3 rounded-3xl bg-white p-10 text-center shadow-sm"
+        className="flex flex-col items-center gap-3 rounded-wb-card bg-wb-surface-card p-10 text-center shadow-wb-card"
       >
         <span className="text-5xl">🎉</span>
-        <p className="text-2xl font-bold text-sky-900">Check complete!</p>
-        <p className="text-sky-700">
+        <p className="text-2xl font-bold text-wb-ink">Check complete!</p>
+        <p className="text-wb-ink-muted">
           You knew {wordsKnown} of {results.length} words.
         </p>
         <div className="mt-4 flex gap-3">
           <button
             type="button"
             onClick={handleRestart}
-            className="rounded-xl bg-sky-500 px-6 py-3 text-lg font-bold text-white shadow hover:bg-sky-600"
+            className="rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover"
           >
             Check Again
           </button>
           <Link
             to="/progress"
-            className="rounded-xl bg-sky-100 px-6 py-3 text-lg font-bold text-sky-800 hover:bg-sky-200"
+            className="rounded-wb-md bg-sky-100 px-6 py-3 text-lg font-bold text-wb-ink hover:bg-sky-200"
           >
             View Progress
           </Link>
@@ -147,7 +147,7 @@ export function VocabularyCheckPage(): ReactElement {
 
   return (
     <div className="flex flex-col items-center">
-      <p className="mb-4 text-sky-600">
+      <p className="mb-4 text-wb-ink-muted">
         Word {currentIndex + 1} of {words.length}
       </p>
 
@@ -158,11 +158,11 @@ export function VocabularyCheckPage(): ReactElement {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -40 }}
           transition={{ duration: 0.25 }}
-          className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-sm"
+          className="w-full max-w-md rounded-wb-card bg-wb-surface-card p-8 text-center shadow-wb-card"
         >
-          <p className="text-3xl font-extrabold text-sky-900">{current.word}</p>
-          <p className="mt-3 text-sky-700">{current.definition}</p>
-          {current.example && <p className="mt-2 text-sm italic text-sky-500">"{current.example}"</p>}
+          <p className="text-3xl font-extrabold text-wb-ink">{current.word}</p>
+          <p className="mt-3 text-wb-ink-muted">{current.definition}</p>
+          {current.example && <p className="mt-2 text-sm italic text-wb-ink-muted">"{current.example}"</p>}
         </motion.div>
       </AnimatePresence>
 
@@ -170,14 +170,14 @@ export function VocabularyCheckPage(): ReactElement {
         <button
           type="button"
           onClick={() => handleAnswer(false)}
-          className="rounded-xl bg-amber-400 px-6 py-3 text-lg font-bold text-white shadow hover:bg-amber-500"
+          className="rounded-wb-md bg-wb-secondary px-6 py-3 text-lg font-bold text-wb-on-secondary shadow hover:bg-wb-secondary-hover"
         >
           Still Learning
         </button>
         <button
           type="button"
           onClick={() => handleAnswer(true)}
-          className="rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow hover:bg-emerald-600"
+          className="rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow"
         >
           I Know This
         </button>
