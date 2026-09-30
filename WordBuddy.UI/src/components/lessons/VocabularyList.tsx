@@ -5,22 +5,22 @@ export function VocabularyList({ items }: { items: VocabularyItem[] }): ReactEle
   return (
     <ul className="flex flex-col gap-3">
       {items.map((item) => (
-        <li key={item.id} className="rounded-2xl bg-sky-50 p-4">
+        <li key={item.id} className="rounded-wb-lg bg-wb-surface-page p-4">
           <div className="flex items-center gap-3">
-            <p className="text-xl font-bold text-sky-900">{item.word}</p>
+            <p className="text-xl font-bold text-wb-ink">{item.word}</p>
             {item.audio && (
               <button
                 type="button"
                 aria-label={`Play pronunciation of ${item.word}`}
                 onClick={() => new Audio(item.audio!.url).play()}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 text-white hover:bg-sky-600"
+                className="flex h-9 w-9 items-center justify-center rounded-wb-pill bg-wb-primary text-wb-on-primary hover:bg-wb-primary-hover"
               >
                 🔊
               </button>
             )}
           </div>
-          <p className="mt-1 text-sky-800">{item.definition}</p>
-          <p className="mt-1 text-sm italic text-sky-600">"{item.example}"</p>
+          <p className="mt-1 text-wb-ink">{item.definition}</p>
+          <p className="mt-1 text-sm italic text-wb-ink-muted">"{item.example}"</p>
         </li>
       ))}
     </ul>

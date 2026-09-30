@@ -5,14 +5,14 @@ export function GrammarRuleList({ rules }: { rules: GrammarRule[] }): ReactEleme
   return (
     <ul className="flex flex-col gap-4">
       {rules.map((rule) => (
-        <li key={rule.id} className="rounded-2xl bg-emerald-50 p-4">
-          <p className="text-xl font-bold text-emerald-900">{rule.title}</p>
-          <p className="mt-1 text-emerald-800">{rule.explanation}</p>
+        <li key={rule.id} className="rounded-wb-lg bg-emerald-50 p-4">
+          <p className="text-xl font-bold text-wb-grammar-ink">{rule.title}</p>
+          <p className="mt-1 text-wb-grammar-ink">{rule.explanation}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {rule.examples.map((example) => (
               <span
                 key={example}
-                className="rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-800"
+                className="rounded-wb-pill bg-wb-grammar-bg px-3 py-1 text-sm text-wb-grammar-ink"
               >
                 {example}
               </span>

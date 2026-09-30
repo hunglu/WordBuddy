@@ -27,7 +27,7 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 - [x] Migrate `pages/RegisterPage.tsx`. Verify: the same checks as Login pass, and the AgeGroup selector still works. — `pages/RegisterPage.tsx`
 - [x] Migrate `pages/DashboardPage.tsx`. Verify: streak numbers use `text-wb-highlight`, cards use `shadow-wb-card`/`rounded-wb-card`, and any card lift is done with `whileHover`. — `pages/DashboardPage.tsx` (no streak numbers exist on this page; cards now `motion.create(Link)` with whileHover/whileTap; hover:shadow-lg dropped for static shadow-wb-card)
 - [x] Migrate `pages/LessonsPage.tsx`, applying `levelClasses` to level badges. Verify: cards use `wb-vocab-*`/`wb-grammar-*`, the active tab uses `bg-wb-primary`, card hover lift uses Framer Motion, and no `hover:-translate`/`hover:shadow` remains. — `pages/LessonsPage.tsx`
-- [ ] Migrate `pages/LessonDetailPage.tsx` and `components/lessons/{VocabularyList,GrammarRuleList}.tsx`, applying `levelClasses` where a level is shown. Verify: no palette or `transition` classes remain.
+- [x] Migrate `pages/LessonDetailPage.tsx` and `components/lessons/{VocabularyList,GrammarRuleList}.tsx`, applying `levelClasses` where a level is shown. Verify: no palette or `transition` classes remain. — `pages/LessonDetailPage.tsx`, `components/lessons/VocabularyList.tsx`, `components/lessons/GrammarRuleList.tsx` (no level is displayed in these files, so levelClasses not applied)
 - [ ] Migrate `components/lessons/DailyPhraseList.tsx`. Verify: the card uses `wb-phrase-*`, and the audio button uses `bg-wb-secondary text-wb-on-secondary hover:bg-wb-secondary-hover`.
 - [ ] Migrate `pages/ProgressPage.tsx`. Verify: success and danger states use `wb-` tokens and keep their labels, and streak numbers use `text-wb-highlight`.
 - [ ] Migrate `pages/VocabularyBuilderPage.tsx`, using `shareStatusClasses` for status chips. Verify: no palette classes remain, or the gaps are listed.
@@ -66,3 +66,5 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 - `layouts/PublicLayout.tsx`: page gradient `from-sky-100 via-white to-amber-100` has no token (left as-is); card `shadow-xl` has no wb- shadow (left as built-in).
 - `layouts/AppLayout.tsx`: nav item `hover:bg-sky-100` (generic hover tint, not a vocab card) has no token (left as-is); active nav plain `shadow` left as built-in.
 - `pages/LessonsPage.tsx`: inactive type-tab `hover:bg-sky-100` has no token (left as-is); active tab plain `shadow` left as built-in.
+- `components/lessons/GrammarRuleList.tsx`: rule card `bg-emerald-50` has no token (`wb-grammar-bg` is emerald-100 and is already used by the example chips inside the card) — left as-is.
+- `pages/LessonDetailPage.tsx` (+ Builder/Check/Moderation): `hover:bg-emerald-600` on success buttons dropped — there is no `wb-success-hover` token, so success buttons have no hover colour now.
