@@ -8,8 +8,8 @@ Work top to bottom, one commit per item. "Verify" means run `npm run build && np
 
 ## Frontend: build baseline and bundling
 
-- [ ] Baseline measurement: on unchanged code, run `npm run build` and record the `dist/assets/*.css` count and the raw and gzip size of each file under "Measurements". This may be committed together with the next task. Verify: the numbers are recorded.
-- [ ] Set `build.cssCodeSplit: false` in `vite.config.ts`. Verify: exactly one `.css` file is in `dist/assets/`, and its sizes are recorded.
+- [x] Baseline measurement: on unchanged code, run `npm run build` and record the `dist/assets/*.css` count and the raw and gzip size of each file under "Measurements". This may be committed together with the next task. Verify: the numbers are recorded. — (measurement only, no files)
+- [x] Set `build.cssCodeSplit: false` in `vite.config.ts`. Verify: exactly one `.css` file is in `dist/assets/`, and its sizes are recorded. — `WordBuddy.UI/vite.config.ts`
 
 ## Frontend: foundation
 
@@ -58,8 +58,8 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 
 | Point | CSS files | Raw | Gzip |
 | --- | --- | --- | --- |
-| Baseline | | | |
-| After `cssCodeSplit: false` | | | |
+| Baseline | 1 (`index-*.css`) | 21.44 kB | 4.65 kB |
+| After `cssCodeSplit: false` | 1 (`style-*.css`) | 21.45 kB | 4.67 kB |
 | After migration | | | |
 
 ## Gaps (filled in by coder if unmapped colours are found, or with Sam's violet decision)

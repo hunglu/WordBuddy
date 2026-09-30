@@ -13,6 +13,10 @@ const PROGRESS_URL = 'http://localhost:5083'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    // One CSS bundle for the whole app (theme tokens are global anyway).
+    cssCodeSplit: false,
+  },
   server: {
     proxy: {
       '/api/auth': { target: IDENTITY_URL, changeOrigin: true },
