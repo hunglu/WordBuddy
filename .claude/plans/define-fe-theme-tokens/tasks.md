@@ -41,7 +41,7 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 
 ## Docs / rules
 
-- [ ] Update `.claude/skills/frontend-design/SKILL.md` with a "Theme tokens" section. It covers the token table in `wb-` names, the naming convention (`wb-` prefix, built-ins never overridden, `wb-<domain>-<variant>-<role>` with roles bg/ink/border), the `Record<Enum,string>` variant maps in `src/theme/variants.ts`, type roles, the spacing note, dark mode, the focus ring, the motion policy (no CSS transitions, Framer Motion for lift and press), CSS Module usage, and the single bundle. Copy `design-tokens.json` next to it. Verify: every token name in the skill exists in `index.css`.
+- [x] Update `.claude/skills/frontend-design/SKILL.md` with a "Theme tokens" section. It covers the token table in `wb-` names, the naming convention (`wb-` prefix, built-ins never overridden, `wb-<domain>-<variant>-<role>` with roles bg/ink/border), the `Record<Enum,string>` variant maps in `src/theme/variants.ts`, type roles, the spacing note, dark mode, the focus ring, the motion policy (no CSS transitions, Framer Motion for lift and press), CSS Module usage, and the single bundle. Copy `design-tokens.json` next to it. Verify: every token name in the skill exists in `index.css`. — `.claude/skills/frontend-design/SKILL.md` (section 2 replaced by "Theme tokens" incl. v3 tokens; motion/states/a11y updated to wb- tokens), `.claude/skills/frontend-design/design-tokens.json` (copy of v3); every wb- name checked against index.css
 
 ## Tests
 
