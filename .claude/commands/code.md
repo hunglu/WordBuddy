@@ -40,7 +40,7 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 5. **Once every task in `tasks.md` is checked off**, edit `proposal.md` frontmatter to
    `status: implemented` (bump `version` + `updated`, as every proposal edit does). Confirm you're on `feature/<slug>` (`git branch --show-current`), then
    commit `.claude/plans/<slug>/` (`git add .claude/plans/<slug>` then
-   `git commit -m "<slug>: mark implemented"`, ending with the Co-Authored-By line) and
+   `git commit -m "<slug>: mark implemented"`, no Co-Authored-By trailer) and
    `git push origin feature/<slug>` (ask-gated, so Sam approves it). On a partial run, commit and
    push whatever the coder finished the same way so the branch on GitHub reflects progress.
 

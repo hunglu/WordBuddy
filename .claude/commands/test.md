@@ -18,11 +18,11 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 ## Steps
 
 1. **Validate.** Confirm `.claude/plans/<slug>/plan.md` and `tasks.md` exist and `proposal.md`'s
-   status is `reviewed`. If it's `implemented` or `changes-requested`, tell Sam to run
-   `/review <slug>` (or `/code <slug>` to fix findings) first — code is never merged unreviewed.
-   A `needs-fixes` branch goes back through `/code` → `/review` before `/test` again. Exception:
-   Sam explicitly says to re-test without code changes (e.g. services were down) — then
-   `needs-fixes` is accepted.
+   status is `reviewed` or `needs-fixes`. If it's `implemented` or `changes-requested`, tell Sam
+   to run `/review <slug>` (or `/code <slug>` to fix findings) first — code is never merged
+   unreviewed. Whether a `needs-fixes` re-run may merge is decided by the **merge guard**
+   (`docs/sdlc/workflow.md` → Merge guard), not by status alone: if application code changed
+   after the reviewed commit, the tester refuses to merge and Sam runs `/review` again.
 
    Also confirm the `feature/<slug>` branch exists locally or on `origin`. If it doesn't, tell
    Sam to run `/code <slug>` first.

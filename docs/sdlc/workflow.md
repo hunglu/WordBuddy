@@ -25,6 +25,28 @@ Issue ─▶ /propose ─▶ /plan ─▶ [Sam reads plan] ─▶ /code ──�
 command. Human gates: reviewing `plan.md` before `/code`, reading `review.md` before `/test`,
 and approving every `git push`, PR post and PR merge.
 
+## Merge guard
+
+`/test` merges only when **all three** hold (checked by the tester right before merging):
+
+1. **Approved review of this code.** `review.md`'s verdict is Approve, and its
+   `Reviewed commit: <sha>` is an ancestor of the branch head
+   (`git merge-base --is-ancestor <sha> HEAD`).
+2. **Only test-scope commits since the review.** Every file changed by non-merge commits after
+   that sha is on the tester allowlist:
+   ```bash
+   git log --no-merges --name-only --format= <sha>..HEAD | sort -u
+   ```
+   Allowlist: `**/*.UnitTests/**`, `**/*.IntegrationTests/**`, `e2e/**`,
+   `.claude/plans/<slug>/**`, `docs/features/**`. Merge commits that only bring in `main` are
+   excluded (that code was reviewed in its own PR). Any other path means code changed after the
+   review → don't merge; status `needs-fixes` with "changed after review — run `/review`".
+3. **Every suite ran in this session and passed** (a skipped suite is not a pass).
+
+Because of 1–2, `/test` accepts a proposal that is `reviewed` **or** `needs-fixes`: a re-test after
+a test-only failure (services down, flaky test fixed in `e2e/`) passes the guard, while a
+re-test after an application-code fix fails it and is sent back through `/review`.
+
 **Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed`; any code
 change after a review (review fixes or test fixes) goes back through `/review`. The reviewer
 can't approve its own account's PR on GitHub, so the verdict lives in `review.md` and a PR
