@@ -1,0 +1,24 @@
+# Review: Add pull request and code review stage to the SDLC workflow
+
+PR: #4 · Round 1 · Reviewed commit: ed83bc8 · 2026-10-01T01:07:10+07:00
+
+## Verdict
+Changes requested — the design is sound, but the `/test` re-test exception can't work because the tester's merge guard contradicts it, the tester's own commits reach `main` without review, the tester's conflict and decline paths still describe a local merge, and two files still require the Co-Authored-By trailer.
+
+## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | major | `.claude/commands/test.md:21-25` vs `.claude/agents/tester.md:138` | `/test` accepts `needs-fixes` when Sam asks for a re-test without code changes, but the tester only merges when `proposal.md` "was `reviewed` when you started". Scenario: services were down, Sam re-runs `/test`, every suite passes, and the tester refuses to merge. The exception also never checks that there really were no code changes. | Define one guard in both files: merge only if `review.md` says Approve **and** `git log <reviewed sha>..origin/feature/<slug>` has only tester commits (tests, test-report, proposal). Use that same check for the exception instead of relying on Sam's word. |
+| 2 | major | `docs/sdlc/workflow.md` ("Nothing reaches `main` without a review") and `.claude/agents/tester.md:111` | The tester commits new tests and test-support changes to `feature/<slug>` after the review and then merges them. The tester can also fix things in a way that touches app code (for example, test seeding). So `main` gets unreviewed commits, which contradicts the new rule. | Either state the exception explicitly ("tester commits limited to test projects, `e2e/`, `test-report.md`, `docs/features/`, `proposal.md`") and have the tester check its own diff against that allowlist before merging, or send it back through `/review`. |
+| 3 | major | `.claude/agents/tester.md:142-145` | The conflict and decline handling still describes the local `git merge` path: it tells the tester to run `git merge --abort` and says "the local merge stays". With `gh pr merge`, a conflicted PR fails on the server, and if Sam declines there is no local merge. Scenario: `gh pr merge` fails with "not mergeable" and the tester runs `git merge --abort` with no merge in progress. The verdict text is then wrong. | Split the bullets: for the PR path, a `gh pr merge` failure or a decline means "Not merged — <reason>", status `needs-fixes`, and nothing local to undo. Keep the current bullets for the `pr: none` fallback only. |
+| 4 | major | `.claude/agents/tester.md:111`, `.claude/commands/code.md:43` | These lines still require a Co-Authored-By trailer. That contradicts `coder.md:56`, `reviewer.md:87` and Sam's instruction to drop it. | Change both to "no Co-Authored-By trailer". |
+| 5 | nit | `.claude/commands/release.md:3,8` | Still reads "Stage 5 of 5 … code → test → release". It now clashes with `/test` being Stage 5 of 6. | Change it to "Stage 6 of 6: propose → plan → code → review → test → release". |
+| 6 | nit | `.claude/commands/code.md:3,9`, `plan.md:3,9`, `propose.md:3,9`, `agents/coder.md:8`, `agents/planner.md:8`, `agents/tester.md:8` | Stale "idea → plan → code → test" and "Stage n of 4" wording. | Update to the 6-stage chain. |
+| 7 | nit | `.claude/commands/status.md:13` | Step 1 reads only `title,status,type,issue`, but the table now needs `pr`. | Add `pr` to the fields read. |
+| 8 | nit | `.claude/commands/status.md:17,33` | No command ever sets `blocked`, and nothing says how to leave it. It has no entry or exit in the state machine. This predates the PR. | In `workflow.md`, document "Sam sets `blocked` by hand; to leave it, restore the previous status". |
+| 9 | nit | `docs/sdlc/github-integration.md` Code row | The card moves to **In review** in the Review row, but nothing moves it back to In progress on `changes-requested`. | Add "`changes-requested` → back to In progress". |
+
+Verified OK: `settings.json` is valid JSON. `gh pr create/merge/review/comment/edit` are all ask-gated for both Bash and PowerShell, and nothing the flow needs is denied. The `gh pr merge --merge --subject --body`, `gh pr review --comment --body-file` and `gh pr comment --body-file` flags are valid. `--merge` creates a merge commit, and `Closes #n` in the PR body or merge body closes the issue. The three-dot `origin/main...origin/feature/<slug>` diff is correct. The code, review, test and status validation lists agree: implemented → review; changes-requested/needs-fixes → code → implemented; reviewed → test. No secrets were added.
+
+## Plan conformance
+All 8 tasks in `tasks.md` appear in the diff. Nothing is out of scope. The `## Tests` items in `tasks.md` (consistency check, `/status` dry run) are left for `/test`. Findings 1, 2 and 3 are the "`/test` exception must not skip review" risk that `plan.md` already names.
