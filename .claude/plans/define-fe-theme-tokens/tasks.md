@@ -22,7 +22,7 @@ Work top to bottom, one commit per item. "Verify" means run `npm run build && np
 
 In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/active movement. Keep colour hovers, which are now instant. Move lift and press motion to `motion.*` `whileHover`/`whileTap`.
 
-- [ ] Migrate `layouts/PublicLayout.tsx` and `layouts/AppLayout.tsx`. Verify: no palette or `transition` classes remain, and the sidebar looks unchanged in light.
+- [x] Migrate `layouts/PublicLayout.tsx` and `layouts/AppLayout.tsx`. Verify: no palette or `transition` classes remain, and the sidebar looks unchanged in light. — `layouts/PublicLayout.tsx`, `layouts/AppLayout.tsx` (unmapped left in place, see Gaps)
 - [ ] Migrate `pages/LoginPage.tsx`. Verify: the primary button uses `bg-wb-primary text-wb-on-primary hover:bg-wb-primary-hover`, and inputs use `border-wb-border-control`.
 - [ ] Migrate `pages/RegisterPage.tsx`. Verify: the same checks as Login pass, and the AgeGroup selector still works.
 - [ ] Migrate `pages/DashboardPage.tsx`. Verify: streak numbers use `text-wb-highlight`, cards use `shadow-wb-card`/`rounded-wb-card`, and any card lift is done with `whileHover`.
@@ -63,5 +63,5 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 | After migration | | | |
 
 ## Gaps (filled in by coder if unmapped colours are found, or with Sam's violet decision)
-
-- (none yet)
+- `layouts/PublicLayout.tsx`: page gradient `from-sky-100 via-white to-amber-100` has no token (left as-is); card `shadow-xl` has no wb- shadow (left as built-in).
+- `layouts/AppLayout.tsx`: nav item `hover:bg-sky-100` (generic hover tint, not a vocab card) has no token (left as-is); active nav plain `shadow` left as built-in.
