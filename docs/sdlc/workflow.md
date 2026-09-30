@@ -21,6 +21,25 @@ GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─�
 **Loop:** nothing runs on its own. Each session: `/status` → take the top item → run its next
 command. Human gates: reviewing `plan.md` before `/code`, and approving every `git push`.
 
+## Proposal versioning
+
+Every `proposal.md` carries three fields in its frontmatter:
+
+```yaml
+version: 1.0                        # 1.0 on creation
+created: 2026-09-30T23:00:44+07:00  # never changes
+updated: 2026-09-30T23:00:44+07:00  # timestamp of the latest edit
+```
+
+- Timestamps are ISO 8601 local time with UTC offset, to the second. Always take them from the
+  clock (`date +%Y-%m-%dT%H:%M:%S%:z`), never type or estimate them.
+- `/propose` writes `version: 1.0` and `created` = `updated` = now.
+- **Every** later edit to `proposal.md` — a status change by `/plan`, `/code`, `/test` or
+  `/release`, a scope revision, a hand edit — adds 1 to the major number (`1.0` → `2.0` → `3.0`)
+  and sets `updated` to now. One edit session = one bump, even if several fields change.
+- A scope change (not just a status change) also appends a line to `## Revisions`:
+  `- **v<version> — <timestamp>** — <what changed>`. Git history holds the full diff.
+
 ## Changing an existing feature
 
 1. Read `docs/features/<feature>.md` (current behaviour).

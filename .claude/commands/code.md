@@ -21,7 +21,8 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    tell Sam to run `/plan <slug>` first. Never fabricate a plan to get around this check.
 
 2. If status is `planned`, edit `proposal.md` frontmatter to `status: in-progress` before
-   starting.
+   starting. Every edit to `proposal.md` also bumps `version` and sets `updated` (see
+   `docs/sdlc/workflow.md` → Proposal versioning).
 
 3. **Invoke the `coder` subagent** (via the Agent tool, `subagent_type: coder`), passing it the
    full contents of `plan.md` and `tasks.md` and the slug. Tell it to first create (or resume)
@@ -36,7 +37,7 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    `status: in-progress` — don't mark it `implemented` on a partial run.
 
 5. **Once every task in `tasks.md` is checked off**, edit `proposal.md` frontmatter to
-   `status: implemented`. Confirm you're on `feature/<slug>` (`git branch --show-current`), then
+   `status: implemented` (bump `version` + `updated`, as every proposal edit does). Confirm you're on `feature/<slug>` (`git branch --show-current`), then
    commit `.claude/plans/<slug>/` (`git add .claude/plans/<slug>` then
    `git commit -m "<slug>: mark implemented"`, ending with the Co-Authored-By line) and
    `git push origin feature/<slug>` (ask-gated, so Sam approves it). On a partial run, commit and

@@ -55,7 +55,9 @@ anything else.
    issue: <GitHub issue number, e.g. 42 — or "none">
    affects: <docs/features/<feature>.md paths this changes, comma-separated — or "none">
    supersedes: <slug of an earlier proposal this changes — or "none">
-   created: <YYYY-MM-DD>
+   version: 1.0
+   created: <YYYY-MM-DDTHH:MM:SS±HH:MM, local time, e.g. 2026-09-30T23:00:44+07:00>
+   updated: <same as created>
    ---
 
    ## Problem
@@ -84,5 +86,6 @@ anything else.
 
 ## Verification
 
-- `.claude/plans/<slug>/proposal.md` exists with `status: idea` in its frontmatter.
+- `.claude/plans/<slug>/proposal.md` exists with `status: idea`, `version: 1.0`, and `created` = `updated` = the current local timestamp (get it with
+  `date +%Y-%m-%dT%H:%M:%S%:z` — never guess the time).
 - No files outside `.claude/plans/<slug>/` were touched.

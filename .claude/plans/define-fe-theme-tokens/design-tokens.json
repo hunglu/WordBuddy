@@ -1,0 +1,554 @@
+{
+  "name": "WordBuddy",
+  "version": 1,
+  "meta": {
+    "source": "code",
+    "repo": "hunglu/WordBuddy",
+    "package": "WordBuddy.UI",
+    "paths": {
+      "tokens": [
+        "WordBuddy.UI/src/pages/*.tsx",
+        "WordBuddy.UI/src/layouts/*.tsx"
+      ]
+    },
+    "synced": "2026-09-30",
+    "status": "v2 — wb- prefix, variant sets for share status and level, secondary + highlight added",
+    "naming": "Every custom token is prefixed wb- so a review can tell custom from Tailwind built-ins: --color-wb-*, --radius-wb-*, --shadow-wb-* → bg-wb-primary, rounded-wb-card, shadow-wb-card. Built-in Tailwind scales (rounded-md, shadow-sm, spacing) are never overridden. Variant sets follow wb-<domain>-<variant>-<role>, e.g. wb-share-pending-ink, wb-level-advanced-bg; roles are bg, ink, border."
+  },
+  "color": {
+    "themes": [
+      {
+        "id": "light",
+        "name": "Light"
+      },
+      {
+        "id": "dark",
+        "name": "Dark (proposed)"
+      }
+    ],
+    "tokens": [
+      {
+        "name": "wb-surface-page",
+        "value": {
+          "light": "#f0f9ff",
+          "dark": "#0f172a"
+        },
+        "usage": "App background behind sidebar and pages (today: bg-sky-50)."
+      },
+      {
+        "name": "wb-surface-card",
+        "value": {
+          "light": "#ffffff",
+          "dark": "#1e293b"
+        },
+        "usage": "Cards, sidebar, inactive pills, inputs (today: bg-white)."
+      },
+      {
+        "name": "wb-ink",
+        "value": {
+          "light": "#0c4a6e",
+          "dark": "#e0f2fe"
+        },
+        "usage": "Headings and primary text (today: text-sky-900). 9.5:1 light, 15.6:1 dark."
+      },
+      {
+        "name": "wb-ink-muted",
+        "value": {
+          "light": "#0369a1",
+          "dark": "#7dd3fc"
+        },
+        "usage": "Secondary text, loading and empty states. CHANGED from sky-600 (#0284c7, 4.1:1 — fails AA body text) to sky-700 (5.9:1)."
+      },
+      {
+        "name": "wb-primary",
+        "value": {
+          "light": "#0369a1",
+          "dark": "#38bdf8"
+        },
+        "usage": "Primary button and active tab fill. CHANGED from sky-500 (#0ea5e9) — white on sky-500 is 2.8:1 and fails; white on sky-700 is 5.9:1."
+      },
+      {
+        "name": "wb-primary-hover",
+        "value": {
+          "light": "#075985",
+          "dark": "#7dd3fc"
+        },
+        "usage": "Primary fill on hover/pressed."
+      },
+      {
+        "name": "wb-on-primary",
+        "value": {
+          "light": "#ffffff",
+          "dark": "#0f172a"
+        },
+        "usage": "Text and icons on primary. Dark theme uses dark text on a light-blue fill (8.3:1)."
+      },
+      {
+        "name": "wb-brand-sky",
+        "value": {
+          "light": "#0ea5e9",
+          "dark": "#0ea5e9"
+        },
+        "usage": "Brand hue for large decorative shapes, charts and illustrations only — never behind text (2.8:1 with white)."
+      },
+      {
+        "name": "wb-border-subtle",
+        "value": {
+          "light": "#bae6fd",
+          "dark": "#334155"
+        },
+        "usage": "Decorative card and pill outlines (today: border-sky-200). Not for form controls — below 3:1."
+      },
+      {
+        "name": "wb-border-control",
+        "value": {
+          "light": "#0284c7",
+          "dark": "#64748b"
+        },
+        "usage": "Input and select borders; must reach 3:1 against surface-card (4.1:1 light, 3.1:1 dark)."
+      },
+      {
+        "name": "wb-focus-ring",
+        "value": {
+          "light": "#0284c7",
+          "dark": "#38bdf8"
+        },
+        "usage": "Keyboard focus ring (ring-4). New — no focus style exists today."
+      },
+      {
+        "name": "wb-vocab-bg",
+        "value": {
+          "light": "#e0f2fe",
+          "dark": "#082f49"
+        },
+        "usage": "Vocabulary lesson card fill (today: bg-sky-100)."
+      },
+      {
+        "name": "wb-vocab-ink",
+        "value": {
+          "light": "#075985",
+          "dark": "#bae6fd"
+        },
+        "usage": "Text on vocab-bg. 6.6:1 light, 10.5:1 dark."
+      },
+      {
+        "name": "wb-vocab-border",
+        "value": {
+          "light": "#7dd3fc",
+          "dark": "#0369a1"
+        },
+        "usage": "Vocabulary card outline (today: border-sky-300)."
+      },
+      {
+        "name": "wb-grammar-bg",
+        "value": {
+          "light": "#d1fae5",
+          "dark": "#022c22"
+        },
+        "usage": "Grammar lesson card fill (today: bg-emerald-100)."
+      },
+      {
+        "name": "wb-grammar-ink",
+        "value": {
+          "light": "#065f46",
+          "dark": "#a7f3d0"
+        },
+        "usage": "Text on grammar-bg. 6.8:1 light, 11.8:1 dark."
+      },
+      {
+        "name": "wb-grammar-border",
+        "value": {
+          "light": "#6ee7b7",
+          "dark": "#047857"
+        },
+        "usage": "Grammar card outline (today: border-emerald-300)."
+      },
+      {
+        "name": "wb-phrase-bg",
+        "value": {
+          "light": "#fef3c7",
+          "dark": "#451a03"
+        },
+        "usage": "Daily phrase card fill, streak highlights (today: bg-amber-100)."
+      },
+      {
+        "name": "wb-phrase-ink",
+        "value": {
+          "light": "#92400e",
+          "dark": "#fde68a"
+        },
+        "usage": "Text on phrase-bg. 6.4:1 light, 12:1 dark."
+      },
+      {
+        "name": "wb-phrase-border",
+        "value": {
+          "light": "#fcd34d",
+          "dark": "#b45309"
+        },
+        "usage": "Daily phrase card outline (today: border-amber-300)."
+      },
+      {
+        "name": "wb-success",
+        "value": {
+          "light": "#047857",
+          "dark": "#34d399"
+        },
+        "usage": "Correct answer, completed lesson, success button. CHANGED from emerald-500/600 (white 2.5–3.8:1) to emerald-700 (5.5:1). Always paired with ✓ and a label."
+      },
+      {
+        "name": "wb-on-success",
+        "value": {
+          "light": "#ffffff",
+          "dark": "#0f172a"
+        },
+        "usage": "Text on success fill."
+      },
+      {
+        "name": "wb-danger",
+        "value": {
+          "light": "#be123c",
+          "dark": "#fb7185"
+        },
+        "usage": "Errors, wrong answers, log out. CHANGED from rose-600 (4.4:1 on surface-page) to rose-700. Always paired with text, never colour alone."
+      },
+      {
+        "name": "wb-danger-soft",
+        "value": {
+          "light": "#ffe4e6",
+          "dark": "#4c0519"
+        },
+        "usage": "Hover fill behind danger text, wrong-answer background."
+      },
+      {
+        "name": "wb-share-private-bg",
+        "value": {
+          "light": "#e0f2fe",
+          "dark": "#082f49"
+        },
+        "usage": "VocabularyShareStatus.Private chip fill."
+      },
+      {
+        "name": "wb-share-private-ink",
+        "value": {
+          "light": "#075985",
+          "dark": "#bae6fd"
+        },
+        "usage": "Text on wb-share-private-bg (6.6:1 / 10.5:1)."
+      },
+      {
+        "name": "wb-share-private-border",
+        "value": {
+          "light": "#7dd3fc",
+          "dark": "#0369a1"
+        },
+        "usage": "Private chip outline."
+      },
+      {
+        "name": "wb-share-pending-bg",
+        "value": {
+          "light": "#fef3c7",
+          "dark": "#451a03"
+        },
+        "usage": "VocabularyShareStatus.PendingReview chip fill."
+      },
+      {
+        "name": "wb-share-pending-ink",
+        "value": {
+          "light": "#92400e",
+          "dark": "#fde68a"
+        },
+        "usage": "Text on wb-share-pending-bg (6.4:1 / 12:1)."
+      },
+      {
+        "name": "wb-share-pending-border",
+        "value": {
+          "light": "#fcd34d",
+          "dark": "#b45309"
+        },
+        "usage": "PendingReview chip outline."
+      },
+      {
+        "name": "wb-share-shared-bg",
+        "value": {
+          "light": "#d1fae5",
+          "dark": "#022c22"
+        },
+        "usage": "VocabularyShareStatus.Shared chip fill."
+      },
+      {
+        "name": "wb-share-shared-ink",
+        "value": {
+          "light": "#065f46",
+          "dark": "#a7f3d0"
+        },
+        "usage": "Text on wb-share-shared-bg (6.8:1 / 11.8:1)."
+      },
+      {
+        "name": "wb-share-shared-border",
+        "value": {
+          "light": "#6ee7b7",
+          "dark": "#047857"
+        },
+        "usage": "Shared chip outline."
+      },
+      {
+        "name": "wb-share-rejected-bg",
+        "value": {
+          "light": "#ffe4e6",
+          "dark": "#4c0519"
+        },
+        "usage": "VocabularyShareStatus.Rejected chip fill."
+      },
+      {
+        "name": "wb-share-rejected-ink",
+        "value": {
+          "light": "#9f1239",
+          "dark": "#fecdd3"
+        },
+        "usage": "Text on wb-share-rejected-bg (6.7:1 / 11.1:1)."
+      },
+      {
+        "name": "wb-share-rejected-border",
+        "value": {
+          "light": "#fda4af",
+          "dark": "#be123c"
+        },
+        "usage": "Rejected chip outline."
+      },
+      {
+        "name": "wb-level-beginner-bg",
+        "value": {
+          "light": "#d1fae5",
+          "dark": "#022c22"
+        },
+        "usage": "Level.Beginner badge fill. NEW — levels are uncoloured today."
+      },
+      {
+        "name": "wb-level-beginner-ink",
+        "value": {
+          "light": "#065f46",
+          "dark": "#a7f3d0"
+        },
+        "usage": "Text on wb-level-beginner-bg (6.8:1)."
+      },
+      {
+        "name": "wb-level-intermediate-bg",
+        "value": {
+          "light": "#e0f2fe",
+          "dark": "#082f49"
+        },
+        "usage": "Level.Intermediate badge fill. NEW."
+      },
+      {
+        "name": "wb-level-intermediate-ink",
+        "value": {
+          "light": "#075985",
+          "dark": "#bae6fd"
+        },
+        "usage": "Text on wb-level-intermediate-bg (6.6:1)."
+      },
+      {
+        "name": "wb-level-advanced-bg",
+        "value": {
+          "light": "#ede9fe",
+          "dark": "#2e1065"
+        },
+        "usage": "Level.Advanced badge fill. NEW colour family (violet) — needs Sam approval."
+      },
+      {
+        "name": "wb-level-advanced-ink",
+        "value": {
+          "light": "#5b21b6",
+          "dark": "#ddd6fe"
+        },
+        "usage": "Text on wb-level-advanced-bg (7.6:1 / 11:1)."
+      },
+      {
+        "name": "wb-secondary",
+        "value": {
+          "light": "#b45309",
+          "dark": "#fbbf24"
+        },
+        "usage": "Secondary action fill (\"Not sure\"/skip, phrase audio play). CHANGED from amber-400/500 with white text (≈2:1) to amber-700 (5.0:1)."
+      },
+      {
+        "name": "wb-secondary-hover",
+        "value": {
+          "light": "#92400e",
+          "dark": "#fcd34d"
+        },
+        "usage": "wb-secondary on hover."
+      },
+      {
+        "name": "wb-on-secondary",
+        "value": {
+          "light": "#ffffff",
+          "dark": "#0f172a"
+        },
+        "usage": "Text/icon on wb-secondary."
+      },
+      {
+        "name": "wb-highlight",
+        "value": {
+          "light": "#b45309",
+          "dark": "#fbbf24"
+        },
+        "usage": "Streak and highlight numbers (🔥). CHANGED from text-amber-500 (2.1:1) to amber-700 (5.0:1)."
+      }
+    ]
+  },
+  "type": {
+    "fonts": [],
+    "families": {
+      "sans": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\""
+    },
+    "groups": [
+      {
+        "name": "Headings",
+        "family": "sans",
+        "styles": [
+          {
+            "name": "display",
+            "fontSize": "36px",
+            "lineHeight": "40px",
+            "fontWeight": 800,
+            "sample": "Great job, Mai! 🔥",
+            "usage": "Score reveals, dashboard greeting (text-4xl font-extrabold)."
+          },
+          {
+            "name": "page-title",
+            "fontSize": "30px",
+            "lineHeight": "36px",
+            "fontWeight": 800,
+            "sample": "Lessons",
+            "usage": "One per page (text-3xl font-extrabold)."
+          },
+          {
+            "name": "card-title",
+            "fontSize": "20px",
+            "lineHeight": "28px",
+            "fontWeight": 700,
+            "sample": "Animals at the zoo",
+            "usage": "Lesson and stat card titles (text-xl font-bold)."
+          }
+        ]
+      },
+      {
+        "name": "Text",
+        "family": "sans",
+        "styles": [
+          {
+            "name": "body-lg",
+            "fontSize": "18px",
+            "lineHeight": "28px",
+            "fontWeight": 400,
+            "sample": "Loading lessons…",
+            "usage": "Status messages, child-facing body text (text-lg)."
+          },
+          {
+            "name": "body",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": 400,
+            "sample": "An elephant is a very large grey animal.",
+            "usage": "Adult body text, definitions (text-base)."
+          },
+          {
+            "name": "label",
+            "fontSize": "14px",
+            "lineHeight": "20px",
+            "fontWeight": 600,
+            "sample": "Beginner",
+            "usage": "Pills, form labels, metadata (text-sm font-semibold)."
+          },
+          {
+            "name": "button",
+            "fontSize": "18px",
+            "lineHeight": "28px",
+            "fontWeight": 700,
+            "sample": "Start lesson",
+            "usage": "Primary buttons (text-lg font-bold)."
+          }
+        ]
+      }
+    ]
+  },
+  "spacing": {
+    "tokens": [
+      {
+        "name": "space-1",
+        "value": "4px",
+        "usage": "Icon-to-text nudge (mt-1)."
+      },
+      {
+        "name": "space-2",
+        "value": "8px",
+        "usage": "Gap between pills and tabs (gap-2)."
+      },
+      {
+        "name": "space-3",
+        "value": "12px",
+        "usage": "Button vertical padding (py-3)."
+      },
+      {
+        "name": "space-4",
+        "value": "16px",
+        "usage": "Grid gap, button horizontal padding (gap-4, px-4)."
+      },
+      {
+        "name": "space-5",
+        "value": "20px",
+        "usage": "Card padding (p-5)."
+      },
+      {
+        "name": "space-6",
+        "value": "24px",
+        "usage": "Section spacing, panel padding (mt-6, p-6)."
+      },
+      {
+        "name": "space-8",
+        "value": "32px",
+        "usage": "Space before status messages and page sections (mt-8)."
+      }
+    ],
+    "note": "Not overridden: values equal Tailwind defaults (p-4 = 16px …). Kept for documentation only, no --spacing-wb-* variables."
+  },
+  "radius": {
+    "tokens": [
+      {
+        "name": "wb-md",
+        "value": "12px",
+        "usage": "Buttons and inputs (rounded-xl)."
+      },
+      {
+        "name": "wb-lg",
+        "value": "16px",
+        "usage": "Sidebar items, panels (rounded-2xl)."
+      },
+      {
+        "name": "wb-card",
+        "value": "24px",
+        "usage": "Lesson and stat cards (rounded-3xl) — the signature soft shape."
+      },
+      {
+        "name": "wb-pill",
+        "value": "9999px",
+        "usage": "Tabs, filter pills, level badges (rounded-full)."
+      }
+    ]
+  },
+  "shadow": {
+    "tokens": [
+      {
+        "name": "wb-card",
+        "value": "0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a",
+        "usage": "Resting cards (shadow-sm)."
+      },
+      {
+        "name": "wb-raised",
+        "value": "0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a",
+        "usage": "Hovered cards, sidebar (shadow-md)."
+      }
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 ---
 name: frontend-design
-description: Designs and builds WordBuddy.UI screens and components that look and feel like the rest of the app — kid-friendly, bright, rounded, sky/emerald/amber palette, Tailwind-only styling, Framer Motion animation, TanStack Query loading/error/empty states. Use whenever the user asks to create, redesign, restyle, or polish a page, component, layout, card, form, or empty/error state in WordBuddy.UI, or says "make it look nicer", "design a screen for X", "UI for feature Y". Not for backend work (use develop-webapi).
+description: Designs and builds WordBuddy.UI screens and components that look and feel like the rest of the app — kid-friendly, bright, rounded, sky/emerald/amber palette, Tailwind utilities plus CSS Modules, Framer Motion animation, TanStack Query loading/error/empty states. Use whenever the user asks to create, redesign, restyle, or polish a page, component, layout, card, form, or empty/error state in WordBuddy.UI, or says "make it look nicer", "design a screen for X", "UI for feature Y". Not for backend work (use develop-webapi).
 ---
 
 # WordBuddy frontend design
 
 Make new UI indistinguishable from the existing pages (`WordBuddy.UI/src/pages/LessonsPage.tsx` is
-the reference). Hard rules come from `WordBuddy.UI/CLAUDE.md` — Tailwind only, Framer Motion only,
+the reference). Hard rules come from `WordBuddy.UI/CLAUDE.md` — Tailwind utilities + CSS Modules, Framer Motion only,
 TanStack Query only, strict TS without `enum`. This skill adds the *visual* language.
 
 ## 1. Before designing
@@ -66,7 +66,7 @@ blank the page.
 
 ## 6. Checklist before finishing
 
-- [ ] Only Tailwind classes; no `style={{}}` except Framer Motion props.
+- [ ] Tailwind utilities or a `Component.module.css` (with `@reference` to `index.css`); colours only from theme tokens; no `style={{}}` except Framer Motion props.
 - [ ] Loading / error / empty / content all handled.
 - [ ] Child vs. adult presentation considered and stated in your summary.
 - [ ] Keyboard-navigable, visible focus, ≥ 44px targets.
