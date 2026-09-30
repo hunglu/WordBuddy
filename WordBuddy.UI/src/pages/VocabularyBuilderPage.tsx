@@ -78,7 +78,7 @@ export function VocabularyBuilderPage(): ReactElement {
           </label>
           <input
             id="word"
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('word')}
           />
           {errors.word && <p className="mt-1 text-sm text-rose-600">{errors.word.message}</p>}
@@ -91,7 +91,7 @@ export function VocabularyBuilderPage(): ReactElement {
           <textarea
             id="definition"
             rows={2}
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('definition')}
           />
           {errors.definition && <p className="mt-1 text-sm text-rose-600">{errors.definition.message}</p>}
@@ -104,7 +104,7 @@ export function VocabularyBuilderPage(): ReactElement {
           <textarea
             id="example"
             rows={2}
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('example')}
           />
           {errors.example && <p className="mt-1 text-sm text-rose-600">{errors.example.message}</p>}

@@ -84,7 +84,7 @@ export function RegisterPage(): ReactElement {
           </label>
           <input
             id="displayName"
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('displayName')}
           />
           {errors.displayName && (
@@ -100,7 +100,7 @@ export function RegisterPage(): ReactElement {
             id="email"
             type="email"
             autoComplete="email"
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('email')}
           />
           {errors.email && <p className="mt-1 text-sm text-rose-600">{errors.email.message}</p>}
@@ -114,7 +114,7 @@ export function RegisterPage(): ReactElement {
             id="password"
             type="password"
             autoComplete="new-password"
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('password')}
           />
           {errors.password && (
@@ -130,7 +130,7 @@ export function RegisterPage(): ReactElement {
             id="confirmPassword"
             type="password"
             autoComplete="new-password"
-            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-xl border-2 border-sky-200 px-4 py-3 text-base focus:border-sky-500"
             {...register('confirmPassword')}
           />
           {errors.confirmPassword && (

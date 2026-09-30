@@ -216,3 +216,10 @@
   --wb-highlight: #fbbf24;
   color-scheme: dark;
 }
+
+@layer base {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--color-wb-focus-ring);
+  }
+}
