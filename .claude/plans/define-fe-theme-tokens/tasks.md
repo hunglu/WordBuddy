@@ -26,7 +26,7 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 - [x] Migrate `pages/LoginPage.tsx`. Verify: the primary button uses `bg-wb-primary text-wb-on-primary hover:bg-wb-primary-hover`, and inputs use `border-wb-border-control`. — `pages/LoginPage.tsx`
 - [x] Migrate `pages/RegisterPage.tsx`. Verify: the same checks as Login pass, and the AgeGroup selector still works. — `pages/RegisterPage.tsx`
 - [x] Migrate `pages/DashboardPage.tsx`. Verify: streak numbers use `text-wb-highlight`, cards use `shadow-wb-card`/`rounded-wb-card`, and any card lift is done with `whileHover`. — `pages/DashboardPage.tsx` (no streak numbers exist on this page; cards now `motion.create(Link)` with whileHover/whileTap; hover:shadow-lg dropped for static shadow-wb-card)
-- [ ] Migrate `pages/LessonsPage.tsx`, applying `levelClasses` to level badges. Verify: cards use `wb-vocab-*`/`wb-grammar-*`, the active tab uses `bg-wb-primary`, card hover lift uses Framer Motion, and no `hover:-translate`/`hover:shadow` remains.
+- [x] Migrate `pages/LessonsPage.tsx`, applying `levelClasses` to level badges. Verify: cards use `wb-vocab-*`/`wb-grammar-*`, the active tab uses `bg-wb-primary`, card hover lift uses Framer Motion, and no `hover:-translate`/`hover:shadow` remains. — `pages/LessonsPage.tsx`
 - [ ] Migrate `pages/LessonDetailPage.tsx` and `components/lessons/{VocabularyList,GrammarRuleList}.tsx`, applying `levelClasses` where a level is shown. Verify: no palette or `transition` classes remain.
 - [ ] Migrate `components/lessons/DailyPhraseList.tsx`. Verify: the card uses `wb-phrase-*`, and the audio button uses `bg-wb-secondary text-wb-on-secondary hover:bg-wb-secondary-hover`.
 - [ ] Migrate `pages/ProgressPage.tsx`. Verify: success and danger states use `wb-` tokens and keep their labels, and streak numbers use `text-wb-highlight`.
@@ -65,3 +65,4 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 ## Gaps (filled in by coder if unmapped colours are found, or with Sam's violet decision)
 - `layouts/PublicLayout.tsx`: page gradient `from-sky-100 via-white to-amber-100` has no token (left as-is); card `shadow-xl` has no wb- shadow (left as built-in).
 - `layouts/AppLayout.tsx`: nav item `hover:bg-sky-100` (generic hover tint, not a vocab card) has no token (left as-is); active nav plain `shadow` left as built-in.
+- `pages/LessonsPage.tsx`: inactive type-tab `hover:bg-sky-100` has no token (left as-is); active tab plain `shadow` left as built-in.

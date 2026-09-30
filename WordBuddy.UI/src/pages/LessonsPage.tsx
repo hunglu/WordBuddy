@@ -4,6 +4,7 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLessons } from '../api/lessons'
+import { levelClasses } from '../theme/variants'
 import type { Level, LessonType } from '../types'
 
 const TYPE_TABS: { value: LessonType | undefined; label: string }[] = [
@@ -21,9 +22,9 @@ const LEVEL_PILLS: { value: Level | undefined; label: string }[] = [
 ]
 
 const TYPE_COLORS: Record<LessonType, string> = {
-  Vocabulary: 'bg-sky-100 text-sky-800 border-sky-300',
-  Grammar: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-  DailyPhrase: 'bg-amber-100 text-amber-800 border-amber-300',
+  Vocabulary: 'bg-wb-vocab-bg text-wb-vocab-ink border-wb-vocab-border',
+  Grammar: 'bg-wb-grammar-bg text-wb-grammar-ink border-wb-grammar-border',
+  DailyPhrase: 'bg-wb-phrase-bg text-wb-phrase-ink border-wb-phrase-border',
 }
 
 const TYPE_ICONS: Record<LessonType, string> = {
@@ -31,6 +32,8 @@ const TYPE_ICONS: Record<LessonType, string> = {
   Grammar: '📐',
   DailyPhrase: '💬',
 }
+
+const MotionLink = motion.create(Link)
 
 export function LessonsPage(): ReactElement {
   const [type, setType] = useState<LessonType | undefined>(undefined)
@@ -43,7 +46,7 @@ export function LessonsPage(): ReactElement {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold text-sky-900">Lessons</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">Lessons</h1>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {TYPE_TABS.map((tab) => (
@@ -51,10 +54,10 @@ export function LessonsPage(): ReactElement {
             key={tab.label}
             type="button"
             onClick={() => setType(tab.value)}
-            className={`rounded-full px-5 py-2 text-base font-bold transition-colors ${
+            className={`rounded-wb-pill px-5 py-2 text-base font-bold ${
               type === tab.value
-                ? 'bg-sky-500 text-white shadow'
-                : 'bg-white text-sky-900 hover:bg-sky-100'
+                ? 'bg-wb-primary text-wb-on-primary shadow'
+                : 'bg-wb-surface-card text-wb-ink hover:bg-sky-100'
             }`}
           >
             {tab.label}
@@ -68,10 +71,10 @@ export function LessonsPage(): ReactElement {
             key={pill.label}
             type="button"
             onClick={() => setLevel(pill.value)}
-            className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
+            className={`rounded-wb-pill border px-4 py-1.5 text-sm font-semibold ${
               level === pill.value
-                ? 'border-sky-500 bg-sky-500 text-white'
-                : 'border-sky-200 bg-white text-sky-700 hover:bg-sky-50'
+                ? 'border-wb-primary bg-wb-primary text-wb-on-primary'
+                : 'border-wb-border-subtle bg-wb-surface-card text-wb-ink-muted hover:bg-wb-surface-page'
             }`}
           >
             {pill.label}
@@ -79,16 +82,16 @@ export function LessonsPage(): ReactElement {
         ))}
       </div>
 
-      {isLoading && <p className="mt-8 text-lg text-sky-600">Loading lessons…</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading lessons…</p>}
 
       {isError && (
-        <p className="mt-8 text-lg text-rose-600">
+        <p className="mt-8 text-lg text-wb-danger">
           Couldn't load lessons right now. Please try again in a moment.
         </p>
       )}
 
       {data && data.length === 0 && (
-        <p className="mt-8 text-lg text-sky-600">No lessons match these filters yet.</p>
+        <p className="mt-8 text-lg text-wb-ink-muted">No lessons match these filters yet.</p>
       )}
 
       {data && data.length > 0 && (
@@ -100,17 +103,20 @@ export function LessonsPage(): ReactElement {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: index * 0.05 }}
             >
-              <Link
+              <MotionLink
                 to={`/lessons/${lesson.id}`}
-                className={`block h-full rounded-3xl border-2 p-5 shadow-sm transition-transform hover:-translate-y-1 hover:shadow-md ${TYPE_COLORS[lesson.type]}`}
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className={`block h-full rounded-wb-card border-2 p-5 shadow-wb-card ${TYPE_COLORS[lesson.type]}`}
               >
                 <span className="text-3xl">{TYPE_ICONS[lesson.type]}</span>
                 <p className="mt-2 text-xl font-bold">{lesson.title}</p>
                 <p className="mt-1 text-sm opacity-80">{lesson.description}</p>
-                <span className="mt-3 inline-block rounded-full bg-white/60 px-3 py-1 text-xs font-semibold">
+                <span className={`mt-3 inline-block rounded-wb-pill px-3 py-1 text-xs font-semibold ${levelClasses[lesson.level]}`}>
                   {lesson.level}
                 </span>
-              </Link>
+              </MotionLink>
             </motion.div>
           ))}
         </div>
