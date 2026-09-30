@@ -12,11 +12,11 @@ export const shareStatusClasses: Record<VocabularyShareStatus, string> = {
 }
 
 /**
- * Badge classes per lesson level. Advanced uses a neutral fallback until the violet
- * wb-level-advanced-* tokens are approved.
+ * Badge classes per lesson level. Built only from wb- tokens; `Record` makes a missing level a
+ * compile error.
  */
 export const levelClasses: Record<Level, string> = {
   Beginner: 'bg-wb-level-beginner-bg text-wb-level-beginner-ink',
   Intermediate: 'bg-wb-level-intermediate-bg text-wb-level-intermediate-ink',
-  Advanced: 'bg-wb-surface-card text-wb-ink border-wb-border-subtle',
+  Advanced: 'bg-wb-level-advanced-bg text-wb-level-advanced-ink',
 }

@@ -12,7 +12,7 @@
       ]
     },
     "synced": "2026-09-30",
-    "status": "v2 — wb- prefix, variant sets for share status and level, secondary + highlight added",
+    "status": "v3 — violet approved for wb-level-advanced; gap tokens added (hover-tint, primary-soft, success-soft, success-hover, danger-soft-ink/hover, grammar-surface, auth gradient, overlay shadow)",
     "naming": "Every custom token is prefixed wb- so a review can tell custom from Tailwind built-ins: --color-wb-*, --radius-wb-*, --shadow-wb-* → bg-wb-primary, rounded-wb-card, shadow-wb-card. Built-in Tailwind scales (rounded-md, shadow-sm, spacing) are never overridden. Variant sets follow wb-<domain>-<variant>-<role>, e.g. wb-share-pending-ink, wb-level-advanced-bg; roles are bg, ink, border."
   },
   "color": {
@@ -353,7 +353,7 @@
           "light": "#ede9fe",
           "dark": "#2e1065"
         },
-        "usage": "Level.Advanced badge fill. NEW colour family (violet) — needs Sam approval."
+        "usage": "Level.Advanced badge fill (violet). Approved by Sam 2026-10-01."
       },
       {
         "name": "wb-level-advanced-ink",
@@ -394,6 +394,110 @@
           "dark": "#fbbf24"
         },
         "usage": "Streak and highlight numbers (🔥). CHANGED from text-amber-500 (2.1:1) to amber-700 (5.0:1)."
+      },
+      {
+        "name": "wb-hover-tint",
+        "value": {
+          "light": "#e0f2fe",
+          "dark": "#0c4a6e"
+        },
+        "usage": "Hover fill for nav items, tabs and option buttons (was hover:bg-sky-100). wb-ink on it: 8.2:1 both themes."
+      },
+      {
+        "name": "wb-primary-soft",
+        "value": {
+          "light": "#e0f2fe",
+          "dark": "#082f49"
+        },
+        "usage": "Soft blue secondary buttons (was bg-sky-100). Text: wb-ink (8.2:1 / 12.1:1)."
+      },
+      {
+        "name": "wb-primary-soft-hover",
+        "value": {
+          "light": "#bae6fd",
+          "dark": "#0c4a6e"
+        },
+        "usage": "wb-primary-soft on hover (was hover:bg-sky-200). wb-ink on it: 7.1:1 / 8.2:1."
+      },
+      {
+        "name": "wb-success-soft",
+        "value": {
+          "light": "#d1fae5",
+          "dark": "#022c22"
+        },
+        "usage": "Soft green chips and Share button (was bg-emerald-100). Distinct meaning from wb-grammar-bg even though values match."
+      },
+      {
+        "name": "wb-success-soft-ink",
+        "value": {
+          "light": "#065f46",
+          "dark": "#a7f3d0"
+        },
+        "usage": "Text on wb-success-soft / -hover (6.8:1 / 11.8:1; on hover 6.0:1 / 7.6:1)."
+      },
+      {
+        "name": "wb-success-soft-hover",
+        "value": {
+          "light": "#a7f3d0",
+          "dark": "#064e3b"
+        },
+        "usage": "wb-success-soft on hover (was hover:bg-emerald-200)."
+      },
+      {
+        "name": "wb-success-hover",
+        "value": {
+          "light": "#065f46",
+          "dark": "#6ee7b7"
+        },
+        "usage": "Solid success button on hover. wb-on-success on it: 7.7:1 / 11.7:1."
+      },
+      {
+        "name": "wb-danger-soft-ink",
+        "value": {
+          "light": "#9f1239",
+          "dark": "#fecdd3"
+        },
+        "usage": "Text on soft red buttons (wb-danger-soft and its hover): 5.7:1 / 11.1:1. wb-danger on the hover fill is only 4.5:1."
+      },
+      {
+        "name": "wb-danger-soft-hover",
+        "value": {
+          "light": "#fecdd3",
+          "dark": "#881337"
+        },
+        "usage": "Soft red button on hover (was hover:bg-rose-200). Use with wb-danger-soft-ink (5.7:1 / 6.8:1)."
+      },
+      {
+        "name": "wb-grammar-surface",
+        "value": {
+          "light": "#ecfdf5",
+          "dark": "#041f19"
+        },
+        "usage": "Grammar rule card background (was bg-emerald-50); example chips inside use wb-grammar-bg. wb-grammar-ink on it: 7.3:1 / 13.5:1."
+      },
+      {
+        "name": "wb-auth-from",
+        "value": {
+          "light": "#e0f2fe",
+          "dark": "#0f172a"
+        },
+        "usage": "Login/Register background gradient start (was from-sky-100)."
+      },
+      {
+        "name": "wb-auth-via",
+        "value": {
+          "light": "#ffffff",
+          "dark": "#1e293b"
+        },
+        "usage": "Login/Register gradient middle (was via-white)."
+      },
+      {
+        "name": "wb-auth-to",
+        "value": {
+          "light": "#fef3c7",
+          "dark": "#451a03"
+        },
+        "usage": "Login/Register gradient end (was to-amber-100). wb-ink on it: 8.5:1 / 13:1."
       }
     ]
   },
@@ -548,6 +652,11 @@
         "name": "wb-raised",
         "value": "0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a",
         "usage": "Hovered cards, sidebar (shadow-md)."
+      },
+      {
+        "name": "wb-overlay",
+        "value": "0 20px 25px -5px #0000001a, 0 8px 10px -6px #0000001a",
+        "usage": "Auth card and floating panels (was shadow-xl). Plain `shadow` maps to wb-card."
       }
     ]
   }
