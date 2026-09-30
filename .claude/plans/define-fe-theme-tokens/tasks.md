@@ -45,15 +45,15 @@ In each file, also remove `transition*`/`duration-*`/`ease-*` and CSS hover/acti
 
 ## Tests
 
-- [ ] Contrast check, light and dark, for every token text/background pair: ink and ink-muted on surface-page and surface-card; on-primary on primary; on-success on success; on-secondary on secondary; highlight on surface-card; danger on surface-page and danger-soft; vocab, grammar and phrase ink on their backgrounds; `wb-share-*-ink` on `wb-share-*-bg` (4 pairs); `wb-level-*-ink` on `wb-level-*-bg`; border-control and focus-ring against surface-card. Verify: text pairs are at least 4.5:1 and borders and rings at least 3:1, with results recorded in `test-report.md`.
-- [ ] Type check for the variant maps. Verify: `npm run build` passes, and temporarily deleting one key from `shareStatusClasses` makes `tsc` fail (note this in `test-report.md`, then revert).
-- [ ] Run the full `e2e/ui` suite. Verify: every scenario passes, and any class-dependent selector is replaced with a role or `data-testid`.
-- [ ] Add a Gherkin dark-mode scenario covering both `data-theme="dark"` and `colorScheme: 'dark'` emulation. Verify: the Login body background computes to the dark `wb-surface-page` (`#0f172a`).
-- [ ] Add a Gherkin keyboard-focus scenario that tabs to the Login primary button. Verify: the computed `box-shadow` is not `none`.
-- [ ] Add a Gherkin no-CSS-transition scenario on Lessons and Login. Verify: every button, link and card has a computed `transition-duration` of `0s`.
+- [x] Contrast check, light and dark, for every token text/background pair: ink and ink-muted on surface-page and surface-card; on-primary on primary; on-success on success; on-secondary on secondary; highlight on surface-card; danger on surface-page and danger-soft; vocab, grammar and phrase ink on their backgrounds; `wb-share-*-ink` on `wb-share-*-bg` (4 pairs); `wb-level-*-ink` on `wb-level-*-bg`; border-control and focus-ring against surface-card. Verify: text pairs are at least 4.5:1 and borders and rings at least 3:1, with results recorded in `test-report.md`.
+- [x] Type check for the variant maps. Verify: `npm run build` passes, and temporarily deleting one key from `shareStatusClasses` makes `tsc` fail (note this in `test-report.md`, then revert).
+- [x] Run the full `e2e/ui` suite. Verify: every scenario passes, and any class-dependent selector is replaced with a role or `data-testid`.
+- [x] Add a Gherkin dark-mode scenario covering both `data-theme="dark"` and `colorScheme: 'dark'` emulation. Verify: the Login body background computes to the dark `wb-surface-page` (`#0f172a`).
+- [x] Add a Gherkin keyboard-focus scenario that tabs to the Login primary button. Verify: the computed `box-shadow` is not `none`.
+- [x] Add a Gherkin no-CSS-transition scenario on Lessons and Login. Verify: every button, link and card has a computed `transition-duration` of `0s`.
 - [ ] Manual Child-account check in light and dark. Verify: text sizes and tap targets are unchanged from `main`, level badges and share chips are readable, and the results are noted in `test-report.md`.
-- [ ] Copy the bundle measurements (baseline, after `cssCodeSplit`, after migration) into `test-report.md`. Verify: all three rows are present.
-- [ ] Create `docs/features/ui-theme.md` from `_template.md`. It covers the tokens, the `wb-` naming convention and `wb-<domain>-<variant>-<role>` variant naming, the variant maps, dark-mode precedence, the focus ring, the motion policy, the single CSS bundle, CSS Module usage, and child/adult behaviour. Verify: the file exists and includes the naming convention.
+- [x] Copy the bundle measurements (baseline, after `cssCodeSplit`, after migration) into `test-report.md`. Verify: all three rows are present.
+- [x] Create `docs/features/ui-theme.md` from `_template.md`. It covers the tokens, the `wb-` naming convention and `wb-<domain>-<variant>-<role>` variant naming, the variant maps, dark-mode precedence, the focus ring, the motion policy, the single CSS bundle, CSS Module usage, and child/adult behaviour. Verify: the file exists and includes the naming convention.
 
 ## Measurements (filled in by coder)
 

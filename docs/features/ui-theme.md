@@ -2,15 +2,13 @@
 feature: UI theme tokens
 services: UI
 audience: Both
-state: proposed
+state: shipped
 last-updated-by: define-fe-theme-tokens
 ---
 
 # UI theme tokens
 
 ## What it does
-
-Not on `main` yet. This file describes the behaviour once `define-fe-theme-tokens` merges.
 
 Every custom colour, radius and shadow in WordBuddy.UI is defined once, in a Tailwind v4 `@theme`
 block in `src/index.css`. Components use only token utilities (`bg-wb-primary`, `text-wb-ink`,
@@ -66,6 +64,8 @@ Login, Register, Progress, and the Vocabulary Builder/Check/Moderation/SharedPoo
 
 ## Pending changes
 
-- `define-fe-theme-tokens`: semantic `wb-` theme tokens, dark mode, focus ring, and no CSS transitions (#2)
+None.
 
 ## Change history
+
+- `define-fe-theme-tokens` (#2): semantic `wb-` theme tokens, dark mode, focus ring, and no CSS transitions

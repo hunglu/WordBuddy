@@ -40,7 +40,7 @@ When('they start a recall check', async ({ page }) => {
   await page.getByRole('link', { name: /start recall check/i }).click()
   await expect(page).toHaveURL(/\/vocabulary\/check$/)
 
-  await page.getByRole('button', { name: '5 words' }).click()
+  await page.getByRole('button', { name: '5 words', exact: true }).click()
   await page.getByRole('button', { name: /start check/i }).click()
 })
 
@@ -50,9 +50,12 @@ Then('they can complete the check and see their result', async ({ page }) => {
 
   // The random check returns anywhere from 1 up to the requested word count — click through
   // however many flashcards appear until the completion screen shows.
-  for (let i = 0; i < 5 && !(await completeHeading.isVisible()); i++) {
-    await knowButton.click()
-  }
-
-  await expect(completeHeading).toBeVisible()
+  // Retry-until-settled: each pass clicks once, then gives the next card (or the result screen)
+  // time to render, so fast clicks aren't swallowed by the card transition.
+  await expect(async () => {
+    if (!(await completeHeading.isVisible())) {
+      await knowButton.click({ timeout: 1000 })
+    }
+    await expect(completeHeading).toBeVisible({ timeout: 750 })
+  }).toPass({ timeout: 20000 })
 })

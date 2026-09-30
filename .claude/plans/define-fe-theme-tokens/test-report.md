@@ -1,10 +1,12 @@
 # Test report: Define FE theme tokens
 
-Run 2026-10-01 on `feature/define-fe-theme-tokens` (b1ce1cb, already up to date with `origin/main`).
+Re-run 2026-10-01 on `feature/define-fe-theme-tokens` (7158b66, already up to date with `origin/main`). The first run was on b1ce1cb. The contrast, type-check and bundle sections below come from that first run, and the frontend code has not changed since.
 
 ## Backend unit/integration
 
-Not applicable. This change is frontend-only (WordBuddy.UI), and no backend service was touched.
+Since the first run, the only backend change is the dev-only Identity seeder (7158b66).
+
+`dotnet test src/Services/Identity/WordBuddy.Identity.slnx`: the build passes, and 0 tests were run. Neither `WordBuddy.Identity.UnitTests` nor `WordBuddy.Identity.IntegrationTests` contains any tests yet ("No test is available"). So this run proves that the service compiles, and nothing more. The seeder itself is checked end to end: the E2E login with the seeded account passes (see below).
 
 ## E2E API
 
@@ -65,26 +67,25 @@ Result: 39 pairs checked, 0 failures. Text pairs need at least 4.5:1, and border
 
 ## E2E UI
 
-I ran this against the Vite dev server at `http://localhost:5173` (`UI_BASE_URL`), which proxies to the running compose backends.
-The compose UI container on `:3000` still serves an old build (`index-*.css` with no `wb-` tokens), and rebuilding it
-needs `docker compose`, which is ask-gated, so I did not rebuild it.
+I ran this against the Vite dev server at `http://localhost:5173` (`UI_BASE_URL`), which proxies to the running compose backends. Sam decided not to rebuild the `:3000` UI container. The seeded adult account `learner@example.com` was used.
 
 | Scenario | Result |
 | --- | --- |
-| Login: Successful login | FAIL (environment) |
-| Vocabulary Builder: add word + recall check | FAIL (environment) |
+| Login: Successful login | pass |
+| Vocabulary Builder: add word + recall check | pass (after fixing 2 test-side defects, see Failures) |
 | Theme: data-theme="dark" gives dark surface (#0f172a) | pass |
 | Theme: `colorScheme: 'dark'` emulation gives dark surface | pass |
 | Theme: keyboard Tab to Log in button gives non-`none` box-shadow | pass |
 | Theme: Login has no CSS transition-duration | pass |
-| Theme: Lessons has no CSS transition-duration | FAIL (environment) |
+| Theme: Lessons has no CSS transition-duration | pass |
 
-Total: 4 passed, 3 failed. As a control, I also ran the theme scenarios against the old `:3000` build, and 4 of 5 failed there. So the new scenarios do detect the change.
+Final result: 7 passed, 0 failed. I ran the suite twice in a row, and both runs were 7/7 green.
 
 ## Child-account check
 
-Not done. No Child test account is available, and a check "manual in light and dark" needs someone to look at the screens.
-This is **not a pass**.
+- **Automated, adult paths (done):** In `WordBuddy.UI/src` (excluding `index.css`), the removed and added lines of the diff against `main` contain exactly the same text-size, padding, width and height utilities (232 occurrences each side, no differences). `index.css` does not override any built-in `--text-*`/`--spacing` scale. So text sizes and tap targets are unchanged compared with `main`. The login, lessons and vocabulary pages were exercised as the adult account in the suite above.
+- **Child-specific check (NOT covered):** Only an adult account is seeded, so nobody has looked at the screens as a Child account in light or dark mode, and the readability of level badges and share chips as a Child has not been checked by eye. The contrast table below covers those token pairs numerically.
+- **Decision (Sam, 2026-10-01):** The missing Child-specific check is accepted and does not block the merge.
 
 ## Bundle measurements
 
@@ -98,12 +99,13 @@ These numbers come from the coder, recorded in tasks.md. I rebuilt today and con
 
 ## Failures
 
-- All 3 failures have the same cause. The E2E test account `learner@example.com` (default `E2E_TEST_EMAIL`) does not exist in the running Identity service: `POST :5080/api/auth/login` returns 400, and the UI shows "Email or password is incorrect."
-  The e2e/ui README lists this account as a precondition. No application defect was found.
-- The Child-account check has not been done (see above).
+None in the final run. Two defects in the test code were fixed in `e2e/ui/steps/vocabulary.steps.ts`. No application code was changed.
+
+1. `getByRole('button', { name: '5 words' })` also matched "15 words" (a strict-mode violation), so I added `exact: true`.
+2. The recall-check loop clicked "I Know This" up to 5 times without waiting, and the card transition swallowed some of those clicks. The run stopped on "Word 3 of 3" while the app was still working. I replaced the loop with a `toPass` retry that clicks once and then waits for the next card or the result screen.
+
+The earlier failures (missing test account) are fixed by the seeder in 7158b66.
 
 ## Verdict
 
-Not merged. The E2E UI suite has 3 failures because the test account is missing, and the Child-account check is outstanding.
-To finish: create the test account (or set `E2E_TEST_EMAIL`/`E2E_TEST_PASSWORD`), plus a Child account, then re-run `/test define-fe-theme-tokens`.
-Ideally, also rebuild the `:3000` UI container first.
+Approved — merged into main. The Child-specific visual check is not covered; Sam accepted this as non-blocking.
