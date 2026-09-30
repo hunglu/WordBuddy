@@ -33,6 +33,13 @@ anything else.
      have content restrictions enforced via authorization policies)
    - Success criteria — how we'd know it worked
    - Constraints — deadline, dependencies, anything explicitly out of scope
+   - Type — `new` feature, `change` to an existing one, or `bugfix`. For `change`, which
+     existing slug / `docs/features/*.md` it modifies. Never edit a `done` proposal — a change
+     always gets its own new folder.
+   - GitHub issue number, if the idea came from the Kanban board (see
+     `docs/sdlc/github-integration.md`). If `$ARGUMENTS` starts with `#<n>`, that is the issue:
+     run `gh issue view <n> --json title,body,labels` and fill the fields from it before asking
+     Sam anything. If `gh` is missing or not authenticated, say so and continue with what Sam typed.
 
    If Sam gives a terse one-liner and says "that's enough, go", don't push back — capture what
    you have and leave the rest as `_Not specified._` in the template. This command must not block
@@ -44,6 +51,10 @@ anything else.
    ---
    title: <title>
    status: idea
+   type: <new | change | bugfix>
+   issue: <GitHub issue number, e.g. 42 — or "none">
+   affects: <docs/features/<feature>.md paths this changes, comma-separated — or "none">
+   supersedes: <slug of an earlier proposal this changes — or "none">
    created: <YYYY-MM-DD>
    ---
 

@@ -22,7 +22,11 @@
       "Bash(dotnet ef database update:*)",
       "Bash(docker compose up:*)",
       "Bash(docker compose down:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Edit(./CLAUDE.md)",
+      "Write(./CLAUDE.md)",
+      "Edit(./**/CLAUDE.md)",
+      "Write(./**/CLAUDE.md)"
     ],
     "allow": [
       "Bash(dotnet build:*)",

@@ -1,6 +1,10 @@
 ---
 title: New Feature to build up vocabulary and check up
 status: blocked
+type: new
+issue: none
+affects: docs/features/vocabulary-builder.md
+supersedes: none
 created: 2026-09-23
 ---
 

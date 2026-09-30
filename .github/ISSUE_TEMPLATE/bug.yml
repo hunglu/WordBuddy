@@ -1,0 +1,19 @@
+name: Bug
+description: Something behaves wrongly
+labels: ["type:bugfix"]
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+  - type: dropdown
+    id: service
+    attributes:
+      label: Service
+      options: [Identity, Content, Quiz, Progress, Notification, UI, Unknown]

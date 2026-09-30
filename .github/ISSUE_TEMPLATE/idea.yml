@@ -1,0 +1,40 @@
+name: Idea / feature
+description: New feature, or a change to a shipped feature
+labels: ["type:new"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options: [new, change]
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is broken or missing today
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+  - type: dropdown
+    id: users
+    attributes:
+      label: Target users
+      options: [Children, Adults, Both]
+  - type: textarea
+    id: success
+    attributes:
+      label: Success criteria
+  - type: input
+    id: affects
+    attributes:
+      label: Affects (for a change)
+      placeholder: docs/features/vocabulary-builder.md
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints / out of scope
