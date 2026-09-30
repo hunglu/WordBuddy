@@ -19,11 +19,11 @@ export function ProgressPage(): ReactElement {
   } = useVocabularyRecallProgress()
 
   if (isLoading) {
-    return <p className="text-lg text-sky-600">Loading your progress…</p>
+    return <p className="text-lg text-wb-ink-muted">Loading your progress…</p>
   }
 
   if (isError) {
-    return <p className="text-lg text-rose-600">Couldn't load your progress right now.</p>
+    return <p className="text-lg text-wb-danger">Couldn't load your progress right now.</p>
   }
 
   const completed = data?.filter((entry) => entry.isCompleted) ?? []
@@ -34,35 +34,35 @@ export function ProgressPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-sky-900">My Progress</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">My Progress</h1>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-          <p className="text-4xl font-extrabold text-sky-600">
+        <div className="rounded-wb-card bg-wb-surface-card p-6 text-center shadow-wb-card">
+          <p className="text-4xl font-extrabold text-wb-ink-muted">
             <CountUpStat value={completed.length} />
           </p>
-          <p className="mt-1 text-sky-800">Lessons completed</p>
+          <p className="mt-1 text-wb-ink">Lessons completed</p>
         </div>
-        <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-          <p className="text-4xl font-extrabold text-emerald-600">
+        <div className="rounded-wb-card bg-wb-surface-card p-6 text-center shadow-wb-card">
+          <p className="text-4xl font-extrabold text-wb-success">
             <CountUpStat value={averageScore} suffix="%" />
           </p>
-          <p className="mt-1 text-sky-800">Average score</p>
+          <p className="mt-1 text-wb-ink">Average score</p>
         </div>
-        <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-          <p className="text-4xl font-extrabold text-amber-500">🔥</p>
-          <p className="mt-1 text-sky-800">Streak (coming soon)</p>
+        <div className="rounded-wb-card bg-wb-surface-card p-6 text-center shadow-wb-card">
+          <p className="text-4xl font-extrabold text-wb-highlight">🔥</p>
+          <p className="mt-1 text-wb-ink">Streak (coming soon)</p>
         </div>
       </div>
 
       {completed.length === 0 ? (
-        <div className="mt-10 flex flex-col items-center gap-3 rounded-3xl bg-white p-10 text-center shadow-sm">
+        <div className="mt-10 flex flex-col items-center gap-3 rounded-wb-card bg-wb-surface-card p-10 text-center shadow-wb-card">
           <span className="text-5xl">🌱</span>
-          <p className="text-lg font-semibold text-sky-900">No completed lessons yet</p>
-          <p className="text-sky-600">Finish your first lesson to see it here!</p>
+          <p className="text-lg font-semibold text-wb-ink">No completed lessons yet</p>
+          <p className="text-wb-ink-muted">Finish your first lesson to see it here!</p>
           <Link
             to="/lessons"
-            className="mt-2 rounded-xl bg-sky-500 px-6 py-3 text-lg font-bold text-white shadow hover:bg-sky-600"
+            className="mt-2 rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow hover:bg-wb-primary-hover"
           >
             Browse Lessons
           </Link>
@@ -70,10 +70,10 @@ export function ProgressPage(): ReactElement {
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {completed.map((entry) => (
-            <div key={entry.id} className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-lg font-bold text-sky-900">{entry.lessonTitle}</p>
+            <div key={entry.id} className="rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card">
+              <p className="text-lg font-bold text-wb-ink">{entry.lessonTitle}</p>
               {entry.scorePercent !== null && (
-                <span className="mt-2 inline-block rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
+                <span className="mt-2 inline-block rounded-wb-pill bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
                   {entry.scorePercent}%
                 </span>
               )}
@@ -82,44 +82,44 @@ export function ProgressPage(): ReactElement {
         </div>
       )}
 
-      <h2 className="mt-10 text-2xl font-extrabold text-sky-900">Vocabulary Recall</h2>
+      <h2 className="mt-10 text-2xl font-extrabold text-wb-ink">Vocabulary Recall</h2>
 
-      {isRecallLoading && <p className="mt-4 text-lg text-sky-600">Loading your recall progress…</p>}
+      {isRecallLoading && <p className="mt-4 text-lg text-wb-ink-muted">Loading your recall progress…</p>}
       {isRecallError && (
-        <p className="mt-4 text-lg text-rose-600">Couldn't load your recall progress right now.</p>
+        <p className="mt-4 text-lg text-wb-danger">Couldn't load your recall progress right now.</p>
       )}
 
       {recall && (
         <>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-              <p className="text-4xl font-extrabold text-sky-600">
+            <div className="rounded-wb-card bg-wb-surface-card p-6 text-center shadow-wb-card">
+              <p className="text-4xl font-extrabold text-wb-ink-muted">
                 <CountUpStat value={recall.totalWordsTracked} />
               </p>
-              <p className="mt-1 text-sky-800">Words tracked</p>
+              <p className="mt-1 text-wb-ink">Words tracked</p>
             </div>
-            <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-              <p className="text-4xl font-extrabold text-emerald-600">
+            <div className="rounded-wb-card bg-wb-surface-card p-6 text-center shadow-wb-card">
+              <p className="text-4xl font-extrabold text-wb-success">
                 <CountUpStat value={recall.knownCount} />
               </p>
-              <p className="mt-1 text-sky-800">Known</p>
+              <p className="mt-1 text-wb-ink">Known</p>
             </div>
-            <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-              <p className="text-4xl font-extrabold text-amber-500">
+            <div className="rounded-wb-card bg-wb-surface-card p-6 text-center shadow-wb-card">
+              <p className="text-4xl font-extrabold text-wb-highlight">
                 <CountUpStat value={recall.learningCount} />
               </p>
-              <p className="mt-1 text-sky-800">Still learning</p>
+              <p className="mt-1 text-wb-ink">Still learning</p>
             </div>
           </div>
 
           {recall.recentSessions.length === 0 ? (
-            <div className="mt-6 flex flex-col items-center gap-3 rounded-3xl bg-white p-10 text-center shadow-sm">
+            <div className="mt-6 flex flex-col items-center gap-3 rounded-wb-card bg-wb-surface-card p-10 text-center shadow-wb-card">
               <span className="text-5xl">🧠</span>
-              <p className="text-lg font-semibold text-sky-900">No recall checks yet</p>
-              <p className="text-sky-600">Run your first check to see your history here!</p>
+              <p className="text-lg font-semibold text-wb-ink">No recall checks yet</p>
+              <p className="text-wb-ink-muted">Run your first check to see your history here!</p>
               <Link
                 to="/vocabulary/check"
-                className="mt-2 rounded-xl bg-emerald-500 px-6 py-3 text-lg font-bold text-white shadow hover:bg-emerald-600"
+                className="mt-2 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success shadow"
               >
                 Start a Check
               </Link>
@@ -127,9 +127,9 @@ export function ProgressPage(): ReactElement {
           ) : (
             <div className="mt-6 flex flex-col gap-3">
               {recall.recentSessions.map((session) => (
-                <div key={session.id} className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
-                  <p className="text-sky-800">{new Date(session.checkedAtUtc).toLocaleString()}</p>
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
+                <div key={session.id} className="flex items-center justify-between rounded-wb-lg bg-wb-surface-card p-4 shadow-wb-card">
+                  <p className="text-wb-ink">{new Date(session.checkedAtUtc).toLocaleString()}</p>
+                  <span className="rounded-wb-pill bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
                     {session.wordsKnown} / {session.wordsChecked} known
                   </span>
                 </div>
