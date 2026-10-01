@@ -34,6 +34,8 @@ npm run report        # open the last HTML report
 | `UI_BASE_URL` | Base URL of the UI under test | `http://localhost:3000` |
 | `E2E_TEST_EMAIL` | Login credential used by `steps/login.steps.ts` | `learner@example.com` |
 | `E2E_TEST_PASSWORD` | Login credential used by `steps/login.steps.ts` | `ChangeMe123!` |
+| `E2E_ADMIN_EMAIL` | Admin login used by `steps/navigation.steps.ts` | `admin@wordbuddy.com` (Identity dev seed) |
+| `E2E_ADMIN_PASSWORD` | Admin login used by `steps/navigation.steps.ts` | `Admin@123` (Identity dev seed) |
 
 Never commit real test credentials — set them as environment variables in CI/local shell instead.
 

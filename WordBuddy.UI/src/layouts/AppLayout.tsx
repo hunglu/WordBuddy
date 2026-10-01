@@ -1,21 +1,51 @@
 import type { ReactElement } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, Outlet, matchPath, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
-const NAV_ITEMS = [
+/** A sidebar navigation entry. */
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  end: boolean
+  /**
+   * Exact paths this item owns. When set, the item is active only on these paths
+   * (instead of the default prefix/exact matching on `to`).
+   */
+  activePaths?: string[]
+}
+
+const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Home', icon: '🏠', end: true },
   { to: '/lessons', label: 'Lessons', icon: '📚', end: false },
-  { to: '/vocabulary', label: 'My Vocabulary', icon: '📝', end: false },
-  { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: false },
+  {
+    to: '/vocabulary',
+    label: 'My Vocabulary',
+    icon: '📝',
+    end: true,
+    activePaths: ['/vocabulary', '/vocabulary/check'],
+  },
+  { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
 ]
 
-const ADMIN_NAV_ITEM = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: false }
+const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true }
+
+/**
+ * Whether a nav item is the selected one for `pathname`: exact match on `activePaths` when set,
+ * otherwise an exact (`end`) or prefix match on `to` (driven by `end`).
+ */
+function isItemActive(item: NavItem, pathname: string): boolean {
+  const paths: string[] = item.activePaths ?? [item.to]
+  const end: boolean = item.activePaths ? true : item.end
+  return paths.some((p) => matchPath({ path: p, end }, pathname) !== null)
+}
 
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
-  const navItems = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
+  const navItems: NavItem[] = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
+  const { pathname } = useLocation()
 
   return (
     <div className="flex min-h-screen bg-wb-surface-page">
@@ -25,23 +55,24 @@ export function AppLayout(): ReactElement {
           <span className="text-xl font-extrabold text-wb-ink-muted">WordBuddy</span>
         </div>
 
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
-                isActive
+        {navItems.map((item) => {
+          const active: boolean = isItemActive(item, pathname)
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={active ? 'page' : undefined}
+              className={`flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
+                active
                   ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
                   : 'text-wb-ink hover:bg-wb-hover-tint'
-              }`
-            }
-          >
-            <span className="text-2xl">{item.icon}</span>
-            {item.label}
-          </NavLink>
-        ))}
+              }`}
+            >
+              <span className="text-2xl">{item.icon}</span>
+              {item.label}
+            </Link>
+          )
+        })}
 
         <div className="mt-auto flex items-center gap-3 rounded-wb-lg px-4 py-3">
           <span className="text-2xl">👤</span>
