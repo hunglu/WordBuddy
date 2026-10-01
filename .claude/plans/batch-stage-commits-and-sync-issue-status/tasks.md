@@ -59,19 +59,28 @@
 
 ## Tests
 
-- [ ] Consistency check: `settings.json` parses (`node -e "JSON.parse(...)"`); no remaining
+- [x] Consistency check: `settings.json` parses (`node -e "JSON.parse(...)"`); no remaining
       "one commit per task", "record PR", separate "mark implemented" or "needs fixes" commit
       instructions (`Grep` across `.claude/` and `docs/sdlc/`); status names and the column
       mapping are identical in `workflow.md`, `github-integration.md` and every command. —
-      Grep finds nothing stale and all mappings match.
+      Grep finds nothing stale and all mappings match. — no file changes; JSON parses (33 ask
+      entries); only remaining `git revert` hits are the "not a `git revert`" notes
 - [ ] Dry run: run the board-sync id lookups read-only against the real board and confirm every
       mapped option name exists (this answers Open question 2). — Every mapped column resolves
-      to an option id.
+      to an option id. — **Blocked on Sam:** read-only lookup ran (project #1
+      `PVT_kwHOAFfpBs4BZ5na`, Status field `PVTSSF_lAHOAFfpBs4BZ5nazhU1Ct8`). Options on the board:
+      `Backlog · Ready · Planned · In progress · Done · Released` — **`In review` is missing**.
+      All other mapped names resolve. Until Sam adds an `In review` option (or picks another
+      mapping for `reviewed`), `/review` approve will report-and-skip per the Board sync rules.
 - [ ] Live run on the next real proposal (or this one's own `/code`): count commits and pushes per
       stage with `git log --oneline main..feature/<slug>`, and confirm the issue is assigned and In
       progress after `/code` starts and the board follows through review/test/done. Record the
       result in `test-report.md`. — At most one bookkeeping commit per stage per cycle, and the
-      board matches `status:` at every stage.
+      board matches `status:` at every stage. — Not doable inside this `/code` run; belongs to
+      `/test` / the next real proposal.
 - [ ] Ask-gate check: confirm that `gh project item-edit`, `gh issue edit --add-assignee` and
       `git push` each prompt for approval in both Bash and PowerShell. — No GitHub write or push
-      runs without a prompt.
+      runs without a prompt. — Partly verified statically: `ask` now has `Bash(...)` and
+      `PowerShell(...)` prefix patterns for `git push`, `gh issue edit` (covers
+      `--add-assignee`), `gh project item-edit`, `item-add`, `item-archive`. The live
+      "prompt appears in both shells" check still needs Sam (left for `/test`).
