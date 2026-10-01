@@ -23,7 +23,9 @@ git merge origin/main               # bring in anything that landed on main sinc
 
 Merging `main` in first means the tests run against exactly what will land. If that merge
 conflicts, run `git merge --abort`, stop, and report the conflicting files — resolving conflicts
-in application code is `/code`'s job, not yours. If `feature/<slug>` doesn't exist, stop and tell
+in application code is `/code`'s job, not yours. **On a conflict, change nothing:** no status
+change, no commit, no push, no merge. The PR stays open as it is until the conflict is resolved on
+`feature/<slug>` (`/code`), and that resolution then goes through `/review` before `/test` again. If `feature/<slug>` doesn't exist, stop and tell
 Sam to run `/code <slug>` first.
 
 ## Backend unit / integration tests
@@ -97,39 +99,52 @@ Write `.claude/plans/<slug>/test-report.md`:
 
 ## Commit, approve, and merge
 
-1. Set `.claude/plans/<slug>/proposal.md` frontmatter to `status: done` if the branch is approved
-   (see below), otherwise `status: needs-fixes`. Every edit to `proposal.md` also bumps `version`
-   and sets `updated` (see `docs/sdlc/workflow.md` → Proposal versioning).
-   If approved, also update the living spec(s) named in `proposal.md`'s `affects:` field
-   (`docs/features/<feature>.md`, created from `docs/features/_template.md` if missing) so they
-   describe the feature *as it now behaves*, and append this slug to its `## Change history`.
-   Set `state: shipped` and `last-updated-by: <slug>`, remove this slug's line from
-   `## Pending changes`, and set its row in `docs/features/README.md` to `shipped`.
-2. Commit your work on `feature/<slug>`: `git add` the test files you wrote, `test-report.md`,
-   `proposal.md`, and any `docs/features/*.md` you updated (specific paths, never
-   `git add -A`/`.`), then
-   `git commit -m "<slug>: tests and test report"` (no Co-Authored-By trailer — Sam asked to
-   drop it). Only files on the merge-guard allowlist may be in this commit: test projects,
-   `e2e/`, `.claude/plans/<slug>/`, `docs/features/`. If a test can only pass by changing
-   application code, don't change it — report it and set `needs-fixes`.
-3. `git push origin feature/<slug>` (ask-gated — Sam approves).
+Order matters: **nothing says `done` until the merge has actually happened.** Work through these
+steps in order and stop at the first one that says stop.
 
-**The branch is approved only if the merge guard holds** (`docs/sdlc/workflow.md` → Merge guard):
+**Step 1 — Decide the verdict** (`docs/sdlc/workflow.md` → Merge guard). Approved only if all hold:
 
 1. `review.md` verdict is Approve and its `Reviewed commit` sha is an ancestor of HEAD
    (`git merge-base --is-ancestor <sha> HEAD`).
-2. `git log --no-merges --name-only --format= <sha>..HEAD | sort -u` lists only allowlisted
-   paths (`**/*.UnitTests/**`, `**/*.IntegrationTests/**`, `e2e/**`, `.claude/plans/<slug>/**`,
-   `docs/features/**`). Record the command's output in `test-report.md`.
+2. Nothing outside the allowlist changed since the review, measured against "reviewed code +
+   current main" (HEAD already has `origin/main` merged in, see the top of this file):
+   ```bash
+   base=$(git merge-tree --write-tree <sha> origin/main)   # non-zero exit = reviewed code conflicts with main → guard fails
+   git diff --name-only "$base" HEAD
+   ```
+   Every listed path must be on the allowlist: `**/*.UnitTests/**`, `**/*.IntegrationTests/**`,
+   `e2e/**`, `.claude/plans/<slug>/test-report.md`, `.claude/plans/<slug>/proposal.md`, `.claude/plans/<slug>/review.md`,
+   `docs/features/**`. Record the output in `test-report.md`.
 3. Every suite ran in this session with zero failures. A `Skipped` suite is not a pass.
 
-This holds whether the run started from `reviewed` or `needs-fixes`. If 1 or 2 fails, don't
-merge: set `needs-fixes`, verdict "Not merged — code changed after review, run `/review`". If 3
-fails, don't merge: report which suites failed or were skipped and why, set `needs-fixes`, and
-let Sam decide (re-run `/test <slug>` once services are up, or `/code` to fix).
+**Step 2 — Commit tests and report** on `feature/<slug>` (status unchanged yet): `git add` the test
+files you wrote and `test-report.md` (specific paths, never `git add -A`/`.`), verdict line
+"Pending merge" if approved, else "Not merged — <reason>". `git commit -m "<slug>: tests and test
+report"` (no Co-Authored-By trailer). Only allowlisted files may be in this commit; if a test can
+only pass by changing application code, don't change it — report it. Then
+`git push origin feature/<slug>` (ask-gated).
 
-**If approved**, merge into `main` **through the pull request** (`pr:` in `proposal.md`), so
-GitHub records the merge, links the review, and closes the issue:
+**Step 3 — Not approved:** set `status: needs-fixes` (bump `version`, set `updated`), update the
+verdict line, commit `"<slug>: needs fixes"`, push, comment the report on the PR, and stop.
+Guard 1–2 failed → reason "code changed after review, run `/review`". Guard 3 failed → list
+failed/skipped suites; Sam decides (re-run `/test` once services are up, or `/code` to fix).
+
+**Step 4 — Approved: check the PR is mergeable before marking anything done.**
+`gh pr view <pr> --json mergeable --jq .mergeable` (retry once after a few seconds on `UNKNOWN`).
+- `CONFLICTING` → **leave everything as it is**: no status change, no merge. The PR stays open
+  until the conflict is resolved on `feature/<slug>` via `/code`, then `/review`. Set the verdict
+  line to "Not merged — PR has conflicts with main", commit and push only `test-report.md`,
+  comment it on the PR, and stop.
+- `MERGEABLE` → continue.
+
+**Step 5 — Mark done (one commit, so it can be undone cleanly):** set `status: done` (bump
+`version`, `updated`); update the living spec(s) in `affects:` (`docs/features/<feature>.md`,
+from `_template.md` if missing) to describe the feature *as it now behaves*, append this slug to
+`## Change history`, set `state: shipped` and `last-updated-by: <slug>`, remove this slug's line
+from `## Pending changes`, set its row in `docs/features/README.md` to `shipped`; verdict line
+"Approved — merged into main". Commit `"<slug>: mark done"` and push (ask-gated).
+
+**Step 6 — Merge through the PR**, re-checking guard 2 first (the new commit is allowlisted):
 
 ```bash
 gh pr merge <pr> -R hunglu/WordBuddy --merge \
@@ -137,40 +152,24 @@ gh pr merge <pr> -R hunglu/WordBuddy --merge \
 git switch main && git pull origin main
 ```
 
-`--merge` makes a merge commit (the same shape as `--no-ff`); never `--squash`/`--rebase`, and
-never `--delete-branch`. Only if `pr:` is `none` (no PR could be opened) fall back to:
+`--merge` makes a merge commit (same shape as `--no-ff`); never `--squash`/`--rebase`, never
+`--delete-branch`. Post the report on the PR:
+`gh pr comment <pr> --body-file .claude/plans/<slug>/test-report.md` (ask-gated).
 
-```bash
-git switch main
-git pull origin main
-git merge --no-ff feature/<slug> -m "Merge feature/<slug>: <title>" -m "Closes #<issue>"
-git push origin main                 # ask-gated — Sam approves
-```
+**If step 6 doesn't go through** (GitHub now reports a conflict, or Sam declines): nothing changed
+on `main`. Undo step 5 with exactly one corrective commit on `feature/<slug>`:
+`git revert --no-edit <mark-done sha>`, then set the verdict line to "Not merged — <reason>"
+in `test-report.md`, amend nothing else, commit, push. Status is back to what it was before
+`/test`; the PR stays open.
 
-Re-check the merge guard immediately before merging (the branch may have moved). Post the verdict
-on the PR too: `gh pr comment <pr> --body-file .claude/plans/<slug>/test-report.md` (ask-gated).
+**Fallback, only when `pr:` is `none`:** in step 4 skip the mergeability check; in step 6 run
+`git switch main && git pull origin main && git merge --no-ff feature/<slug> -m "Merge
+feature/<slug>: <title>" -m "Closes #<issue>" && git push origin main` (push ask-gated). On a
+conflict, `git merge --abort`, switch back to `feature/<slug>` and undo step 5 as above. If Sam
+declines the push, say so; the local merge stays for Sam to push or reset — don't undo it.
 
-**Merging through the PR (normal path):**
-- `gh pr merge` refuses if GitHub reports the PR as not mergeable (conflicts). Nothing is
-  merged locally, so there is nothing to abort: set the verdict to "Not merged — PR has
-  conflicts with main", set `needs-fixes`, and stop. Conflicts are resolved on `feature/<slug>`
-  via `/code`, then `/review`.
-- If Sam declines `gh pr merge`, nothing changed on `main`: verdict "Not merged — Sam declined
-  the merge", status stays `reviewed`/`needs-fixes` as set, and stop.
-- If the merge succeeded on GitHub, `git switch main && git pull origin main` to sync locally.
-
-**Fallback, only when `pr:` is `none`:**
-- If `git merge --no-ff` conflicts, `git merge --abort`, switch back to `feature/<slug>`, set the
-  verdict to "Not merged — conflicts with main", and stop.
-- If Sam declines `git push origin main`, say so in the verdict; the local merge stays for Sam
-  to push or reset themselves — don't undo it.
-
-Either way, don't delete `feature/<slug>` locally or on GitHub — that's Sam's call.
-
-Write the `## Verdict` line in step 2 as either "Approved — merged into main" or
-"Not merged — <reason>". If the merge or the push to `main` then doesn't go through, don't make
-another commit on `main` to fix the report. Say what happened in your summary, and the `/test`
-command relays it to Sam.
+Never commit on `main` to fix a report, and never delete `feature/<slug>` — that's Sam's call.
+Say what happened in your summary; the `/test` command relays it to Sam.
 
 ## Rules
 

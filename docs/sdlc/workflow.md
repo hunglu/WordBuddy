@@ -32,23 +32,42 @@ and approving every `git push`, PR post and PR merge.
 1. **Approved review of this code.** `review.md`'s verdict is Approve, and its
    `Reviewed commit: <sha>` is an ancestor of the branch head
    (`git merge-base --is-ancestor <sha> HEAD`).
-2. **Only test-scope commits since the review.** Every file changed by non-merge commits after
-   that sha is on the tester allowlist:
+2. **Only test-scope changes since the review.** Compare HEAD (which has `origin/main` merged
+   in) with "the reviewed code + current main":
+
    ```bash
-   git log --no-merges --name-only --format= <sha>..HEAD | sort -u
+   base=$(git merge-tree --write-tree <sha> origin/main)   # needs git ≥ 2.38
+   git diff --name-only "$base" HEAD
    ```
-   Allowlist: `**/*.UnitTests/**`, `**/*.IntegrationTests/**`, `e2e/**`,
-   `.claude/plans/<slug>/**`, `docs/features/**`. Merge commits that only bring in `main` are
-   excluded (that code was reviewed in its own PR). Any other path means code changed after the
-   review → don't merge; status `needs-fixes` with "changed after review — run `/review`".
+
+   - `main`'s own commits are part of `base`, so they never show up — merging `main` in doesn't
+     block the merge (that code was reviewed in its own PR).
+   - Anything changed on the branch after the review shows up, **including edits made while
+     resolving a merge conflict**, because those exist only in HEAD.
+   - If `git merge-tree` exits non-zero, the reviewed code conflicts with `main`, so any
+     resolution is unreviewed → the guard fails.
+
+   Every listed path must be on the tester allowlist: `**/*.UnitTests/**`,
+   `**/*.IntegrationTests/**`, `e2e/**`, `.claude/plans/<slug>/test-report.md`,
+   `.claude/plans/<slug>/proposal.md`, `.claude/plans/<slug>/review.md`, `docs/features/**`.
+   `plan.md` and `tasks.md` are not on it; `review.md` is, because the reviewer commits it after
+   the commit it reviewed. Any other path means code changed after the review → don't merge;
+   status `needs-fixes` with "changed after review — run `/review`".
 3. **Every suite ran in this session and passed** (a skipped suite is not a pass).
 
 Because of 1–2, `/test` accepts a proposal that is `reviewed` **or** `needs-fixes`: a re-test after
 a test-only failure (services down, flaky test fixed in `e2e/`) passes the guard, while a
 re-test after an application-code fix fails it and is sent back through `/review`.
 
-**Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed`; any code
-change after a review (review fixes or test fixes) goes back through `/review`. The reviewer
+**A conflicting PR is left as it is.** If the PR conflicts with `main` (when `/test` merges
+`main` in, or when GitHub reports it not mergeable), `/test` changes no status and merges nothing;
+the PR stays open until the conflict is resolved on `feature/<slug>` via `/code` and re-reviewed.
+`done` is only written once the merge is certain, and undone with one revert if the merge then
+fails.
+
+**Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed` or
+`needs-fixes`, and the merge guard blocks any code change made after the review (review fixes,
+test fixes, conflict resolutions) until it has gone through `/review`. The reviewer
 can't approve its own account's PR on GitHub, so the verdict lives in `review.md` and a PR
 comment; branch protection that requires an approving review needs a second GitHub account.
 
