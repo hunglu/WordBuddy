@@ -1,17 +1,51 @@
 # Review: Add pull request and code review stage to the SDLC workflow
 
-PR: #4 · Round 3 · Reviewed commit: 37ad18d · 2026-10-01T08:55:30+07:00
+PR: #4 · Round 4 · Reviewed commit: 7cbdf0c · 2026-10-01T09:18:23+07:00
 
 ## Verdict
+Approve. The round-3 major and all 11 nits are resolved, nothing new broke, and the workflow docs agree with each other.
+
+## Round-3 findings
+| # | Status | Evidence |
+|---|---|---|
+| 1 (major) | Resolved | `test.md` step 5 now follows `tester.md` steps 1–6 and merges through `gh pr merge --merge` (`--no-ff` only when `pr: none`). A conflict or `UNKNOWN` leaves the status as it is, is called an expected outcome, and tells the orchestrator not to set `needs-fixes`. Verification lists the three allowed end states (`done`+merged, `needs-fixes`, unchanged). The allowlist points to `workflow.md` → Merge guard. |
+| 2 | Resolved | `tester.md` and `workflow.md` check `merge-tree`'s exit code with `if ! out=...` and take only the first line as `base`. |
+| 3 | Resolved | `git revert --no-commit` + edit `test-report.md` + one `git commit`. |
+| 4 | Resolved | `tester.md` step 5: if the push is declined, don't merge; undo locally and stop. |
+| 5 | Resolved | `UNKNOWN` after retry is treated like `CONFLICTING`. |
+| 6, 12 | Resolved | `github-integration.md`: the Test row covers `reviewed`/`needs-fixes` + guard and says conflicts are left as they are. The new "Sửa sau review" row moves the card back to In progress. |
+| 7, 10, 11 | Resolved | `status.md` reads `pr`, `blocked-from`, `blocked-by`; the `needs-fixes` row includes a direct `/test` re-run; the `blocked` row points to the new `workflow.md` → Blocked section (enter/exit rules, and a conflict is not `blocked`). |
+| 8, 9 | Resolved | `propose`/`plan`/`code`/`test`/`release` commands and the `coder`/`planner`/`tester` agents use the 6-stage chain and the correct stage numbers. |
+
+## Agent-file corruption check
+`git diff 2ec3a3f 7cbdf0c -- .claude/agents/` shows only the intended hunks: the one-line chain wording in `coder.md` and `planner.md`, and in `tester.md` the chain line, the guard snippet, `UNKNOWN`, the declined push and the revert block. No other lines changed. A grep for w→o artefacts in `.claude/agents/` found nothing. No content was lost.
+
+## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| — | — | — | None. | — |
+
+Cross-doc check: `test.md`, `tester.md`, `workflow.md`, `status.md`, `code.md`, `review.md`, `github-integration.md` and root `CLAUDE.md` agree on the stages, status transitions, merge guard, allowlist and the conflict rule. No secrets were added.
+
+## Plan conformance
+All 8 tasks are covered. Commit 7cbdf0c changes only workflow docs, commands, agents and `proposal.md`, all within the proposal's scope.
+
+## Previous rounds
+
+## Round: Add pull request and code review stage to the SDLC workflow
+
+PR: #4 · Round 3 · Reviewed commit: 37ad18d · 2026-10-01T08:55:30+07:00
+
+### Verdict
 Changes requested. Both round-2 majors are fixed correctly in `tester.md` and `workflow.md`. One new major remains: `.claude/commands/test.md` still describes the old flow and contradicts Sam's conflict rule.
 
-## Round-2 majors
+### Round-2 majors
 | # | Status | Evidence |
 |---|---|---|
 | 1 | Resolved | `tester.md:100-172` now runs in this order: guard, then the "Pending merge" commit, then `needs-fixes` (stop), then the mergeability check (`CONFLICTING` leaves the status unchanged and stops), then the separate "mark done" commit, then `gh pr merge`. If the merge fails, a revert follows. `done` can only reach origin after GitHub has reported `MERGEABLE`. The remaining window between pushing step 5 and merging in step 6 is inherent, and the revert path covers it. |
 | 2 | Resolved | `git diff --name-only $(merge-tree <sha> origin/main) HEAD` hides `main`'s commits and shows conflict-resolution edits. The allowlist is narrowed to `test-report.md`, `proposal.md` and `review.md`. I tested this with git 2.55: on a conflict, stdout contains the tree id **plus** the conflicted-file and message lines, and the exit code is 1. `$base` then becomes multi-line, and `git diff` fails with `fatal: failed to stat ... Filename too long` (exit 128). It does not print an empty list, so the guard fails loudly and does not pass silently. See nit 2 for hardening. |
 
-## Findings
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | major | `.claude/commands/test.md:43-47, 55-60` | This file was not updated for rounds 2 and 3. Step 5 says the tester "merges `feature/<slug>` into `main` with `--no-ff` and pushes `main`", but the merge now goes through `gh pr merge`. Verification says "status is `done` or `needs-fixes`, never left at `implemented`". Under Sam's rule, a conflicting PR keeps `reviewed`, and a revert after a failed merge restores the previous status. The allowlist at line 59 also omits `docs/features/` and still allows all of `.claude/plans/<slug>/`. Scenario: GitHub reports `CONFLICTING`, and the tester correctly leaves the status at `reviewed`. The `/test` command's own verification then flags the run as wrong, and the orchestrator may "fix" it to `needs-fixes`, which breaks Sam's rule. | Step 5: say the tester follows `tester.md` → Commit, approve, and merge (`gh pr merge --merge`; `--no-ff` only when `pr: none`). Verification: `done` ⇔ merged; `needs-fixes` on a guard or suite failure; status unchanged (`reviewed`/`needs-fixes`) with "Not merged — PR has conflicts" or "declined". Point the allowlist to `workflow.md` → Merge guard. |
@@ -29,10 +63,9 @@ Changes requested. Both round-2 majors are fixed correctly in `tester.md` and `w
 
 Verified OK: `workflow.md` and `tester.md` describe the same guard, allowlist and conflict rule. `code.md`, `review.md`, `reviewer.md` and `status.md` agree on the status transitions. Round-2 nit 3 (`workflow.md:50`) and nit 5 (allowlist narrowed) are fixed. No secrets were added.
 
-## Plan conformance
+### Plan conformance
 All 8 tasks are still covered. Commit 37ad18d changes only `tester.md`, `workflow.md` and `proposal.md`, which is in scope. The gap is that `test.md` was not carried along with the change.
 
-## Previous rounds
 
 ## Round: Add pull request and code review stage to the SDLC workflow
 
