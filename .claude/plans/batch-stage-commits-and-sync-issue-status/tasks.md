@@ -40,10 +40,10 @@
 - [x] `.claude/commands/status.md`: use the `gh pr list --head` fallback for the PR column when
       `pr:` is `none`. — `/status` doesn't flag a PR as missing just because `pr:` lags.
       — .claude/commands/status.md
-- [ ] `.claude/settings.json`: add ask-gates `Bash(...)`/`PowerShell(...)` for
+- [x] `.claude/settings.json`: add ask-gates `Bash(...)`/`PowerShell(...)` for
       `gh project item-edit:*`, `gh project item-add:*`, `gh project item-archive:*`, plus
       `PowerShell(git push:*)`. — The JSON parses, and every GitHub write and push is gated on
-      both shells.
+      both shells. — .claude/settings.json
 - [ ] **Root `CLAUDE.md` (ask-gated, Sam approves the exact text).** Replace the `/code` row
       `` | `/code <slug>` | `coder` | `feature/<slug>` branch, one commit per task, pull request opened → `implemented` | ``
       with
