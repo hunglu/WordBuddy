@@ -44,7 +44,7 @@
       `gh project item-edit:*`, `gh project item-add:*`, `gh project item-archive:*`, plus
       `PowerShell(git push:*)`. — The JSON parses, and every GitHub write and push is gated on
       both shells. — .claude/settings.json
-- [ ] **Root `CLAUDE.md` (ask-gated, Sam approves the exact text).** Replace the `/code` row
+- [x] **Root `CLAUDE.md` (ask-gated, Sam approves the exact text).** — CLAUDE.md (approved via Edit prompt) Replace the `/code` row
       `` | `/code <slug>` | `coder` | `feature/<slug>` branch, one commit per task, pull request opened → `implemented` | ``
       with
       `` | `/code <slug>` | `coder` | issue assigned + board In progress, `feature/<slug>` branch, one commit + one push per run, pull request opened → `implemented` | ``
