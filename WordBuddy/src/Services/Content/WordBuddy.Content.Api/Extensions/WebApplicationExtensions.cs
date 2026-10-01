@@ -1,3 +1,4 @@
+using WordBuddy.Shared.Infrastructure.Health;
 using Serilog;
 using WordBuddy.Content.Infrastructure.Seeding;
 
@@ -20,6 +21,7 @@ internal static class WebApplicationExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.MapWordBuddyHealthChecks();
         app.MapControllers();
     }
 }

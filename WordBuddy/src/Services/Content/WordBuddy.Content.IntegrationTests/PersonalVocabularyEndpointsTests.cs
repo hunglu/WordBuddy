@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentAssertions;
 using WordBuddy.Content.Api.Models;
 using WordBuddy.Content.Application.DTOs;
@@ -18,6 +20,11 @@ namespace WordBuddy.Content.IntegrationTests;
 /// </summary>
 public sealed class PersonalVocabularyEndpointsTests : IClassFixture<ContentApiFactory>
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
+
     private readonly ContentApiFactory _factory;
 
     public PersonalVocabularyEndpointsTests(ContentApiFactory factory)
@@ -48,7 +55,7 @@ public sealed class PersonalVocabularyEndpointsTests : IClassFixture<ContentApiF
 
         HttpResponseMessage mineResponse = await owner.GetAsync("/api/vocabulary/mine");
         mineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<PersonalVocabularyWordDto>? mine = await mineResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>();
+        List<PersonalVocabularyWordDto>? mine = await mineResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions);
         mine.Should().Contain(w => w.Id == wordId && w.ShareStatus == VocabularyShareStatus.Private);
 
         HttpResponseMessage shareResponse = await owner.PostAsync($"/api/vocabulary/{wordId}/share", content: null);
@@ -60,7 +67,7 @@ public sealed class PersonalVocabularyEndpointsTests : IClassFixture<ContentApiF
 
         HttpResponseMessage sharedResponse = await owner.GetAsync("/api/vocabulary/shared");
         sharedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<PersonalVocabularyWordDto>? shared = await sharedResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>();
+        List<PersonalVocabularyWordDto>? shared = await sharedResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions);
         shared.Should().Contain(w => w.Id == wordId && w.VisibleToChildren);
     }
 
@@ -82,7 +89,7 @@ public sealed class PersonalVocabularyEndpointsTests : IClassFixture<ContentApiF
 
         HttpResponseMessage childSharedResponse = await child.GetAsync("/api/vocabulary/shared");
         childSharedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<PersonalVocabularyWordDto>? childShared = await childSharedResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>();
+        List<PersonalVocabularyWordDto>? childShared = await childSharedResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions);
         childShared.Should().NotContain(w => w.Id == wordId);
     }
 
