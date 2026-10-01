@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, matchPath, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
 /** A sidebar navigation entry. */
@@ -35,6 +35,7 @@ const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderati
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
   const navItems: NavItem[] = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
+  const { pathname } = useLocation()
 
   return (
     <div className="flex min-h-screen bg-wb-surface-page">
@@ -49,13 +50,16 @@ export function AppLayout(): ReactElement {
             key={item.to}
             to={item.to}
             end={item.end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
-                isActive
+            className={({ isActive }) => {
+              const active: boolean = item.activePaths
+                ? item.activePaths.some((p) => matchPath({ path: p, end: true }, pathname) !== null)
+                : isActive
+              return `flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
+                active
                   ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
                   : 'text-wb-ink hover:bg-wb-hover-tint'
               }`
-            }
+            }}
           >
             <span className="text-2xl">{item.icon}</span>
             {item.label}

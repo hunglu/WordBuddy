@@ -4,7 +4,7 @@
 
 - [x] Add a typed `NavItem` interface with optional `activePaths` in `WordBuddy.UI/src/layouts/AppLayout.tsx` — `npm run build` passes with no `any`. — WordBuddy.UI/src/layouts/AppLayout.tsx
 - [x] Set My Vocabulary to `end: true` with `activePaths: ['/vocabulary', '/vocabulary/check']`, and set Shared Pool and Moderation to `end: true` — config compiles. — WordBuddy.UI/src/layouts/AppLayout.tsx
-- [ ] Compute the active state from `useLocation()` + `matchPath` for items that have `activePaths`, falling back to NavLink `isActive` for the others — only one item is highlighted on every route.
+- [x] Compute the active state from `useLocation()` + `matchPath` for items that have `activePaths`, falling back to NavLink `isActive` for the others — only one item is highlighted on every route. — WordBuddy.UI/src/layouts/AppLayout.tsx
 
 ## Tests
 
