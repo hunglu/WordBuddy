@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { NavLink, Outlet, matchPath, useLocation } from 'react-router-dom'
+import { Link, Outlet, matchPath, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
 /** A sidebar navigation entry. */
@@ -10,7 +10,7 @@ interface NavItem {
   end: boolean
   /**
    * Exact paths this item owns. When set, the item is active only on these paths
-   * (instead of NavLink's own prefix/exact matching on `to`).
+   * (instead of the default prefix/exact matching on `to`).
    */
   activePaths?: string[]
 }
@@ -31,6 +31,16 @@ const NAV_ITEMS: NavItem[] = [
 
 const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true }
 
+/**
+ * Whether a nav item is the selected one for `pathname`: exact match on `activePaths` when set,
+ * otherwise an exact (`end`) or prefix match on `to` (driven by `end`).
+ */
+function isItemActive(item: NavItem, pathname: string): boolean {
+  const paths: string[] = item.activePaths ?? [item.to]
+  const end: boolean = item.activePaths ? true : item.end
+  return paths.some((p) => matchPath({ path: p, end }, pathname) !== null)
+}
+
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
@@ -45,26 +55,24 @@ export function AppLayout(): ReactElement {
           <span className="text-xl font-extrabold text-wb-ink-muted">WordBuddy</span>
         </div>
 
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => {
-              const active: boolean = item.activePaths
-                ? item.activePaths.some((p) => matchPath({ path: p, end: true }, pathname) !== null)
-                : isActive
-              return `flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
+        {navItems.map((item) => {
+          const active: boolean = isItemActive(item, pathname)
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={active ? 'page' : undefined}
+              className={`flex items-center gap-3 rounded-wb-lg px-4 py-3 text-lg font-semibold ${
                 active
                   ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
                   : 'text-wb-ink hover:bg-wb-hover-tint'
-              }`
-            }}
-          >
-            <span className="text-2xl">{item.icon}</span>
-            {item.label}
-          </NavLink>
-        ))}
+              }`}
+            >
+              <span className="text-2xl">{item.icon}</span>
+              {item.label}
+            </Link>
+          )
+        })}
 
         <div className="mt-auto flex items-center gap-3 rounded-wb-lg px-4 py-3">
           <span className="text-2xl">👤</span>
