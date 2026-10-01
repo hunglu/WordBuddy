@@ -1,6 +1,4 @@
-# WordBuddy - Personal Project — AI-assisted development with Claude Code
-
-## Project structure
+# Project structure
 
 project-root/
 ├── CLAUDE.md                    # Loaded every session — project overview, stack, commands
