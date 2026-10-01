@@ -18,12 +18,18 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Home', icon: '🏠', end: true },
   { to: '/lessons', label: 'Lessons', icon: '📚', end: false },
-  { to: '/vocabulary', label: 'My Vocabulary', icon: '📝', end: false },
-  { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: false },
+  {
+    to: '/vocabulary',
+    label: 'My Vocabulary',
+    icon: '📝',
+    end: true,
+    activePaths: ['/vocabulary', '/vocabulary/check'],
+  },
+  { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
 ]
 
-const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: false }
+const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true }
 
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
