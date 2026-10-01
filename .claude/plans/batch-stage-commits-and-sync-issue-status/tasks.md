@@ -16,12 +16,12 @@
       makes no commits or pushes, still checks off `tasks.md` and runs a build per task, and
       returns the list of files it touched. — `coder.md` has no `git commit`/`git push`
       instructions. — .claude/agents/coder.md
-- [ ] `.claude/commands/code.md`: at the start, set `in-progress` and run board sync (assign
+- [x] `.claude/commands/code.md`: at the start, set `in-progress` and run board sync (assign
       `@me` + In progress; fix rounds Status only). At the end, make one `git add` of the
       coder's files + `.claude/plans/<slug>/`, one commit (`implement` / `fix round <n>` /
       `wip`), and one `git push -u origin feature/<slug>`. Then `gh pr create` (first run) or
       `gh pr comment` (fix round). Write `pr: <n>` to the working tree without committing it. —
-      A first run produces exactly one commit and one push.
+      A first run produces exactly one commit and one push. — .claude/commands/code.md
 - [ ] `.claude/agents/reviewer.md` + `.claude/commands/review.md`: resolve the PR through the
       `gh pr list --head` fallback when `pr:` is `none`. The single review commit includes any
       pending `pr:` edit. After the verdict, run board sync (In review / In progress). — Still
