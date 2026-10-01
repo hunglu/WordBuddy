@@ -27,12 +27,13 @@
       pending `pr:` edit. After the verdict, run board sync (In review / In progress). — Still
       one commit per review round, and the board matches the verdict. — .claude/agents/reviewer.md,
       .claude/commands/review.md
-- [ ] `.claude/agents/tester.md` + `.claude/commands/test.md`: replace steps 2–6 with the
+- [x] `.claude/agents/tester.md` + `.claude/commands/test.md`: replace steps 2–6 with the
       batched order from `plan.md` §1. One commit for each outcome (approved / needs-fixes /
       conflicting); the push comes before the mergeability check; the undo is a path-limited
       checkout, not a `git revert`. Board sync: In progress for needs-fixes, Done check after
       the merge. Update the Verification list to match. — The tester's three outcomes each
-      produce one commit and stay on the merge-guard allowlist.
+      produce one commit and stay on the merge-guard allowlist. — .claude/agents/tester.md,
+      .claude/commands/test.md
 - [ ] `.claude/commands/propose.md`, `plan.md`, `release.md`: board sync to Ready / Planned /
       Released per the mapping table. — Each stage sets its column or reports why it skipped.
 - [ ] `.claude/commands/status.md`: use the `gh pr list --head` fallback for the PR column when

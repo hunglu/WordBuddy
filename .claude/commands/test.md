@@ -41,15 +41,21 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    after this command).
 
 5. **Status, approval, and merge are done by the tester subagent**, in the order set by
-   `.claude/agents/tester.md` (steps 1–6): verdict → commit tests and report → not approved:
-   `needs-fixes` → approved: check the PR is mergeable → separate "mark done" commit → merge
-   **through the PR** with `gh pr merge <pr> --merge` (local `--no-ff` only when `pr:` is
-   `none`). Pushes and the PR merge are ask-gated, so Sam approves each one. Don't repeat any of
-   these steps yourself. Just check that they happened.
+   `.claude/agents/tester.md` (steps 1–5), with **one commit + one push per run**: resolve the PR
+   (`pr:` may lag — `gh pr list --head` fallback) → verdict → not approved: one commit
+   `<slug>: tests, report, needs fixes` + push, board sync **In progress** → approved: one commit
+   `<slug>: tests, report, mark done` + push → mergeability check (after the push, since the push
+   carries the `origin/main` merge) → merge **through the PR** with `gh pr merge <pr> --merge`
+   (local `--no-ff` only when no PR exists) → board sync check **Done**. If the PR isn't
+   mergeable or the merge fails/is declined, one corrective `<slug>: undo mark done — <reason>`
+   commit (path-limited checkout of `proposal.md` + `docs/features/`, not a `git revert`).
+   Pushes, the PR merge and board writes are ask-gated, so Sam approves each one. Don't repeat
+   any of these steps yourself. Just check that they happened.
 
-   **Conflicts leave everything as it is** (Sam's rule): if `main` can't be merged into the
-   branch, or GitHub reports the PR as conflicting or still `UNKNOWN`, the tester changes no
-   status and merges nothing. That is an expected outcome, not a failed run — don't set
+   **Conflicts leave the status as it is** (Sam's rule): if `main` can't be merged into the
+   branch, the tester changes and commits nothing. If GitHub reports the PR as conflicting or
+   still `UNKNOWN` after the push, the "mark done" is undone, so the status ends as it was and
+   nothing is merged. That is an expected outcome, not a failed run — don't set
    `needs-fixes` yourself. The PR stays open until the conflict is resolved via `/code`, then
    `/review`.
 
@@ -67,8 +73,13 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
   - `needs-fixes` — guard or suite failure, nothing merged;
   - unchanged (`reviewed` / `needs-fixes` as it was before) — conflict, Sam declined a push or
     the merge; nothing merged, PR still open.
-- `done` is never on `feature/<slug>` without the merge (if the merge failed, the "mark done"
-  commit was reverted).
+- `done` is never left on `feature/<slug>` without the merge (if the merge failed, the
+  path-limited "undo mark done" commit restored `proposal.md` and `docs/features/`; tests stay).
+- The run added one bookkeeping commit and one push (`tests, report, mark done` /
+  `tests, report, needs fixes` / report-only), plus at most the local `origin/main` merge commit
+  and, only on the failure path, the "undo mark done" commit.
+- Board Status: Done after a merge, In progress after `needs-fixes`, or the skip reason is
+  reported.
 - The tester changed only allowlisted paths (`docs/sdlc/workflow.md` → Merge guard): test
   projects, `e2e/`, `docs/features/`, and in `.claude/plans/<slug>/` only `test-report.md`,
   `proposal.md`, `review.md` — apart from the merge commit itself.
