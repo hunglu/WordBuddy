@@ -39,3 +39,10 @@ To get a valid run: rebuild and restart the UI container from this branch (`dock
 ## Verdict
 
 Not merged: E2E UI suite failed because the environment can't log in (UI proxy returns 404 on /api/auth, and the UI container is stale). Re-run `/test` once the stack is rebuilt from this branch.
+
+## Override (2026-10-01T17:33:55+07:00)
+
+Sam chose to merge without a green E2E run. Merge guard check 3 was **not** met. The merge rests
+on the passing frontend build and review round 2's approval. The 9 `navigation.feature`
+scenarios have **never passed**. Run them on the next working stack; if they fail, open a new
+`bugfix` proposal.

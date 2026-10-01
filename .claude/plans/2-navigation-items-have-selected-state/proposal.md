@@ -1,14 +1,14 @@
 ---
 title: 2 navigation Items have selected state
-status: needs-fixes
+status: done
 type: bugfix
 issue: 5
 pr: 7
 affects: docs/features/app-navigation.md
 supersedes: none
-version: 1.8
+version: 1.9
 created: 2026-10-01T16:50:32+07:00
-updated: 2026-10-01T17:21:42+07:00
+updated: 2026-10-01T17:33:55+07:00
 ---
 
 ## Problem
