@@ -1,11 +1,41 @@
 # Review: 2 navigation Items have selected state
 
-PR: #7 · Round 1 · Reviewed commit: 1d9a761 · 2026-10-01T17:07:42+07:00
+PR: #7 · Round 2 · Reviewed commit: 0b07bdb · 2026-10-01T17:17:39+07:00
 
 ## Verdict
-Changes requested. The fix is correct, but two majors remain: an unrelated README edit is in the PR, and `aria-current` is missing on `/vocabulary/check`.
+Approve. All round-1 majors are fixed. No blockers or majors remain.
 
 ## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | WordBuddy.UI/src/layouts/AppLayout.tsx:25,39 | My Vocabulary sets `end: true`, but `isItemActive` ignores `end` whenever `activePaths` is set. The field is dead config for that item, and a later edit to it would silently do nothing. | Leave as is, or document on `NavItem.end` that it is ignored when `activePaths` is set. |
+| 2 | nit | e2e/ui (tsc) | Carried over from round 1 #4: `@types/node` is missing. This is pre-existing and was deferred on purpose. | Fix in a separate change. |
+
+Round-1 verification:
+- R1 #1 (README): `git diff origin/main -- README README.md` is empty. Root README is no longer in the PR. Resolved.
+- R1 #2 (aria-current): `isItemActive` computes `active` once per item. It drives both the class and `aria-current`. Switching from NavLink to Link is sound, because NavLink would set its own `aria-current` from its `end` match. Behaviour checked against NavLink:
+  - Rendered element: Link still renders `<a href>`, so focus, Tab order, Enter activation and the focus ring are unchanged.
+  - Prefix matching: `matchPath` with `end: false` keeps Lessons and My Progress active on sub-routes such as `/lessons/42`, and still respects segment boundaries.
+  - Exact matches: Home stays exact.
+  - Trailing slash and case: `/vocabulary/` matches, and matching is case-insensitive like NavLink's default.
+  - Basename: `useLocation().pathname` is already basename-relative.
+  - Lost features: only NavLink's unused `pending`/`transitioning` class states.
+  - Plan rules: My Vocabulary is active on `/vocabulary` and `/vocabulary/check`; Shared Pool and Moderation are exact. This matches the plan. Resolved.
+- R1 #3 (e2e): the step asserts that the expected link has `aria-current="page"` and that exactly one `aside a[aria-current="page"]` exists. Resolved.
+- R1 #4: deferred, see nit #2.
+
+## Plan conformance
+All 6 tasks are covered. The plan said to keep NavLink's `isActive` as a fallback. The code uses one `matchPath`-based helper for every item instead. This is an intentional deviation that fixes R1 #2, and the behaviour is the same. The README change is gone, so nothing out of scope remains apart from the early living-spec stub noted in round 1.
+
+## Previous rounds
+
+## Round 1
+PR: #7 · Round 1 · Reviewed commit: 1d9a761 · 2026-10-01T17:07:42+07:00
+
+### Verdict
+Changes requested. The fix is correct, but two majors remain: an unrelated README edit is in the PR, and `aria-current` is missing on `/vocabulary/check`.
+
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | major | README:1-3 | This changes the repo-root README heading. That is unrelated to bugfix #5. It was a local edit on main that ended up in commit 2dd8cea. It adds unreviewed noise to a bugfix PR, and history will credit it to this change. | Revert the README hunk on `feature/<slug>` through `/code`. Ship it in its own PR or docs commit. |
@@ -19,5 +49,5 @@ Notes:
 - Security: the admin defaults (`admin@wordbuddy.com` / `Admin@123`) are the documented Identity dev seed and can be overridden through env vars, following the existing `login.steps.ts` pattern. Acceptable for a dev seed. Child and adult paths are identical, so no extra coverage is needed.
 - Conventions: typed `NavItem`, no `any`/`enum`, only `wb-` tokens, no new state, and TanStack Query is not involved. All OK.
 
-## Plan conformance
+### Plan conformance
 All 6 tasks in `tasks.md` are covered by the diff. Out of scope: the root `README` change (finding #1). The `docs/features/app-navigation.md` stub and the `docs/features/README.md` row are an early part of the living-spec work the plan gives to `/test`. They are harmless and marked `proposed`.
