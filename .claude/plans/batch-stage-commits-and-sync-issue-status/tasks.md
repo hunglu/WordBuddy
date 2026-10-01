@@ -2,11 +2,11 @@
 
 ## Workflow tooling (stands in for "Backend")
 
-- [ ] `docs/sdlc/github-integration.md`: add a "Board sync" section with the recipe from
+- [x] `docs/sdlc/github-integration.md`: add a "Board sync" section with the recipe from
       `plan.md` §2 (id lookup, `item-add`, `item-edit`, `--add-assignee @me`), the status ↔
       column mapping table, the skip/never-block rules, and the `project` scope prerequisite.
       Update the Bước 5 table so the board moves come from commands, not manual drags. — Every
-      command can link to one recipe instead of repeating it.
+      command can link to one recipe instead of repeating it. — docs/sdlc/github-integration.md
 - [ ] `docs/sdlc/workflow.md`: state the "one bookkeeping commit + one push per stage per cycle"
       rule; define a cycle; exempt the `origin/main` merge commit and the failure-path "undo mark
       done" commit; describe `pr:` as a lagging cache with the `gh pr list --head` fallback;
