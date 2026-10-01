@@ -187,7 +187,7 @@ Make exactly one corrective commit on `feature/<slug>` — path-limited, **not**
 (a revert would also remove the tests):
 
 ```bash
-git checkout <done sha>^ -- .claude/plans/<slug>/proposal.md docs/features/   # restores status, living specs, README row
+git restore --source=<done sha>^ --staged --worktree -- .claude/plans/<slug>/proposal.md docs/features/   # restores status, living specs, README row; removes files the done commit added
 # edit test-report.md: verdict line → "Not merged — <reason>"
 git add .claude/plans/<slug>/proposal.md docs/features/ .claude/plans/<slug>/test-report.md
 git commit -m "<slug>: undo mark done — <reason>"
@@ -195,6 +195,8 @@ git push origin feature/<slug>              # ask-gated
 ```
 
 Comment the report on the PR. Status is back to what it was before `/test`; the PR stays open.
+The restore also resets a `pr:` value that this run filled in — harmless, `pr:` is a lagging cache
+and the next stage looks it up again.
 This is the one documented exception to one-commit-per-cycle and only happens on this failure path.
 
 **Fallback, only when no PR exists** (even after the `gh pr list --head` lookup): skip step 4; in

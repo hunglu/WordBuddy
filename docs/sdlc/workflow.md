@@ -38,15 +38,16 @@ round, or a `/test` run. Each cycle makes **at most one bookkeeping commit and o
 | `/review` | `<slug>: review round <n>` |
 | `/test` approved | `<slug>: tests, report, mark done` — then merge |
 | `/test` not approved | `<slug>: tests, report, needs fixes` |
-| `/test` PR conflicting | report only, status unchanged |
+| `/test` — `main` merge conflicts locally | no commit, status unchanged |
+| `/test` — PR not mergeable after the push (`CONFLICTING`/`UNKNOWN`) | `<slug>: tests, report, mark done` + `<slug>: undo mark done — <reason>`, status ends unchanged |
 
 The coder subagent makes no commits or pushes; `/code` stages exactly the files it touched plus
-`.claude/plans/<slug>/` (never `git add -A`). Not counted as bookkeeping commits:
+`.claude/plans/<slug>/` (never `git add -A`). The local `git merge origin/main` merge commit that
+`/test` (or `/code` conflict resolution) creates is not a bookkeeping commit.
 
-- the local `git merge origin/main` merge commit that `/test` (or `/code` conflict resolution)
-  creates;
-- the failure-path `<slug>: undo mark done — <reason>` commit in `/test`, made only when the PR
-  turns out not mergeable or the merge fails/is declined after the push.
+The failure-path `<slug>: undo mark done — <reason>` commit in `/test` is **the one documented
+exception to one commit per cycle**. It is made only when the PR turns out not mergeable, or the
+merge fails/is declined, after the "mark done" push.
 
 **`pr:` is a lagging cache.** The PR number only exists after `/code`'s single push, and rewriting
 that commit would need a force-push. So `/code` writes `pr: <n>` into `proposal.md` in the working
@@ -102,12 +103,17 @@ Because of 1–2, `/test` accepts a proposal that is `reviewed` **or** `needs-fi
 a test-only failure (services down, flaky test fixed in `e2e/`) passes the guard, while a
 re-test after an application-code fix fails it and is sent back through `/review`.
 
-**A conflicting PR is left as it is.** If the PR conflicts with `main` (when `/test` merges
-`main` in, or when GitHub reports it not mergeable), `/test` changes no status and merges nothing;
-the PR stays open until the conflict is resolved on `feature/<slug>` via `/code` and re-reviewed.
-`done` is committed and pushed together with the tests in one commit; if the PR then turns out not
-mergeable or the merge fails, one corrective commit restores `proposal.md` and `docs/features/`
-from before it (path-limited `git checkout <sha>^ -- …`, not a `git revert`, so the tests stay).
+**A conflicting PR is left as it is.** `/test` merges nothing and the status ends where it
+started; the PR stays open until the conflict is resolved on `feature/<slug>` via `/code` and
+re-reviewed. Two cases:
+
+- the local `git merge origin/main` conflicts → nothing is committed or pushed;
+- GitHub reports the PR `CONFLICTING`/`UNKNOWN` after the push → `done` was already committed and
+  pushed with the tests, so one "undo mark done" commit restores `proposal.md` and
+  `docs/features/` from before it (path-limited
+  `git restore --source=<sha>^ --staged --worktree -- .claude/plans/<slug>/proposal.md docs/features/`,
+  not a `git revert`, so the tests stay; files the "mark done" commit added are removed). The same
+  undo applies if the merge itself fails or is declined.
 
 **Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed` or
 `needs-fixes`, and the merge guard blocks any code change made after the review (review fixes,

@@ -65,8 +65,7 @@ Full description: `docs/sdlc/workflow.md`. GitHub integration: `docs/sdlc/github
 | `/test <slug>` | `tester` | tests + `test-report.md`, living spec updated, PR merged on green → `done` / `needs-fixes` |
 | `/release [version]` | — | release notes, tag, kind deploy → `released` |
 
-- One bookkeeping commit and one push per stage run (cycle); board Status follows `status:` (see
-  `docs/sdlc/github-integration.md` → Board sync).
+- One bookkeeping commit and one push per stage run (cycle); board Status follows `status:` (see docs/sdlc/github-integration.md → Board sync).
 - Changing a shipped feature = a **new** proposal (`type: change`, `affects:`, `supersedes:`).
   Never edit a `done` plan folder.
 - Git: feature work only on `feature/<slug>`, never directly on `main`. Every change reaches

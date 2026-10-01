@@ -48,7 +48,9 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    carries the `origin/main` merge) → merge **through the PR** with `gh pr merge <pr> --merge`
    (local `--no-ff` only when no PR exists) → board sync check **Done**. If the PR isn't
    mergeable or the merge fails/is declined, one corrective `<slug>: undo mark done — <reason>`
-   commit (path-limited checkout of `proposal.md` + `docs/features/`, not a `git revert`).
+   commit (path-limited
+   `git restore --source=<done sha>^ --staged --worktree -- .claude/plans/<slug>/proposal.md docs/features/`,
+   not a `git revert`) — the one documented exception to one commit per cycle.
    Pushes, the PR merge and board writes are ask-gated, so Sam approves each one. Don't repeat
    any of these steps yourself. Just check that they happened.
 
@@ -73,11 +75,17 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
   - `needs-fixes` — guard or suite failure, nothing merged;
   - unchanged (`reviewed` / `needs-fixes` as it was before) — conflict, Sam declined a push or
     the merge; nothing merged, PR still open.
-- `done` is never left on `feature/<slug>` without the merge (if the merge failed, the
-  path-limited "undo mark done" commit restored `proposal.md` and `docs/features/`; tests stay).
-- The run added one bookkeeping commit and one push (`tests, report, mark done` /
-  `tests, report, needs fixes` / report-only), plus at most the local `origin/main` merge commit
-  and, only on the failure path, the "undo mark done" commit.
+- `done` is never left on `feature/<slug>` without the merge (if the PR wasn't mergeable or the
+  merge failed, the path-limited "undo mark done" restore removed it from `proposal.md` and
+  `docs/features/`, including files the "mark done" commit added; tests stay).
+- Commits added by the run, by case:
+  - local `git merge origin/main` conflicts → none, nothing pushed;
+  - not approved → `tests, report, needs fixes` + one push;
+  - approved and merged → `tests, report, mark done` + one push;
+  - GitHub reports `CONFLICTING`/`UNKNOWN` after the push, or the merge fails/is declined →
+    `tests, report, mark done` then `undo mark done — <reason>` (the one documented exception to
+    one commit per cycle).
+  Plus at most the local `origin/main` merge commit.
 - Board Status: Done after a merge, In progress after `needs-fixes`, or the skip reason is
   reported.
 - The tester changed only allowlisted paths (`docs/sdlc/workflow.md` → Merge guard): test
