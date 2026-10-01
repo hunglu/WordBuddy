@@ -1,12 +1,12 @@
 ---
 title: Propose — capture a business idea
-description: Captures a business proposal from Sam as the "idea" stage of the idea → plan → code → test workflow. No analysis, no planning — just structured capture.
+description: Captures a business proposal from Sam as the "idea" stage of the propose → plan → code → review → test → release workflow. No analysis, no planning — just structured capture.
 status: draft
 ---
 
 ## Context
 
-This is stage 1 of 4 in the WordBuddy workflow: **propose → plan → code → test**. Each stage is
+This is stage 1 of 6 in the WordBuddy workflow: **propose → plan → code → review → test → release**. Each stage is
 its own command; state lives in `.claude/plans/<slug>/` as plain markdown so it's visible and
 diffable in git.
 
@@ -57,6 +57,7 @@ anything else.
    status: idea
    type: <new | change | bugfix>
    issue: <GitHub issue number, e.g. 42 — or "none">
+   pr: none            # set by /code when it opens the pull request
    affects: <docs/features/<feature>.md paths this changes, comma-separated — or "none">
    supersedes: <slug of an earlier proposal this changes — or "none">
    version: 1.0

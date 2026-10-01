@@ -1,10 +1,12 @@
 # SDLC workflow
 
 ```
-GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─▶ /code ─▶ /test ─▶ /release
-        idea                 idea         planned               in-progress  done     released
-                                                                implemented  needs-fixes ─┐
-                                                                     ▲────────────────────┘
+Issue ─▶ /propose ─▶ /plan ─▶ [Sam reads plan] ─▶ /code ──────▶ /review ──────▶ /test ──────▶ /release
+ idea      idea      planned                      in-progress    reviewed         done           released
+                                                  implemented +  changes-         needs-fixes
+                                                  PR opened      requested
+                                                     ▲               │                │
+                                                     └── /code fix ◀─┴────────────────┘
 ```
 
 | Stage | Command | Output | Board column |
@@ -12,14 +14,81 @@ GitHub Issue (Backlog) ─▶ /propose #n ─▶ /plan ─▶ [Sam review] ─�
 | Intake | new GitHub issue (form) | issue `#n` | Backlog |
 | Capture | `/propose [#n] <title>` | `proposal.md`, living spec stub or pending line in `docs/features/`, GitHub issue created if none given | Ready |
 | Plan | `/plan <slug>` | `plan.md`, `tasks.md` | Planned |
-| Build | `/code <slug>` | `feature/<slug>` branch, commits, PR | In progress |
-| Verify | `/test <slug>` | `test-report.md`, living spec update, merge | Done |
+| Build | `/code <slug>` | `feature/<slug>` branch, commits, **pull request** `feature/<slug>` → `main` (`pr:` in proposal) | In progress |
+| Review | `/review <slug>` | `review.md` (findings: blocker / major / nit), review posted on the PR | In review |
+| Verify | `/test <slug>` | `test-report.md`, living spec update, **PR merged** (`gh pr merge --merge`, `Closes #n`) | Done |
 | Ship | `/release` | `docs/releases/<v>.md`, git tag, kind deploy | Released |
 | Look | `/status` | table of all proposals + next step | — |
 
 **Entry point:** an issue on GitHub (or `/propose` directly for quick ideas).
 **Loop:** nothing runs on its own. Each session: `/status` → take the top item → run its next
-command. Human gates: reviewing `plan.md` before `/code`, and approving every `git push`.
+command. Human gates: reviewing `plan.md` before `/code`, reading `review.md` before `/test`,
+and approving every `git push`, PR post and PR merge.
+
+## Merge guard
+
+`/test` merges only when **all three** hold (checked by the tester right before merging):
+
+1. **Approved review of this code.** `review.md`'s verdict is Approve, and its
+   `Reviewed commit: <sha>` is an ancestor of the branch head
+   (`git merge-base --is-ancestor <sha> HEAD`).
+2. **Only test-scope changes since the review.** Compare HEAD (which has `origin/main` merged
+   in) with "the reviewed code + current main":
+
+   ```bash
+   # needs git ≥ 2.38
+   if ! out=$(git merge-tree --write-tree <sha> origin/main); then
+     echo "GUARD FAIL: reviewed code conflicts with main"
+   else
+     base=$(printf '%s\n' "$out" | head -n1)
+     git diff --name-only "$base" HEAD
+   fi
+   ```
+
+   - `main`'s own commits are part of `base`, so they never show up — merging `main` in doesn't
+     block the merge (that code was reviewed in its own PR).
+   - Anything changed on the branch after the review shows up, **including edits made while
+     resolving a merge conflict**, because those exist only in HEAD.
+   - If `git merge-tree` exits non-zero, the reviewed code conflicts with `main`, so any
+     resolution is unreviewed → the guard fails. Always test the exit code: on a conflict the
+     command prints conflict lines after the tree id, so its output is not a usable `base`.
+
+   Every listed path must be on the tester allowlist: `**/*.UnitTests/**`,
+   `**/*.IntegrationTests/**`, `e2e/**`, `.claude/plans/<slug>/test-report.md`,
+   `.claude/plans/<slug>/proposal.md`, `.claude/plans/<slug>/review.md`, `docs/features/**`.
+   `plan.md` and `tasks.md` are not on it; `review.md` is, because the reviewer commits it after
+   the commit it reviewed. Any other path means code changed after the review → don't merge;
+   status `needs-fixes` with "changed after review — run `/review`".
+3. **Every suite ran in this session and passed** (a skipped suite is not a pass).
+
+Because of 1–2, `/test` accepts a proposal that is `reviewed` **or** `needs-fixes`: a re-test after
+a test-only failure (services down, flaky test fixed in `e2e/`) passes the guard, while a
+re-test after an application-code fix fails it and is sent back through `/review`.
+
+**A conflicting PR is left as it is.** If the PR conflicts with `main` (when `/test` merges
+`main` in, or when GitHub reports it not mergeable), `/test` changes no status and merges nothing;
+the PR stays open until the conflict is resolved on `feature/<slug>` via `/code` and re-reviewed.
+`done` is only written once the merge is certain, and undone with one revert if the merge then
+fails.
+
+**Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed` or
+`needs-fixes`, and the merge guard blocks any code change made after the review (review fixes,
+test fixes, conflict resolutions) until it has gone through `/review`. The reviewer
+can't approve its own account's PR on GitHub, so the verdict lives in `review.md` and a PR
+comment; branch protection that requires an approving review needs a second GitHub account.
+
+## Blocked
+
+Any stage may stop on something outside the workflow (a decision only Sam can make, a missing
+external service or account, a dependency on another proposal). Then:
+
+- **Enter:** the command that hits it sets `status: blocked` and adds `blocked-from: <status it
+  had>` and `blocked-by: <one line: what is needed, from whom>` to the frontmatter (normal
+  version bump). It never guesses past the blocker.
+- **Exit:** once the blocker is resolved, Sam (or Claude on Sam's word) sets `status` back to the
+  `blocked-from` value, removes both fields, bumps the version, and runs that stage's command
+  again. `/status` lists blocked proposals with their `blocked-by`.
+- A conflicting PR is **not** `blocked` — it keeps its status (see above).
 
 ## Proposal versioning
 

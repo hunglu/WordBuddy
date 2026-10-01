@@ -51,23 +51,25 @@ authorization policies and UI alike. Every feature must state its child vs. adul
 Output of any workflow run is written into its `.claude/plans/<slug>/` folder — never into a
 `CLAUDE.md`.
 
-## Workflow: propose → plan → code → test → release
+## Workflow: propose → plan → code → review → test → release
 
 Full description: `docs/sdlc/workflow.md`. GitHub integration: `docs/sdlc/github-integration.md`.
 
 | Command | Agent | Result (`status:` in `proposal.md`) |
 | --- | --- | --- |
 | `/status` | — | read-only board of all proposals + next step |
-| `/propose [#issue] <title>` | — | `proposal.md` → `idea` |
+| `/propose [#issue] <title>` | — | `proposal.md` + GitHub issue → `idea` |
 | `/plan <slug>` | `planner` | `plan.md` + `tasks.md` → `planned` — **approval gate** |
-| `/code <slug>` | `coder` | `feature/<slug>` branch, one commit per task → `implemented` |
-| `/test <slug>` | `tester` | tests + `test-report.md`, living spec updated, `--no-ff` merge on green → `done` / `needs-fixes` |
+| `/code <slug>` | `coder` | `feature/<slug>` branch, one commit per task, pull request opened → `implemented` |
+| `/review <slug>` | `reviewer` | `review.md` + review posted on the PR → `reviewed` / `changes-requested` |
+| `/test <slug>` | `tester` | tests + `test-report.md`, living spec updated, PR merged on green → `done` / `needs-fixes` |
 | `/release [version]` | — | release notes, tag, kind deploy → `released` |
 
 - Changing a shipped feature = a **new** proposal (`type: change`, `affects:`, `supersedes:`).
   Never edit a `done` plan folder.
-- Git: feature work only on `feature/<slug>`, never directly on `main`. Only the tester merges
-  into `main`, only on a green run. Every `git push` is ask-gated; force-push is denied.
+- Git: feature work only on `feature/<slug>`, never directly on `main`. Every change reaches
+  `main` through a pull request that `/review` reviewed; only the tester merges it, only on a
+  green run. Every `git push`, PR post and PR merge is ask-gated; force-push is denied.
 
 ## Project-wide rules
 

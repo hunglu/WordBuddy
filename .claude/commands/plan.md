@@ -1,12 +1,12 @@
 ---
 title: Plan — analyze a proposal and produce a technical plan
-description: Stage 2 of the idea → plan → code → test workflow. Invokes the planner subagent to turn a captured proposal into an approved-pending technical plan and task list. Never writes application code.
+description: Stage 2 of the propose → plan → code → review → test → release workflow. Invokes the planner subagent to turn a captured proposal into an approved-pending technical plan and task list. Never writes application code.
 status: draft
 ---
 
 ## Context
 
-Stage 2 of 4: **propose → plan → code → test**. This command turns `.claude/plans/<slug>/proposal.md`
+Stage 2 of 6: **propose → plan → code → review → test → release**. This command turns `.claude/plans/<slug>/proposal.md`
 into `plan.md` + `tasks.md` via the `planner` subagent (`.claude/agents/planner.md`). This is the
 **approval gate** of the whole workflow: after this command finishes, implementation must not
 start until Sam explicitly runs `/code <slug>`.
