@@ -7,11 +7,11 @@
       column mapping table, the skip/never-block rules, and the `project` scope prerequisite.
       Update the Bước 5 table so the board moves come from commands, not manual drags. — Every
       command can link to one recipe instead of repeating it. — docs/sdlc/github-integration.md
-- [ ] `docs/sdlc/workflow.md`: state the "one bookkeeping commit + one push per stage per cycle"
+- [x] `docs/sdlc/workflow.md`: state the "one bookkeeping commit + one push per stage per cycle"
       rule; define a cycle; exempt the `origin/main` merge commit and the failure-path "undo mark
       done" commit; describe `pr:` as a lagging cache with the `gh pr list --head` fallback;
       update the Board column table to the new mapping. — The rule is in one place and matches
-      the commands.
+      the commands. — docs/sdlc/workflow.md
 - [ ] `.claude/agents/coder.md`: remove the per-task commit step and the `git push -u`. The coder
       makes no commits or pushes, still checks off `tasks.md` and runs a build per task, and
       returns the list of files it touched. — `coder.md` has no `git commit`/`git push`

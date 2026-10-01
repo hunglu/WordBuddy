@@ -14,11 +14,48 @@ Issue ─▶ /propose ─▶ /plan ─▶ [Sam reads plan] ─▶ /code ──�
 | Intake | new GitHub issue (form) | issue `#n` | Backlog |
 | Capture | `/propose [#n] <title>` | `proposal.md`, living spec stub or pending line in `docs/features/`, GitHub issue created if none given | Ready |
 | Plan | `/plan <slug>` | `plan.md`, `tasks.md` | Planned |
-| Build | `/code <slug>` | `feature/<slug>` branch, commits, **pull request** `feature/<slug>` → `main` (`pr:` in proposal) | In progress |
-| Review | `/review <slug>` | `review.md` (findings: blocker / major / nit), review posted on the PR | In review |
-| Verify | `/test <slug>` | `test-report.md`, living spec update, **PR merged** (`gh pr merge --merge`, `Closes #n`) | Done |
+| Build | `/code <slug>` | issue assigned to `@me`, `feature/<slug>` branch, one commit + one push, **pull request** `feature/<slug>` → `main` (`pr:` in proposal) | In progress |
+| Review | `/review <slug>` | `review.md` (findings: blocker / major / nit), review posted on the PR | In review (approve) / In progress (changes requested) |
+| Verify | `/test <slug>` | `test-report.md`, living spec update, **PR merged** (`gh pr merge --merge`, `Closes #n`) | Done / In progress (needs fixes) |
 | Ship | `/release` | `docs/releases/<v>.md`, git tag, kind deploy | Released |
 | Look | `/status` | table of all proposals + next step | — |
+
+The board column is set by the command itself through **Board sync**
+(`docs/sdlc/github-integration.md` → Board sync), which also holds the full `status:` ↔ column
+mapping (`implemented` stays In progress; `blocked` leaves the card where it is). Board sync never
+blocks a stage and never changes `status:`.
+
+## One commit + one push per stage per cycle
+
+A **cycle** is one run of a stage command: a first `/code` run, a `/code` fix round, a `/review`
+round, or a `/test` run. Each cycle makes **at most one bookkeeping commit and one push**:
+
+| Cycle | Commit |
+| --- | --- |
+| `/code` first run | `<slug>: implement` — code, `tasks.md`, plan folder, `proposal.md` (`implemented`) |
+| `/code` fix round | `<slug>: fix round <n>` |
+| `/code` stopped / partial run | `<slug>: wip (<k>/<n> tasks)`, status stays `in-progress` |
+| `/review` | `<slug>: review round <n>` |
+| `/test` approved | `<slug>: tests, report, mark done` — then merge |
+| `/test` not approved | `<slug>: tests, report, needs fixes` |
+| `/test` PR conflicting | report only, status unchanged |
+
+The coder subagent makes no commits or pushes; `/code` stages exactly the files it touched plus
+`.claude/plans/<slug>/` (never `git add -A`). Not counted as bookkeeping commits:
+
+- the local `git merge origin/main` merge commit that `/test` (or `/code` conflict resolution)
+  creates;
+- the failure-path `<slug>: undo mark done — <reason>` commit in `/test`, made only when the PR
+  turns out not mergeable or the merge fails/is declined after the push.
+
+**`pr:` is a lagging cache.** The PR number only exists after `/code`'s single push, and rewriting
+that commit would need a force-push. So `/code` writes `pr: <n>` into `proposal.md` in the working
+tree only; the next stage's commit carries it. Every consumer (`/review`, `/test`, `/status`)
+treats `pr: none` as "unknown" and looks the PR up first:
+
+```bash
+gh pr list -R hunglu/WordBuddy --head feature/<slug> --state all --json number --jq '.[0].number'
+```
 
 **Entry point:** an issue on GitHub (or `/propose` directly for quick ideas).
 **Loop:** nothing runs on its own. Each session: `/status` → take the top item → run its next
@@ -68,8 +105,9 @@ re-test after an application-code fix fails it and is sent back through `/review
 **A conflicting PR is left as it is.** If the PR conflicts with `main` (when `/test` merges
 `main` in, or when GitHub reports it not mergeable), `/test` changes no status and merges nothing;
 the PR stays open until the conflict is resolved on `feature/<slug>` via `/code` and re-reviewed.
-`done` is only written once the merge is certain, and undone with one revert if the merge then
-fails.
+`done` is committed and pushed together with the tests in one commit; if the PR then turns out not
+mergeable or the merge fails, one corrective commit restores `proposal.md` and `docs/features/`
+from before it (path-limited `git checkout <sha>^ -- …`, not a `git revert`, so the tests stay).
 
 **Nothing reaches `main` without a review.** `/test` refuses anything not `reviewed` or
 `needs-fixes`, and the merge guard blocks any code change made after the review (review fixes,
