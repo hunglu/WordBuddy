@@ -3,19 +3,17 @@ import { createBdd } from 'playwright-bdd'
 
 const { Given, When, Then } = createBdd()
 
-// The sidebar marks the selected item with the primary background (see AppLayout.tsx).
-const selectedClass = 'bg-wb-primary'
-
 When('they click the {string} sidebar item', async ({ page }, label: string) => {
   await page.locator('aside').getByRole('link', { name: label }).click()
 })
 
+// The selected sidebar item is the one carrying aria-current="page" (see AppLayout.tsx).
 Then('only the {string} sidebar item is selected', async ({ page }, label: string) => {
   const sidebarLinks = page.locator('aside a')
-  await expect(sidebarLinks.filter({ hasText: label })).toHaveClass(new RegExp(selectedClass))
+  await expect(sidebarLinks.filter({ hasText: label })).toHaveAttribute('aria-current', 'page')
 
-  // Exactly one item carries the selected style, and it is the expected one.
-  const selected = sidebarLinks.and(page.locator(`.${selectedClass}`))
+  // Exactly one item is marked current, and it is the expected one.
+  const selected = page.locator('aside a[aria-current="page"]')
   await expect(selected).toHaveCount(1)
   await expect(selected).toContainText(label)
 })
