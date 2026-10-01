@@ -136,7 +136,13 @@ anything else.
    To link an `issue: pending` proposal later, re-run the searches in b by hand (or ask Claude);
    `/status` lists pending ones so they aren't forgotten.
 
-6. **Report back** with the slug, file paths, and the issue link, and tell Sam the next step is
+6. **Board sync → Ready** (`docs/sdlc/github-integration.md` → Board sync). Once `issue:` is a
+   number, add the issue to the `WordBuddy` project if it isn't on it yet (`gh project item-add`)
+   and set Status **Ready** (`gh project item-edit`). Both ask-gated. Skip when `issue:` is
+   `pending`; if `gh`/the `project` scope is missing, the option name doesn't exist, or Sam
+   declines, say so and continue — it never blocks the proposal.
+
+7. **Report back** with the slug, file paths, the issue link and the board sync result, and tell Sam the next step is
    `/plan <slug>` — do not start planning yourself.
 
 ## Verification
@@ -149,3 +155,4 @@ anything else.
 - `gh issue create` ran at most once, and only after both searches came back empty or Sam chose "new".
 - Every path in `affects:` exists under `docs/features/` (new stub or a `## Pending changes` line).
 - Nothing outside `.claude/plans/<slug>/` and `docs/features/` was touched.
+- Board Status is **Ready**, or the skip reason is reported.

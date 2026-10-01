@@ -34,8 +34,9 @@
       the merge. Update the Verification list to match. — The tester's three outcomes each
       produce one commit and stay on the merge-guard allowlist. — .claude/agents/tester.md,
       .claude/commands/test.md
-- [ ] `.claude/commands/propose.md`, `plan.md`, `release.md`: board sync to Ready / Planned /
+- [x] `.claude/commands/propose.md`, `plan.md`, `release.md`: board sync to Ready / Planned /
       Released per the mapping table. — Each stage sets its column or reports why it skipped.
+      — .claude/commands/propose.md, .claude/commands/plan.md, .claude/commands/release.md
 - [ ] `.claude/commands/status.md`: use the `gh pr list --head` fallback for the PR column when
       `pr:` is `none`. — `/status` doesn't flag a PR as missing just because `pr:` lags.
 - [ ] `.claude/settings.json`: add ask-gates `Bash(...)`/`PowerShell(...)` for
