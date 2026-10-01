@@ -90,4 +90,4 @@ could mention it once in prose.
 
 ## Verdict
 
-Pending merge
+Approved — merged into main
