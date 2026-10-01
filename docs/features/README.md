@@ -11,6 +11,7 @@ proposal's `affects:` field when it merges that proposal, so these always match 
 | Progress | _to backfill_ | shipped |
 | Vocabulary builder & check-up | `vocabulary-builder.md` (created on merge) | blocked |
 | UI theme tokens | `ui-theme.md` | shipped |
+| App navigation (sidebar) | `app-navigation.md` | proposed |
 
 Backfilling a shipped feature: ask Claude "backfill docs/features/<name>.md from the code" —
 read-only against code, writes only this folder.
