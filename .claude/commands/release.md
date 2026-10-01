@@ -1,11 +1,11 @@
 ---
 title: Release — ship what is on main
-description: Stage 5 of the workflow. Tags main, deploys to local Kubernetes (kind), and writes release notes for every proposal at status done. Every push and deploy stays ask-gated.
+description: Stage 6 of the propose → plan → code → review → test → release workflow. Tags main, deploys to local Kubernetes (kind), and writes release notes for every proposal at status done. Every push and deploy stays ask-gated.
 ---
 
 ## Context
 
-Stage 5 of 5: **propose → plan → code → test → release**. Runs on `main` only, after one or more
+Stage 6 of 6: **propose → plan → code → review → test → release**. Runs on `main` only, after one or more
 proposals reached `status: done` (merged). Deployment target is local kind (see
 `WordBuddy/CLAUDE.md` → Running in Docker / local Kubernetes).
 

@@ -40,21 +40,35 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
    be done by the tester subagent directly, or by you from its report — either way it must exist
    after this command).
 
-5. **Status, approval, and merge are done by the tester subagent.** It sets `proposal.md` to
-   `status: done` or `status: needs-fixes`, commits and pushes `feature/<slug>`, and, only when
-   every suite ran and passed, merges `feature/<slug>` into `main` with `--no-ff` and pushes
-   `main`. Both pushes are ask-gated, so Sam approves each one. Don't repeat any of these steps
-   yourself. Just check that they happened.
+5. **Status, approval, and merge are done by the tester subagent**, in the order set by
+   `.claude/agents/tester.md` (steps 1–6): verdict → commit tests and report → not approved:
+   `needs-fixes` → approved: check the PR is mergeable → separate "mark done" commit → merge
+   **through the PR** with `gh pr merge <pr> --merge` (local `--no-ff` only when `pr:` is
+   `none`). Pushes and the PR merge are ask-gated, so Sam approves each one. Don't repeat any of
+   these steps yourself. Just check that they happened.
+
+   **Conflicts leave everything as it is** (Sam's rule): if `main` can't be merged into the
+   branch, or GitHub reports the PR as conflicting or still `UNKNOWN`, the tester changes no
+   status and merges nothing. That is an expected outcome, not a failed run — don't set
+   `needs-fixes` yourself. The PR stays open until the conflict is resolved via `/code`, then
+   `/review`.
 
 6. **Report back to Sam**: the verdict (merged into `main` or not, and why). In the failing or
    skipped case, summarize the failures so Sam knows whether to loop back to `/code <slug>`
-   (fixes continue on the same `feature/<slug>` branch) or `/plan <slug>`.
+   (fixes continue on the same `feature/<slug>` branch) or `/plan <slug>`. For a conflict, name
+   the conflicting files and say the next step is `/code <slug>` to resolve them, then `/review`.
 
 ## Verification
 
-- `.claude/plans/<slug>/test-report.md` exists and states a clear pass/fail outcome and verdict.
-- `proposal.md` status is `done` or `needs-fixes`, never left at `implemented`.
-- `status: done` ⇔ `feature/<slug>` is merged into `main`. Check with
-  `git branch --merged main`.
-- Nothing outside the touched service's test projects, `e2e/`, and `.claude/plans/<slug>/` was
-  modified by the tester, apart from the merge commit itself.
+- `.claude/plans/<slug>/test-report.md` exists and states a clear outcome and verdict.
+- `proposal.md` status after the run is one of:
+  - `done` — and the PR is merged (`gh pr view <pr> --json state` is `MERGED`; with no PR,
+    `git branch --merged main` lists `feature/<slug>`);
+  - `needs-fixes` — guard or suite failure, nothing merged;
+  - unchanged (`reviewed` / `needs-fixes` as it was before) — conflict, Sam declined a push or
+    the merge; nothing merged, PR still open.
+- `done` is never on `feature/<slug>` without the merge (if the merge failed, the "mark done"
+  commit was reverted).
+- The tester changed only allowlisted paths (`docs/sdlc/workflow.md` → Merge guard): test
+  projects, `e2e/`, `docs/features/`, and in `.claude/plans/<slug>/` only `test-report.md`,
+  `proposal.md`, `review.md` — apart from the merge commit itself.

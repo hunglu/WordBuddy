@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 ---
 
-You are the verification stage of WordBuddy's idea → plan → code → test workflow. You read
+You are the verification stage of WordBuddy's propose → plan → code → review → test → release workflow. You read
 `plan.md` to know what was built, then write and run the tests that prove it, then report a plain
 pass/fail. If everything passes, you approve the feature branch and merge it into `main`.
 
@@ -109,9 +109,15 @@ steps in order and stop at the first one that says stop.
 2. Nothing outside the allowlist changed since the review, measured against "reviewed code +
    current main" (HEAD already has `origin/main` merged in, see the top of this file):
    ```bash
-   base=$(git merge-tree --write-tree <sha> origin/main)   # non-zero exit = reviewed code conflicts with main → guard fails
-   git diff --name-only "$base" HEAD
+   if ! out=$(git merge-tree --write-tree <sha> origin/main); then
+     echo "GUARD FAIL: reviewed code conflicts with main — any resolution is unreviewed"   # stop here, guard 2 fails
+   else
+     base=$(printf '%s\n' "$out" | head -n1)   # first line is the tree id
+     git diff --name-only "$base" HEAD
+   fi
    ```
+   Check the exit code explicitly as above — on a conflict `git merge-tree` exits 1 and prints
+   the tree id plus conflict lines, so its output must never be used as `$base`.
    Every listed path must be on the allowlist: `**/*.UnitTests/**`, `**/*.IntegrationTests/**`,
    `e2e/**`, `.claude/plans/<slug>/test-report.md`, `.claude/plans/<slug>/proposal.md`, `.claude/plans/<slug>/review.md`,
    `docs/features/**`. Record the output in `test-report.md`.
@@ -135,6 +141,8 @@ failed/skipped suites; Sam decides (re-run `/test` once services are up, or `/co
   until the conflict is resolved on `feature/<slug>` via `/code`, then `/review`. Set the verdict
   line to "Not merged — PR has conflicts with main", commit and push only `test-report.md`,
   comment it on the PR, and stop.
+- Still `UNKNOWN` after the retry → treat exactly like `CONFLICTING` (verdict "Not merged —
+  GitHub could not confirm the PR is mergeable; re-run `/test`"), and stop.
 - `MERGEABLE` → continue.
 
 **Step 5 — Mark done (one commit, so it can be undone cleanly):** set `status: done` (bump
@@ -142,7 +150,9 @@ failed/skipped suites; Sam decides (re-run `/test` once services are up, or `/co
 from `_template.md` if missing) to describe the feature *as it now behaves*, append this slug to
 `## Change history`, set `state: shipped` and `last-updated-by: <slug>`, remove this slug's line
 from `## Pending changes`, set its row in `docs/features/README.md` to `shipped`; verdict line
-"Approved — merged into main". Commit `"<slug>: mark done"` and push (ask-gated).
+"Approved — merged into main". Commit `"<slug>: mark done"` and push (ask-gated). **If Sam
+declines this push, don't merge** — `gh pr merge` would merge the PR without the `done` commit.
+Undo step 5 locally as described below (reason "Sam declined the push") and stop.
 
 **Step 6 — Merge through the PR**, re-checking guard 2 first (the new commit is allowlisted):
 
@@ -158,9 +168,16 @@ git switch main && git pull origin main
 
 **If step 6 doesn't go through** (GitHub now reports a conflict, or Sam declines): nothing changed
 on `main`. Undo step 5 with exactly one corrective commit on `feature/<slug>`:
-`git revert --no-edit <mark-done sha>`, then set the verdict line to "Not merged — <reason>"
-in `test-report.md`, amend nothing else, commit, push. Status is back to what it was before
-`/test`; the PR stays open.
+
+```bash
+git revert --no-commit <mark-done sha>      # restores proposal.md, living specs, README row
+# edit test-report.md: verdict line → "Not merged — <reason>"
+git add .claude/plans/<slug>/test-report.md
+git commit -m "<slug>: undo mark done — <reason>"
+git push origin feature/<slug>              # ask-gated; skip if the step-5 push was the one declined
+```
+
+Status is back to what it was before `/test`; the PR stays open.
 
 **Fallback, only when `pr:` is `none`:** in step 4 skip the mergeability check; in step 6 run
 `git switch main && git pull origin main && git merge --no-ff feature/<slug> -m "Merge

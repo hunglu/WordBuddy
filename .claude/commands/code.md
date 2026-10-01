@@ -1,12 +1,12 @@
 ---
 title: Code — implement an approved plan
-description: Stage 3 of the idea → plan → code → test workflow. Invokes the coder subagent to implement tasks from an approved plan. Refuses to run without an approved plan.
+description: Stage 3 of the propose → plan → code → review → test → release workflow. Invokes the coder subagent to implement tasks from an approved plan. Refuses to run without an approved plan.
 status: draft
 ---
 
 ## Context
 
-Stage 3 of 4: **propose → plan → code → test**. Sam running this command *is* the approval —
+Stage 3 of 6: **propose → plan → code → review → test → release**. Sam running this command *is* the approval —
 there is no separate "approve" step beyond having reviewed `plan.md`/`tasks.md` from `/plan` and
 choosing to invoke `/code`. Implementation is done by the `coder` subagent
 (`.claude/agents/coder.md`).

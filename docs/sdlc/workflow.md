@@ -36,8 +36,13 @@ and approving every `git push`, PR post and PR merge.
    in) with "the reviewed code + current main":
 
    ```bash
-   base=$(git merge-tree --write-tree <sha> origin/main)   # needs git ≥ 2.38
-   git diff --name-only "$base" HEAD
+   # needs git ≥ 2.38
+   if ! out=$(git merge-tree --write-tree <sha> origin/main); then
+     echo "GUARD FAIL: reviewed code conflicts with main"
+   else
+     base=$(printf '%s\n' "$out" | head -n1)
+     git diff --name-only "$base" HEAD
+   fi
    ```
 
    - `main`'s own commits are part of `base`, so they never show up — merging `main` in doesn't
@@ -45,7 +50,8 @@ and approving every `git push`, PR post and PR merge.
    - Anything changed on the branch after the review shows up, **including edits made while
      resolving a merge conflict**, because those exist only in HEAD.
    - If `git merge-tree` exits non-zero, the reviewed code conflicts with `main`, so any
-     resolution is unreviewed → the guard fails.
+     resolution is unreviewed → the guard fails. Always test the exit code: on a conflict the
+     command prints conflict lines after the tree id, so its output is not a usable `base`.
 
    Every listed path must be on the tester allowlist: `**/*.UnitTests/**`,
    `**/*.IntegrationTests/**`, `e2e/**`, `.claude/plans/<slug>/test-report.md`,
@@ -70,6 +76,19 @@ fails.
 test fixes, conflict resolutions) until it has gone through `/review`. The reviewer
 can't approve its own account's PR on GitHub, so the verdict lives in `review.md` and a PR
 comment; branch protection that requires an approving review needs a second GitHub account.
+
+## Blocked
+
+Any stage may stop on something outside the workflow (a decision only Sam can make, a missing
+external service or account, a dependency on another proposal). Then:
+
+- **Enter:** the command that hits it sets `status: blocked` and adds `blocked-from: <status it
+  had>` and `blocked-by: <one line: what is needed, from whom>` to the frontmatter (normal
+  version bump). It never guesses past the blocker.
+- **Exit:** once the blocker is resolved, Sam (or Claude on Sam's word) sets `status` back to the
+  `blocked-from` value, removes both fields, bumps the version, and runs that stage's command
+  again. `/status` lists blocked proposals with their `blocked-by`.
+- A conflicting PR is **not** `blocked` — it keeps its status (see above).
 
 ## Proposal versioning
 

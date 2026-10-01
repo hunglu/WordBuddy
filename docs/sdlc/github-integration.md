@@ -71,7 +71,8 @@ Lấy số project cho CLI: `gh project list --owner hunglu`.
 | Plan | `/plan <slug>` → `gh issue comment 42 -F .claude/plans/<slug>/plan.md` → kéo **Planned** |
 | Code | `/code <slug>` → khi xong, Claude mở PR `gh pr create --base main --head feature/<slug>` (body có `Closes #42`, cần Sam duyệt) và ghi `pr:` vào proposal → **In progress** |
 | Review | `/review <slug>` → reviewer đọc diff PR, ghi `review.md`, đăng lên PR bằng `gh pr review --comment` → kéo **In review**. `changes-requested` thì quay lại `/code` rồi `/review` |
-| Test | `/test <slug>` (chỉ khi `reviewed`) → `gh pr merge <pr> --merge`; PR có `Closes #42` → issue tự đóng → **Done** |
+| Test | `/test <slug>` (khi `reviewed`, hoặc `needs-fixes` nếu merge guard cho phép) → `gh pr merge <pr> --merge`; PR có `Closes #42` → issue tự đóng → **Done**. PR bị conflict thì giữ nguyên, không đổi status, không merge |
+| Sửa sau review | `changes-requested` / `needs-fixes` → kéo card về **In progress**, chạy `/code <slug>`, rồi `/review` → kéo lại **In review** |
 | Release | `/release` → kéo card sang **Released** |
 | Xem tổng | `/status` (local) hoặc mở board |
 
