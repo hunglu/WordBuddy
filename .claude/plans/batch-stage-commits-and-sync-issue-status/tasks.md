@@ -12,10 +12,10 @@
       done" commit; describe `pr:` as a lagging cache with the `gh pr list --head` fallback;
       update the Board column table to the new mapping. — The rule is in one place and matches
       the commands. — docs/sdlc/workflow.md
-- [ ] `.claude/agents/coder.md`: remove the per-task commit step and the `git push -u`. The coder
+- [x] `.claude/agents/coder.md`: remove the per-task commit step and the `git push -u`. The coder
       makes no commits or pushes, still checks off `tasks.md` and runs a build per task, and
       returns the list of files it touched. — `coder.md` has no `git commit`/`git push`
-      instructions.
+      instructions. — .claude/agents/coder.md
 - [ ] `.claude/commands/code.md`: at the start, set `in-progress` and run board sync (assign
       `@me` + In progress; fix rounds Status only). At the end, make one `git add` of the
       coder's files + `.claude/plans/<slug>/`, one commit (`implement` / `fix round <n>` /
