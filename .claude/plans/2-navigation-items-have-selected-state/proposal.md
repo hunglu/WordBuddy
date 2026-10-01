@@ -3,12 +3,12 @@ title: 2 navigation Items have selected state
 status: implemented
 type: bugfix
 issue: 5
-pr: none            # set by /code when it opens the pull request
+pr: 7
 affects: docs/features/app-navigation.md
 supersedes: none
-version: 1.3
+version: 1.4
 created: 2026-10-01T16:50:32+07:00
-updated: 2026-10-01T17:04:53+07:00
+updated: 2026-10-01T17:06:01+07:00
 ---
 
 ## Problem
