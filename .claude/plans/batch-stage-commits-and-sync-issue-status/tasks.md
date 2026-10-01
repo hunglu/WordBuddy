@@ -22,10 +22,11 @@
       `wip`), and one `git push -u origin feature/<slug>`. Then `gh pr create` (first run) or
       `gh pr comment` (fix round). Write `pr: <n>` to the working tree without committing it. —
       A first run produces exactly one commit and one push. — .claude/commands/code.md
-- [ ] `.claude/agents/reviewer.md` + `.claude/commands/review.md`: resolve the PR through the
+- [x] `.claude/agents/reviewer.md` + `.claude/commands/review.md`: resolve the PR through the
       `gh pr list --head` fallback when `pr:` is `none`. The single review commit includes any
       pending `pr:` edit. After the verdict, run board sync (In review / In progress). — Still
-      one commit per review round, and the board matches the verdict.
+      one commit per review round, and the board matches the verdict. — .claude/agents/reviewer.md,
+      .claude/commands/review.md
 - [ ] `.claude/agents/tester.md` + `.claude/commands/test.md`: replace steps 2–6 with the
       batched order from `plan.md` §1. One commit for each outcome (approved / needs-fixes /
       conflicting); the push comes before the mergeability check; the undo is a path-limited

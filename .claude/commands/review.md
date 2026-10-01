@@ -18,14 +18,19 @@ Sam which one.
    `/code` fixed a `changes-requested` or `needs-fixes` round). Otherwise tell Sam the right
    command (`/code <slug>` first). `feature/<slug>` exists on `origin`.
 
-2. **Make sure a PR exists.** If `pr:` is `none`/missing, create it the way `/code` step 6 does
-   (ask-gated) and record `pr: <n>` before reviewing.
+2. **Make sure a PR exists.** `pr:` may lag one stage (see `docs/sdlc/workflow.md`). If it is
+   `none`/missing, look it up first:
+   `gh pr list -R hunglu/WordBuddy --head feature/<slug> --state all --json number --jq '.[0].number'`.
+   Only if that finds nothing, create it the way `/code` step 6 does (ask-gated). Either way write
+   `pr: <n>` to `proposal.md` in the working tree — the reviewer's single commit carries it.
 
 3. **Invoke the `reviewer` subagent** (`subagent_type: reviewer`) with the slug, `proposal.md`,
-   `plan.md` and `tasks.md`. It writes `review.md`, posts it on the PR, sets the status, commits
-   and pushes (pushes and PR posts are ask-gated — Sam approves each).
+   `plan.md` and `tasks.md`. It writes `review.md`, posts it on the PR, sets the status, makes
+   the round's single commit and push, and runs board sync (In review / In progress). Pushes, PR
+   posts and board writes are ask-gated — Sam approves each.
 
-4. **Report back**: verdict, count of blockers / majors / nits, and the top findings.
+4. **Report back**: verdict, count of blockers / majors / nits, the top findings, the commit sha
+   and the board sync result.
    - `reviewed` → next is `/test <slug>`.
    - `changes-requested` → next is `/code <slug>` to fix the findings (the coder reads
      `review.md`); then `/review <slug>` again.
@@ -35,3 +40,5 @@ Sam which one.
 - `.claude/plans/<slug>/review.md` exists with a verdict and the reviewed commit sha.
 - `proposal.md` status is `reviewed` or `changes-requested`, with `version`/`updated` bumped.
 - No application code changed.
+- Exactly one commit (`<slug>: review round <n>`) and one push this round.
+- Board Status matches the verdict (In review / In progress), or the skip reason is reported.

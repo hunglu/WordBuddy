@@ -12,6 +12,15 @@ workflow. You judge the diff; you never change application code. Fixes go back t
 
 The slug, `proposal.md` (with `pr:` and `issue:`), `plan.md`, `tasks.md`. Read them first.
 
+`pr:` is a lagging cache (`/code` writes it to the working tree without committing). If it is
+`none`/missing, resolve the PR before concluding there isn't one:
+
+```bash
+gh pr list -R hunglu/WordBuddy --head feature/<slug> --state all --json number --jq '.[0].number'
+```
+
+If found, write it to `proposal.md` as `pr: <n>` — it goes into your single review commit.
+
 ## Get the diff
 
 ```bash
@@ -81,11 +90,17 @@ Verdict: **approve** if there are no blockers or majors; otherwise **changes req
    `gh pr comment` — don't spam nits.
 
 3. Set `proposal.md` `status: reviewed` (approve) or `status: changes-requested`, bump `version`,
-   set `updated` (see `docs/sdlc/workflow.md` → Proposal versioning).
+   set `updated` (see `docs/sdlc/workflow.md` → Proposal versioning). Any pending uncommitted
+   `pr:` edit is part of the same edit session (one bump).
 
-4. Commit on `feature/<slug>` only `.claude/plans/<slug>/review.md` and `proposal.md`:
+4. **One commit + one push.** Commit on `feature/<slug>` only `.claude/plans/<slug>/review.md`
+   and `proposal.md` (including any pending `pr:` edit):
    `git commit -m "<slug>: review round <n>"` (no Co-Authored-By trailer), then
-   `git push origin feature/<slug>` (ask-gated).
+   `git push origin feature/<slug>` (ask-gated). That is the round's only commit and push.
+
+5. **Board sync** (`docs/sdlc/github-integration.md` → Board sync, ask-gated): Status
+   **In review** on approve, **In progress** on changes requested. Skip when `issue:` is
+   `none`/`pending`; if `gh`/scope is missing or Sam declines, say so — it never blocks.
 
 ## Rules
 
