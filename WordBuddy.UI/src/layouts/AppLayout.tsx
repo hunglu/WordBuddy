@@ -2,7 +2,20 @@ import type { ReactElement } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
-const NAV_ITEMS = [
+/** A sidebar navigation entry. */
+interface NavItem {
+  to: string
+  label: string
+  icon: string
+  end: boolean
+  /**
+   * Exact paths this item owns. When set, the item is active only on these paths
+   * (instead of NavLink's own prefix/exact matching on `to`).
+   */
+  activePaths?: string[]
+}
+
+const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Home', icon: '🏠', end: true },
   { to: '/lessons', label: 'Lessons', icon: '📚', end: false },
   { to: '/vocabulary', label: 'My Vocabulary', icon: '📝', end: false },
@@ -10,12 +23,12 @@ const NAV_ITEMS = [
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
 ]
 
-const ADMIN_NAV_ITEM = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: false }
+const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: false }
 
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
-  const navItems = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
+  const navItems: NavItem[] = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
 
   return (
     <div className="flex min-h-screen bg-wb-surface-page">
