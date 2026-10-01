@@ -19,3 +19,8 @@ Then('only the {string} sidebar item is selected', async ({ page }, label: strin
   await expect(selected).toHaveCount(1)
   await expect(selected).toContainText(label)
 })
+
+When('they open {string} directly', async ({ page }, path: string) => {
+  await page.goto(path)
+  await expect(page.locator('aside')).toBeVisible()
+})

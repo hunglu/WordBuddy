@@ -8,3 +8,17 @@ Feature: Sidebar navigation selected state
     When they click the "My Vocabulary" sidebar item
     And they click the "Shared Pool" sidebar item
     Then only the "Shared Pool" sidebar item is selected
+
+  Scenario Outline: Exactly one sidebar item is selected on <path>
+    Given the learner is logged in
+    When they open "<path>" directly
+    Then only the "<item>" sidebar item is selected
+
+    Examples:
+      | path               | item          |
+      | /                  | Home          |
+      | /lessons           | Lessons       |
+      | /vocabulary        | My Vocabulary |
+      | /vocabulary/check  | My Vocabulary |
+      | /vocabulary/shared | Shared Pool   |
+      | /progress          | My Progress   |
