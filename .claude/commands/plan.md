@@ -32,8 +32,12 @@ Argument: `$ARGUMENTS` is the slug. If missing, list the folders under `.claude/
    `status: idea` → `status: planned`. Every edit to `proposal.md` also bumps `version` and sets
    `updated` (see `docs/sdlc/workflow.md` → Proposal versioning).
 
-4. **Report back** with a short summary of the plan (not the full file — Sam can read
-   `plan.md`) and the task count from `tasks.md`. End with: implementation will **not** start
+4. **Board sync → Planned** (`docs/sdlc/github-integration.md` → Board sync, ask-gated). Skip
+   when `issue:` is `none`/`pending`; if `gh`/the `project` scope is missing, the option name
+   doesn't exist, or Sam declines, say so and continue — it never blocks the stage.
+
+5. **Report back** with a short summary of the plan (not the full file — Sam can read
+   `plan.md`), the task count from `tasks.md`, and the board sync result. End with: implementation will **not** start
    automatically — Sam runs `/code <slug>` once they've reviewed and are happy with the plan.
 
 ## Verification
@@ -41,3 +45,4 @@ Argument: `$ARGUMENTS` is the slug. If missing, list the folders under `.claude/
 - `.claude/plans/<slug>/plan.md` and `tasks.md` exist and are non-empty.
 - `proposal.md` frontmatter now reads `status: planned`.
 - No file outside `.claude/plans/<slug>/` was modified.
+- Board Status is **Planned**, or the skip reason is reported.

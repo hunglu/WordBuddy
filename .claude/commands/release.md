@@ -28,4 +28,8 @@ version from the latest `git tag` and ask Sam to confirm.
    Commit (`release: <version>`), `git tag <version>`, then `git push origin main --tags`
    (ask-gated). If the proposal has an `issue`, remind Sam the issue closes via the release notes
    or close it with `gh issue close <n>`.
-6. **Report** the version, what shipped, and the smoke-check result.
+6. **Board sync → Released** for each released proposal with an `issue` number
+   (`docs/sdlc/github-integration.md` → Board sync, ask-gated). Skip `none`/`pending`; if
+   `gh`/the `project` scope is missing, the option name doesn't exist, or Sam declines, say so and
+   continue — it never blocks the release.
+7. **Report** the version, what shipped, the smoke-check result, and the board sync result.

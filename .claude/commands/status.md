@@ -17,6 +17,10 @@ Read-only: never edits any file, never changes a status.
    `needs-fixes`, `changes-requested`, `reviewed`, `implemented`, `in-progress`, `planned`,
    `idea`, `blocked`, `released`, `done`, `untracked`.
    Columns: slug · title · type · issue · PR · next step.
+   `pr:` is a lagging cache (`docs/sdlc/workflow.md`): for an `implemented`+ proposal with
+   `pr: none`, look it up read-only with
+   `gh pr list -R hunglu/WordBuddy --head feature/<slug> --state all --json number --jq '.[0].number'`
+   and show that number in the PR column (marked `(not yet recorded)`). Don't edit `proposal.md`.
    Under the table, warn about: any issue number used by more than one proposal (a duplicate
    link — Sam picks which folder keeps it), and every proposal with `issue: pending` or `none`
    (not yet on the board).
@@ -34,4 +38,5 @@ Read-only: never edits any file, never changes a status.
    | blocked | show `blocked-by`; once resolved, Sam sets `status` back to `blocked-from` (see `docs/sdlc/workflow.md` → Blocked) |
 4. End with one line recommending the single most useful next action (fix before build before
    plan: `needs-fixes` > `changes-requested` > `reviewed` > `implemented` > `in-progress` >
-   `planned` > `idea`). Also warn when an `implemented`+ proposal has `pr: none`.
+   `planned` > `idea`). Also warn when an `implemented`+ proposal has `pr: none` **and** the
+   `gh pr list --head` lookup finds no PR either (or `gh` is unavailable — say so).

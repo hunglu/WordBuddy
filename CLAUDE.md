@@ -60,11 +60,12 @@ Full description: `docs/sdlc/workflow.md`. GitHub integration: `docs/sdlc/github
 | `/status` | — | read-only board of all proposals + next step |
 | `/propose [#issue] <title>` | — | `proposal.md` + GitHub issue → `idea` |
 | `/plan <slug>` | `planner` | `plan.md` + `tasks.md` → `planned` — **approval gate** |
-| `/code <slug>` | `coder` | `feature/<slug>` branch, one commit per task, pull request opened → `implemented` |
+| `/code <slug>` | `coder` | issue assigned + board In progress, `feature/<slug>` branch, one commit + one push per run, pull request opened → `implemented` |
 | `/review <slug>` | `reviewer` | `review.md` + review posted on the PR → `reviewed` / `changes-requested` |
 | `/test <slug>` | `tester` | tests + `test-report.md`, living spec updated, PR merged on green → `done` / `needs-fixes` |
 | `/release [version]` | — | release notes, tag, kind deploy → `released` |
 
+- One bookkeeping commit and one push per stage run (cycle); board Status follows `status:` (see docs/sdlc/github-integration.md → Board sync).
 - Changing a shipped feature = a **new** proposal (`type: change`, `affects:`, `supersedes:`).
   Never edit a `done` plan folder.
 - Git: feature work only on `feature/<slug>`, never directly on `main`. Every change reaches
