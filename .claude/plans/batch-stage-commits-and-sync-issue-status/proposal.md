@@ -1,14 +1,14 @@
 ---
 title: Batch stage commits and sync issue status
-status: implemented
+status: changes-requested
 type: change
 issue: 8
-pr: none            # set by /code when it opens the pull request
+pr: 9
 affects: none
 supersedes: none
-version: 1.3
+version: 1.4
 created: 2026-10-01T17:37:59+07:00
-updated: 2026-10-01T21:57:54+07:00
+updated: 2026-10-01T22:01:54+07:00
 ---
 
 ## Problem
