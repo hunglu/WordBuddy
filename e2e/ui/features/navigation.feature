@@ -22,3 +22,8 @@ Feature: Sidebar navigation selected state
       | /vocabulary/check  | My Vocabulary |
       | /vocabulary/shared | Shared Pool   |
       | /progress          | My Progress   |
+
+  Scenario: Admin on Moderation sees only Moderation selected
+    Given the admin is logged in
+    When they open "/vocabulary/moderation" directly
+    Then only the "Moderation" sidebar item is selected
