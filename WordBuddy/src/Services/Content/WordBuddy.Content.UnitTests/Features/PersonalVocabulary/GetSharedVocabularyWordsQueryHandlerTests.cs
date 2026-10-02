@@ -12,7 +12,7 @@ namespace WordBuddy.Content.UnitTests.Features.PersonalVocabulary;
 
 public class GetSharedVocabularyWordsQueryHandlerTests
 {
-    private readonly Mock<IPersonalVocabularyWordRepository> _repository = new();
+    private readonly Mock<IVocabularyWordRepository> _repository = new();
     private readonly Mock<IDistributedCache> _cache = new();
     private readonly Mock<ILogger<GetSharedVocabularyWordsQueryHandler>> _logger = new();
 
@@ -27,20 +27,14 @@ public class GetSharedVocabularyWordsQueryHandlerTests
 
     private GetSharedVocabularyWordsQueryHandler CreateHandler() => new(_repository.Object, _cache.Object, _logger.Object);
 
-    private static PersonalVocabularyWord CreateSharedWord(bool visibleToChildren)
-    {
-        PersonalVocabularyWord word = new(Guid.NewGuid(), Guid.NewGuid(), AgeGroup.Adult, "apple", "a fruit", null);
-        word.RequestShare();
-        word.Approve(visibleToChildren, Guid.NewGuid());
-        return word;
-    }
+    private static VocabularyWord CreateSharedWord(bool visibleToChildren) => TestWords.Shared(Guid.NewGuid(), visibleToChildren);
 
     [Fact]
     public async Task HandleAsync_AdultCaller_ReceivesAllSharedItems()
     {
         _repository
             .Setup(r => r.GetSharedAsync(false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<PersonalVocabularyWord>>([CreateSharedWord(true), CreateSharedWord(false)]));
+            .ReturnsAsync(Result.Success<IReadOnlyList<VocabularyWord>>([CreateSharedWord(true), CreateSharedWord(false)]));
 
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult));
 
@@ -54,7 +48,7 @@ public class GetSharedVocabularyWordsQueryHandlerTests
     {
         _repository
             .Setup(r => r.GetSharedAsync(true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<PersonalVocabularyWord>>([CreateSharedWord(true)]));
+            .ReturnsAsync(Result.Success<IReadOnlyList<VocabularyWord>>([CreateSharedWord(true)]));
 
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Child));
 

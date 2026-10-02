@@ -11,7 +11,7 @@ namespace WordBuddy.Content.UnitTests.Features.PersonalVocabulary;
 
 public class GetRandomVocabularyWordsForCheckQueryHandlerTests
 {
-    private readonly Mock<IPersonalVocabularyWordRepository> _repository = new();
+    private readonly Mock<IVocabularyWordRepository> _repository = new();
     private readonly GetRandomVocabularyWordsForCheckQueryValidator _validator = new();
     private readonly Mock<ILogger<GetRandomVocabularyWordsForCheckQueryHandler>> _logger = new();
 
@@ -19,36 +19,40 @@ public class GetRandomVocabularyWordsForCheckQueryHandlerTests
         new(_repository.Object, _validator, _logger.Object);
 
     [Fact]
-    public async Task HandleAsync_ValidCount_ReturnsAtMostCountItemsFromOwnersList()
+    public async Task GetRandomVocabularyWordsForCheckQueryHandler_HandleAsync_ValidCount_ReturnsLinkedWordsAsRequesterOwned()
     {
         Guid ownerId = Guid.NewGuid();
-        List<PersonalVocabularyWord> words =
+        VocabularyWord own = TestWords.Learner(ownerId, "apple");
+        VocabularyWord adopted = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, "banana");
+        List<UserVocabularyWord> links =
         [
-            new(Guid.NewGuid(), ownerId, AgeGroup.Adult, "apple", "a fruit", null),
-            new(Guid.NewGuid(), ownerId, AgeGroup.Adult, "banana", "a fruit", null),
+            new(Guid.NewGuid(), ownerId, own, isAuthor: true),
+            new(Guid.NewGuid(), ownerId, adopted, isAuthor: false),
         ];
 
         _repository
-            .Setup(r => r.GetRandomByOwnerAsync(ownerId, 2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<PersonalVocabularyWord>>(words));
+            .Setup(r => r.GetRandomLinkedToUserAsync(ownerId, 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlyList<UserVocabularyWord>>(links));
 
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(ownerId, 2));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(2);
         result.Value.Should().OnlyContain(dto => dto.OwnerUserId == ownerId);
+        result.Value.Should().ContainSingle(dto => dto.Id == own.Id && dto.IsAuthor);
+        result.Value.Should().ContainSingle(dto => dto.Id == adopted.Id && !dto.IsAuthor && dto.ShareStatus == VocabularyShareStatus.Private);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(51)]
-    public async Task HandleAsync_CountOutOfRange_ReturnsValidationFailure(int count)
+    public async Task GetRandomVocabularyWordsForCheckQueryHandler_HandleAsync_CountOutOfRange_ReturnsValidationFailure(int count)
     {
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result =
             await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(Guid.NewGuid(), count));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);
-        _repository.Verify(r => r.GetRandomByOwnerAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repository.Verify(r => r.GetRandomLinkedToUserAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -25,6 +25,10 @@ public static class ServiceUrls
 
     public static string Notification => Get("Notification");
 
+    /// <summary>The single public origin learners use (the UI's Nginx in docker-compose, the Ingress
+    /// in Kubernetes) — <c>Services__Public</c> to override.</summary>
+    public static string Public => Get("Public");
+
     private static string Get(string service)
     {
         return Configuration[$"Services:{service}"]

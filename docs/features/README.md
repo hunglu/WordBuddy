@@ -12,6 +12,7 @@ proposal's `affects:` field when it merges that proposal, so these always match 
 | Vocabulary builder & check-up | `vocabulary-builder.md` | shipped |
 | UI theme tokens | `ui-theme.md` | shipped |
 | App navigation (sidebar) | `app-navigation.md` | shipped |
+| Vocabulary storage | `vocabulary.md` | shipped |
 
 Backfilling a shipped feature: ask Claude "backfill docs/features/<name>.md from the code" —
 read-only against code, writes only this folder.

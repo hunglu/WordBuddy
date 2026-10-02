@@ -87,6 +87,9 @@ export interface PersonalVocabularyWord {
   shareStatus: VocabularyShareStatus
   visibleToChildren: boolean
   createdAtUtc: string
+  /** On "my words" / recall check: whether the caller wrote this word (only authors may share it).
+   * Always `false` on the shared pool and moderation lists. */
+  isAuthor: boolean
 }
 
 /** A word as returned by the random-selection-for-check endpoint — same shape as

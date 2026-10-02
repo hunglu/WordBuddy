@@ -8,14 +8,17 @@ using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RequestShareVocabularyWord;
 
+/// <summary>Submits a word from the caller's list for moderation. Only the author may do this —
+/// an adopted or system word returns <c>PersonalVocabularyWord.InvalidShareRequest</c> (409), so
+/// adopted words can't re-enter the pool as duplicates. Not-found when the caller has no link.</summary>
 public sealed class RequestShareVocabularyWordCommandHandler : ICommandHandler<RequestShareVocabularyWordCommand>
 {
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly IValidator<RequestShareVocabularyWordCommand> _validator;
     private readonly ILogger<RequestShareVocabularyWordCommandHandler> _logger;
 
     public RequestShareVocabularyWordCommandHandler(
-        IPersonalVocabularyWordRepository repository,
+        IVocabularyWordRepository repository,
         IValidator<RequestShareVocabularyWordCommand> validator,
         ILogger<RequestShareVocabularyWordCommandHandler> logger)
     {
@@ -37,12 +40,29 @@ public sealed class RequestShareVocabularyWordCommandHandler : ICommandHandler<R
             return Result.Failure(Error.Validation("RequestShareVocabularyWord.Validation", validation.ToString()));
         }
 
-        Result<PersonalVocabularyWord> wordResult = await _repository.GetOwnedByIdAsync(command.WordId, command.RequestingUserId, ct);
-        if (wordResult.IsFailure)
+        Result<UserVocabularyWord> linkResult = await _repository.GetLinkAsync(command.RequestingUserId, command.WordId, ct);
+        if (linkResult.IsFailure)
         {
             _logger.LogWarning(
-                "RequestShareVocabularyWordCommand word not found or not owned: WordId={WordId}, RequestingUserId={RequestingUserId}",
+                "RequestShareVocabularyWordCommand word not in caller's list: WordId={WordId}, RequestingUserId={RequestingUserId}",
                 command.WordId, command.RequestingUserId);
+            return Result.Failure(linkResult.Error);
+        }
+
+        if (!linkResult.Value.IsAuthor)
+        {
+            _logger.LogWarning(
+                "RequestShareVocabularyWordCommand caller is not the author: WordId={WordId}, RequestingUserId={RequestingUserId}",
+                command.WordId, command.RequestingUserId);
+            return Result.Failure(Error.Conflict(
+                "PersonalVocabularyWord.InvalidShareRequest",
+                $"Word {command.WordId} can only be submitted for review by its author."));
+        }
+
+        Result<VocabularyWord> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
+        if (wordResult.IsFailure)
+        {
+            _logger.LogWarning("RequestShareVocabularyWordCommand word not found: WordId={WordId}", command.WordId);
             return Result.Failure(wordResult.Error);
         }
 

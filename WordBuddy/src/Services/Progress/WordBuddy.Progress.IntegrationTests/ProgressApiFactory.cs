@@ -33,6 +33,10 @@ public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncL
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);
+
+        // No Content API runs during these tests; the remap sync is exercised directly through its
+        // command handler with a stubbed transport instead (SyncVocabularyWordIdRemapsTests).
+        Environment.SetEnvironmentVariable("ContentApi__RemapSyncEnabled", "false");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

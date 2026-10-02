@@ -9,10 +9,10 @@ namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetM
 
 public sealed class GetMyVocabularyWordsQueryHandler : IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>>
 {
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly ILogger<GetMyVocabularyWordsQueryHandler> _logger;
 
-    public GetMyVocabularyWordsQueryHandler(IPersonalVocabularyWordRepository repository, ILogger<GetMyVocabularyWordsQueryHandler> logger)
+    public GetMyVocabularyWordsQueryHandler(IVocabularyWordRepository repository, ILogger<GetMyVocabularyWordsQueryHandler> logger)
     {
         _repository = repository;
         _logger = logger;
@@ -22,7 +22,7 @@ public sealed class GetMyVocabularyWordsQueryHandler : IQueryHandler<GetMyVocabu
     {
         _logger.LogInformation("GetMyVocabularyWordsQuery started: OwnerUserId={OwnerUserId}", query.OwnerUserId);
 
-        Result<IReadOnlyList<PersonalVocabularyWord>> wordsResult = await _repository.GetByOwnerAsync(query.OwnerUserId, ct);
+        Result<IReadOnlyList<UserVocabularyWord>> wordsResult = await _repository.GetLinkedToUserAsync(query.OwnerUserId, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(
@@ -31,19 +31,9 @@ public sealed class GetMyVocabularyWordsQueryHandler : IQueryHandler<GetMyVocabu
             return Result.Failure<IReadOnlyList<PersonalVocabularyWordDto>>(wordsResult.Error);
         }
 
-        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(ToDto).ToList();
+        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(PersonalVocabularyWordMapper.ToDto).ToList();
 
         _logger.LogInformation("GetMyVocabularyWordsQuery succeeded: Count={Count}", dtos.Count);
         return Result.Success(dtos);
     }
-
-    private static PersonalVocabularyWordDto ToDto(PersonalVocabularyWord word) => new(
-        word.Id,
-        word.OwnerUserId,
-        word.Word,
-        word.Definition,
-        word.Example,
-        word.ShareStatus,
-        word.VisibleToChildren,
-        word.CreatedAtUtc);
 }

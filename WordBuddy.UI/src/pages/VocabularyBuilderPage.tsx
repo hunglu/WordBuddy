@@ -136,7 +136,7 @@ export function VocabularyBuilderPage(): ReactElement {
               {word.example && <p className="text-sm italic text-wb-ink-muted">"{word.example}"</p>}
 
               <div className="mt-2 flex gap-2">
-                {user?.ageGroup !== 'Child' && (word.shareStatus === 'Private' || word.shareStatus === 'Rejected') && (
+                {user?.ageGroup !== 'Child' && word.isAuthor && (word.shareStatus === 'Private' || word.shareStatus === 'Rejected') && (
                   <button
                     type="button"
                     onClick={() => requestShare.mutate(word.id)}

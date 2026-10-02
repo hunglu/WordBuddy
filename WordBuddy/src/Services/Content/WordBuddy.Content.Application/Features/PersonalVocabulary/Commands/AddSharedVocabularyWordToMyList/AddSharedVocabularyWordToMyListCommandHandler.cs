@@ -8,16 +8,17 @@ using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddSharedVocabularyWordToMyList;
 
-/// <summary>Copies a <see cref="VocabularyShareStatus.Shared"/> community-pool word into the
-/// caller's own list as a new <see cref="VocabularyShareStatus.Private"/> entry.</summary>
+/// <summary>Links a <see cref="VocabularyShareStatus.Shared"/> community-pool word into the caller's
+/// own list — no copy is made. Idempotent: adopting the same word again returns the same id.
+/// Returns the shared word's id.</summary>
 public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHandler<AddSharedVocabularyWordToMyListCommand, Guid>
 {
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly IValidator<AddSharedVocabularyWordToMyListCommand> _validator;
     private readonly ILogger<AddSharedVocabularyWordToMyListCommandHandler> _logger;
 
     public AddSharedVocabularyWordToMyListCommandHandler(
-        IPersonalVocabularyWordRepository repository,
+        IVocabularyWordRepository repository,
         IValidator<AddSharedVocabularyWordToMyListCommand> validator,
         ILogger<AddSharedVocabularyWordToMyListCommandHandler> logger)
     {
@@ -39,14 +40,14 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
             return Result.Failure<Guid>(Error.Validation("AddSharedVocabularyWordToMyList.Validation", validation.ToString()));
         }
 
-        Result<PersonalVocabularyWord> sourceResult = await _repository.GetByIdAsync(command.SharedWordId, ct);
+        Result<VocabularyWord> sourceResult = await _repository.GetByIdAsync(command.SharedWordId, ct);
         if (sourceResult.IsFailure)
         {
             _logger.LogWarning("AddSharedVocabularyWordToMyListCommand source word not found: SharedWordId={SharedWordId}", command.SharedWordId);
             return Result.Failure<Guid>(sourceResult.Error);
         }
 
-        PersonalVocabularyWord source = sourceResult.Value;
+        VocabularyWord source = sourceResult.Value;
 
         bool notVisibleToRequester =
             source.ShareStatus != VocabularyShareStatus.Shared ||
@@ -64,25 +65,26 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
                 $"Word {command.SharedWordId} is not available in the shared pool."));
         }
 
-        Guid id = Guid.NewGuid();
-        PersonalVocabularyWord copy = new(
-            id,
-            command.RequestingUserId,
-            command.RequestingAgeGroup,
-            source.Word,
-            source.Definition,
-            source.Example);
-
-        Result addResult = await _repository.AddAsync(copy, ct);
-        if (addResult.IsFailure)
+        Result<UserVocabularyWord> existingLink = await _repository.GetLinkAsync(command.RequestingUserId, source.Id, ct);
+        if (existingLink.IsSuccess)
         {
-            _logger.LogWarning(
-                "AddSharedVocabularyWordToMyListCommand failed to persist copy: {ErrorCode} — {ErrorDescription}",
-                addResult.Error.Code, addResult.Error.Description);
-            return Result.Failure<Guid>(addResult.Error);
+            _logger.LogInformation("AddSharedVocabularyWordToMyListCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", source.Id, true);
+            return Result.Success(source.Id);
         }
 
-        _logger.LogInformation("AddSharedVocabularyWordToMyListCommand succeeded: NewWordId={NewWordId}", id);
-        return Result.Success(id);
+        bool isAuthor = source.OwnerUserId == command.RequestingUserId;
+        UserVocabularyWord link = new(Guid.NewGuid(), command.RequestingUserId, source.Id, isAuthor);
+
+        Result linkResult = await _repository.LinkAsync(link, ct);
+        if (linkResult.IsFailure)
+        {
+            _logger.LogWarning(
+                "AddSharedVocabularyWordToMyListCommand failed to persist link: {ErrorCode} — {ErrorDescription}",
+                linkResult.Error.Code, linkResult.Error.Description);
+            return Result.Failure<Guid>(linkResult.Error);
+        }
+
+        _logger.LogInformation("AddSharedVocabularyWordToMyListCommand succeeded: WordId={WordId}, IsAuthor={IsAuthor}", source.Id, isAuthor);
+        return Result.Success(source.Id);
     }
 }

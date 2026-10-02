@@ -22,7 +22,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ILessonRepository, LessonRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
-        services.AddScoped<IPersonalVocabularyWordRepository, PersonalVocabularyWordRepository>();
+        services.AddScoped<IVocabularyWordRepository, VocabularyWordRepository>();
+        services.AddScoped<IVocabularyWordIdRemapRepository, VocabularyWordIdRemapRepository>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
         // No Redis instance exists anywhere in this repo yet (docker-compose has no `redis`

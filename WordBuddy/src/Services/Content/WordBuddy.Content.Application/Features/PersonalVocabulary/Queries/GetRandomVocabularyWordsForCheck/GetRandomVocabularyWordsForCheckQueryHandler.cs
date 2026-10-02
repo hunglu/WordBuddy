@@ -11,12 +11,12 @@ namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetR
 
 public sealed class GetRandomVocabularyWordsForCheckQueryHandler : IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>>
 {
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly IValidator<GetRandomVocabularyWordsForCheckQuery> _validator;
     private readonly ILogger<GetRandomVocabularyWordsForCheckQueryHandler> _logger;
 
     public GetRandomVocabularyWordsForCheckQueryHandler(
-        IPersonalVocabularyWordRepository repository,
+        IVocabularyWordRepository repository,
         IValidator<GetRandomVocabularyWordsForCheckQuery> validator,
         ILogger<GetRandomVocabularyWordsForCheckQueryHandler> logger)
     {
@@ -39,7 +39,7 @@ public sealed class GetRandomVocabularyWordsForCheckQueryHandler : IQueryHandler
                 Error.Validation("GetRandomVocabularyWordsForCheck.Validation", validation.ToString()));
         }
 
-        Result<IReadOnlyList<PersonalVocabularyWord>> wordsResult = await _repository.GetRandomByOwnerAsync(query.OwnerUserId, query.Count, ct);
+        Result<IReadOnlyList<UserVocabularyWord>> wordsResult = await _repository.GetRandomLinkedToUserAsync(query.OwnerUserId, query.Count, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(
@@ -48,19 +48,9 @@ public sealed class GetRandomVocabularyWordsForCheckQueryHandler : IQueryHandler
             return Result.Failure<IReadOnlyList<PersonalVocabularyWordDto>>(wordsResult.Error);
         }
 
-        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(ToDto).ToList();
+        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(PersonalVocabularyWordMapper.ToDto).ToList();
 
         _logger.LogInformation("GetRandomVocabularyWordsForCheckQuery succeeded: Count={Count}", dtos.Count);
         return Result.Success(dtos);
     }
-
-    private static PersonalVocabularyWordDto ToDto(PersonalVocabularyWord word) => new(
-        word.Id,
-        word.OwnerUserId,
-        word.Word,
-        word.Definition,
-        word.Example,
-        word.ShareStatus,
-        word.VisibleToChildren,
-        word.CreatedAtUtc);
 }

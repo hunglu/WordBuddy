@@ -8,14 +8,17 @@ using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.DeletePersonalVocabularyWord;
 
+/// <summary>Removes a word from the caller's list by deleting their link. The word itself is
+/// deleted only when the caller wrote it, it isn't shared, and nobody else links to it — so other
+/// learners' lists and the shared pool stay intact. Not-found when the caller has no link.</summary>
 public sealed class DeletePersonalVocabularyWordCommandHandler : ICommandHandler<DeletePersonalVocabularyWordCommand>
 {
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly IValidator<DeletePersonalVocabularyWordCommand> _validator;
     private readonly ILogger<DeletePersonalVocabularyWordCommandHandler> _logger;
 
     public DeletePersonalVocabularyWordCommandHandler(
-        IPersonalVocabularyWordRepository repository,
+        IVocabularyWordRepository repository,
         IValidator<DeletePersonalVocabularyWordCommand> validator,
         ILogger<DeletePersonalVocabularyWordCommandHandler> logger)
     {
@@ -37,25 +40,44 @@ public sealed class DeletePersonalVocabularyWordCommandHandler : ICommandHandler
             return Result.Failure(Error.Validation("DeletePersonalVocabularyWord.Validation", validation.ToString()));
         }
 
-        Result<PersonalVocabularyWord> wordResult = await _repository.GetOwnedByIdAsync(command.WordId, command.RequestingUserId, ct);
-        if (wordResult.IsFailure)
+        Result<UserVocabularyWord> linkResult = await _repository.GetLinkAsync(command.RequestingUserId, command.WordId, ct);
+        if (linkResult.IsFailure)
         {
             _logger.LogWarning(
-                "DeletePersonalVocabularyWordCommand word not found or not owned: WordId={WordId}, RequestingUserId={RequestingUserId}",
+                "DeletePersonalVocabularyWordCommand word not in caller's list: WordId={WordId}, RequestingUserId={RequestingUserId}",
                 command.WordId, command.RequestingUserId);
-            return Result.Failure(wordResult.Error);
+            return Result.Failure(linkResult.Error);
         }
 
-        Result deleteResult = await _repository.DeleteAsync(wordResult.Value, ct);
-        if (deleteResult.IsFailure)
+        UserVocabularyWord link = linkResult.Value;
+
+        Result unlinkResult = await _repository.UnlinkAsync(link, ct);
+        if (unlinkResult.IsFailure)
         {
             _logger.LogWarning(
-                "DeletePersonalVocabularyWordCommand failed to delete: {ErrorCode} — {ErrorDescription}",
-                deleteResult.Error.Code, deleteResult.Error.Description);
-            return deleteResult;
+                "DeletePersonalVocabularyWordCommand failed to unlink: {ErrorCode} — {ErrorDescription}",
+                unlinkResult.Error.Code, unlinkResult.Error.Description);
+            return unlinkResult;
         }
 
-        _logger.LogInformation("DeletePersonalVocabularyWordCommand succeeded: WordId={WordId}", command.WordId);
+        bool wordDeleted = false;
+        if (link.IsAuthor)
+        {
+            Result<bool> deleteResult = await _repository.DeleteIfOrphanedAsync(command.WordId, ct);
+            if (deleteResult.IsFailure)
+            {
+                _logger.LogWarning(
+                    "DeletePersonalVocabularyWordCommand failed to delete orphaned word: {ErrorCode} — {ErrorDescription}",
+                    deleteResult.Error.Code, deleteResult.Error.Description);
+                return Result.Failure(deleteResult.Error);
+            }
+
+            wordDeleted = deleteResult.Value;
+        }
+
+        _logger.LogInformation(
+            "DeletePersonalVocabularyWordCommand succeeded: WordId={WordId}, WordDeleted={WordDeleted}",
+            command.WordId, wordDeleted);
         return Result.Success();
     }
 }

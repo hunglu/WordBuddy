@@ -3,11 +3,12 @@ using WordBuddy.Shared.Kernel;
 namespace WordBuddy.Content.Domain;
 
 /// <summary>A structured learning unit (vocabulary, grammar, or daily phrases). Aggregate root
-/// for its <see cref="VocabularyItem"/>/<see cref="GrammarRule"/>/<see cref="DailyPhrase"/>
-/// children — only the collection matching <see cref="Type"/> is expected to be populated.</summary>
+/// for its <see cref="GrammarRule"/>/<see cref="DailyPhrase"/> children and its
+/// <see cref="LessonVocabularyWord"/> links — only the collection matching <see cref="Type"/> is
+/// expected to be populated.</summary>
 public sealed class Lesson : Entity
 {
-    private readonly List<VocabularyItem> _vocabularyItems = [];
+    private readonly List<LessonVocabularyWord> _vocabularyWords = [];
     private readonly List<GrammarRule> _grammarRules = [];
     private readonly List<DailyPhrase> _dailyPhrases = [];
 
@@ -18,7 +19,9 @@ public sealed class Lesson : Entity
     public AgeGroup TargetAgeGroup { get; }
     public bool IsPublished { get; private set; }
 
-    public IReadOnlyList<VocabularyItem> VocabularyItems => _vocabularyItems;
+    /// <summary>The lesson's words, through <see cref="LessonVocabularyWord"/>; order by
+    /// <see cref="LessonVocabularyWord.SortOrder"/>.</summary>
+    public IReadOnlyList<LessonVocabularyWord> VocabularyWords => _vocabularyWords;
     public IReadOnlyList<GrammarRule> GrammarRules => _grammarRules;
     public IReadOnlyList<DailyPhrase> DailyPhrases => _dailyPhrases;
 
@@ -33,7 +36,9 @@ public sealed class Lesson : Entity
         IsPublished = isPublished;
     }
 
-    public void AddVocabularyItem(VocabularyItem item) => _vocabularyItems.Add(item);
+    /// <summary>Appends <paramref name="word"/> to this lesson, after the existing words.</summary>
+    public void AddVocabularyWord(VocabularyWord word) =>
+        _vocabularyWords.Add(new LessonVocabularyWord(Id, word, _vocabularyWords.Count));
 
     public void AddGrammarRule(GrammarRule rule) => _grammarRules.Add(rule);
 
