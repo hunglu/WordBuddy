@@ -1,14 +1,14 @@
 ---
 title: Refactor database scheme to store vocabulary item
-status: implemented
+status: reviewed
 type: change
 issue: 6
 pr: 11
 affects: docs/features/vocabulary.md
 supersedes: none
-version: 1.7
+version: 1.8
 created: 2026-10-01T22:37:46+07:00
-updated: 2026-10-02T21:41:28+07:00
+updated: 2026-10-02T21:46:40+07:00
 ---
 
 ## Problem

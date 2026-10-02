@@ -1,11 +1,47 @@
 # Review: Refactor database scheme to store vocabulary item
 
-PR: #11 · Round 1 · Reviewed commit: b60769d · 2026-10-02T17:37:59+07:00
+PR: #11 · Round 2 · Reviewed commit: 6944cd4 · 2026-10-02T21:46:40+07:00
 
 ## Verdict
-Changes requested — two majors: a concurrent add/link of the same word now surfaces as an unhandled 500, and the migration can link a Child learner to a word that is not child-visible. That second point breaks the child rule the runtime handlers follow.
+Approve. Fix round 1 resolves both round-1 majors and all three nits. No blockers or majors remain, and this round introduces no regressions.
 
 ## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `WordBuddy/src/Services/Content/WordBuddy.Content.IntegrationTests/ConcurrentVocabularyAddTests.cs:52-93` | The two parallel-HTTP tests run on the in-memory TestServer with 4 requests. They do run concurrently, each on its own request scope and DbContext, but nothing makes them actually collide on the insert. They can pass without ever reaching the duplicate-key branch. The two forced tests (`..._DuplicateKey_...`, separate scopes) cover that branch deterministically, so coverage is fine. The parallel tests are smoke tests, not proof of the race. | Optional. Rename them or add a comment saying they are smoke tests. |
+
+## Round-1 findings: verification
+- **#1 (major) resolved.** `VocabularyWordRepository.cs` changes:
+  - `IsUniqueViolation` checks `DbUpdateException.InnerException is SqlException { Number: 2601 or 2627 }`, which is the right way to detect a duplicate key with Microsoft.Data.SqlClient.
+  - On failure, `Detach(word, authorLink)` / `Detach(link)` removes the failed Added entities, so the change tracker is clean. SaveChanges rolled back its own transaction, so no partial rows remain.
+  - The re-read uses `AsNoTracking` with the same key as the unique index (Learner, owner, hash). The author link is re-added only if it is missing, through `LinkAsync`, which is itself idempotent.
+  - If the conflicting row has vanished, the code returns `Error.Conflict("PersonalVocabularyWord.ConcurrentAdd")`, which `ResultExtensions` maps to 409.
+  - `AddAsync` now returns `Result<Guid>`, and the handler returns the repository id. The unit test covers the "existing id won" case.
+  - The adopt path (`AddSharedVocabularyWordToMyListCommandHandler.cs:78`) gets the idempotent `LinkAsync` and returns the shared id.
+- **#2 (major) resolved.** `#Learner` now carries `OwnerAgeGroup` and `VisibleToChildren` from `PersonalVocabularyWords`. Both columns are non-null in the old table (`20260924082936_AddPersonalVocabularyWords.cs:20,25`), matching `NOT NULL` in the temp table. The `sh` apply adds `AND (s.[OwnerAgeGroup] <> N'Child' OR o.[VisibleToChildren] = 1)`: the copy's owner age group is checked against the shared word's visibility, which is the correct way round. New rows I/J/K were added. `UnifyVocabularyWords_Up_KeepsChildCopyOfNonChildVisibleSharedWord` asserts that the Child copy is kept with authorship and no remap. The Adult copy K still folds into J1. The system-word fold is unaffected, since system words carry no child flag in this model.
+- **#3 (nit) resolved.**
+  - `IX_VocabularyWords_ContentHash` is now created before steps 2–4 and dropped from the end. It has the same name, column and non-unique definition, so the final schema still matches the model snapshot (no Designer/snapshot diff this round).
+  - A temp index `#Learner(ContentHash, OwnerUserId)` was added.
+  - No `suppressTransaction` was added, so everything still runs in one transaction.
+  - The XML doc tells operators to set `Command Timeout=600` in the connection string.
+- **#4 (nit) resolved.** `ContentApiSettingsValidator` is registered with `ValidateOnStart`. It rejects a non-positive or oversized poll interval, a negative or oversized initial delay, and a non-http(s) BaseUrl. Unit tests cover each case, and the defaults pass.
+- **#5 (nit) accepted.** The limitation is documented in the XML doc of `RemapVocabularyWordIdsCommandHandler`, and the description is accurate. Not a finding.
+
+## Plan conformance
+- Every item in the "Fix round 1" section of `tasks.md` matches the code. No changes outside its scope, apart from bookkeeping (`proposal.md`, `tasks.md`).
+- Most of the raw diff is CRLF/LF line-ending churn. With whitespace and line endings ignored, the real change is +442/−28.
+- Still deferred to `/test` (see "Verified in /test"): e2e runs and the Content/Progress integration tests on Docker SQL Server. The new concurrency and migration tests have so far run only on LocalDB.
+- The round-1 note still applies: `/test` owns the final `docs/features/vocabulary.md`.
+
+## Previous rounds
+
+## Round 1
+PR: #11 · Round 1 · Reviewed commit: b60769d · 2026-10-02T17:37:59+07:00
+
+### Verdict
+Changes requested — two majors: a concurrent add/link of the same word now surfaces as an unhandled 500, and the migration can link a Child learner to a word that is not child-visible. That second point breaks the child rule the runtime handlers follow.
+
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | major | `WordBuddy/src/Services/Content/WordBuddy.Content.Infrastructure/Repositories/VocabularyWordRepository.cs:384-411` (callers `AddPersonalVocabularyWordCommandHandler.cs:81,113`, `AddSharedVocabularyWordToMyListCommandHandler.cs:78`) | Dedupe now relies on two unique indexes, `UX_VocabularyWords_ContentHash_OwnerUserId_Learner` and `IX_UserVocabularyWords_UserId_VocabularyWordId`. Each handler does check-then-insert with no conflict handling, and nothing in Content catches `DbUpdateException`. Scenario: a learner double-clicks "Add" (or two tabs adopt the same shared word). Both requests see no word or link, both insert, and the second hits a unique-key violation. The global middleware turns that into a 500. Before this PR duplicates were allowed, so the same action returned 201 twice. This is a new failure on a public endpoint. | Catch the unique violation in `AddAsync`/`LinkAsync` (SQL error 2601/2627 on `DbUpdateException`). Then re-read and return the existing word or link id, which matches the idempotent contract the handlers already document. Add one integration test that runs two parallel adds of the same word. |
@@ -31,7 +67,7 @@ Checked with no finding:
 - No lesson-mutating endpoint was added, so `content:lesson:*` needs no new invalidation. The shared-pool cache is still invalidated on moderation.
 - UI: `isAuthor` is typed as a union-safe boolean and the Share button is gated on it. Nothing else changed.
 
-## Plan conformance
+### Plan conformance
 - Every task in `tasks.md` (rev 2) has matching code and tests in the diff. That covers the domain, configs, migration, repositories, handlers, internal endpoints and policy, the Progress client/token/sync/hosted service, config, the UI, unit and integration tests, and the e2e additions.
 - Sam-approved deviations are accepted and not raised as findings: the `Internal` rate-limit policy was dropped, and Progress.UnitTests references Progress.Infrastructure.
 - Out of scope: `docs/features/vocabulary.md` (+34) and `docs/features/README.md` were edited in `/code`. The repo convention has the living spec updated by `/test`, so `/test` should review or overwrite these rather than treat them as final.
