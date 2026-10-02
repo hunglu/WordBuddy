@@ -12,7 +12,8 @@ namespace WordBuddy.Progress.IntegrationTests;
 /// <summary>
 /// <see cref="RemapVocabularyWordIdsCommand"/> against a real SQL Server database (unique
 /// <c>(UserId, VocabularyWordId)</c> index included), resolved from the API host's own DI container.
-/// This calls the command handler directly; delivery of Content's remap event is not covered here.
+/// This calls the command handler directly; pulling remaps from Content is covered by
+/// <see cref="SyncVocabularyWordIdRemapsTests"/>.
 /// </summary>
 [Collection(ProgressApiCollection.Name)]
 public sealed class RemapVocabularyWordIdsTests

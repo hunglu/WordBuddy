@@ -6,6 +6,7 @@ using WordBuddy.Progress.Application.Features.Progress.Commands.RecordProgress;
 using WordBuddy.Progress.Application.Features.Progress.Queries.GetUserProgress;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.RemapVocabularyWordIds;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.SubmitVocabularyRecallCheck;
+using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.SyncVocabularyWordIdRemaps;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Queries.GetVocabularyRecallProgress;
 
 namespace WordBuddy.Progress.Application.Extensions;
@@ -27,6 +28,9 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<RemapVocabularyWordIdsCommand>, RemapVocabularyWordIdsCommandHandler>();
         services.AddScoped<IValidator<RemapVocabularyWordIdsCommand>, RemapVocabularyWordIdsCommandValidator>();
+
+        services.AddScoped<ICommandHandler<SyncVocabularyWordIdRemapsCommand, int>, SyncVocabularyWordIdRemapsCommandHandler>();
+        services.AddScoped<IValidator<SyncVocabularyWordIdRemapsCommand>, SyncVocabularyWordIdRemapsCommandValidator>();
 
         return services;
     }

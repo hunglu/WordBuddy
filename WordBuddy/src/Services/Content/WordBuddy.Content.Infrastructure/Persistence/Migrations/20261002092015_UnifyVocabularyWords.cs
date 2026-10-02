@@ -27,6 +27,11 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
     /// as fresh copies with new ids (Progress stats pointing at the old ids don't follow), a system word
     /// in several lessons goes back to its first lesson only, and a copy's owner age group is taken from
     /// the user's own words (Child when unknown). Acceptable for a one-way refactor.</para>
+    /// <para><b>Hash normalisation (accepted limitation).</b> Existing rows are hashed here with SQL
+    /// <c>UPPER(LTRIM(RTRIM(...)))</c>; new words are hashed in C# with
+    /// <c>Trim().ToUpperInvariant()</c>. The two can differ for a few rare letters (for example
+    /// <c>ß</c>, ligatures, collation-specific cases), so such a word re-added later gets a second row
+    /// instead of a link. Harmless; not re-hashed by design.</para>
     /// </summary>
     public partial class UnifyVocabularyWords : Migration
     {

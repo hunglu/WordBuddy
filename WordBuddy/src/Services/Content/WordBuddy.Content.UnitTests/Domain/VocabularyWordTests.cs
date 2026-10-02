@@ -39,6 +39,20 @@ public class VocabularyWordTests
         hash.Should().HaveLength(64).And.MatchRegex("^[0-9A-F]{64}$");
     }
 
+    /// <summary>Pins today's C# behaviour for <c>ß</c>: <see cref="string.ToUpperInvariant"/> leaves it
+    /// unchanged (no "SS" expansion), so "straße" and "STRASSE" hash differently. SQL Server's
+    /// <c>UPPER</c> may treat such letters differently — an accepted limitation (see
+    /// <see cref="VocabularyWord.ComputeContentHash"/>).</summary>
+    [Fact]
+    public void VocabularyWord_ComputeContentHash_SharpS_IsNotExpandedToSs()
+    {
+        VocabularyWord.NormalizeWord(" straße ").Should().Be("STRAßE");
+
+        VocabularyWord.ComputeContentHash("straße", "a street", null)
+            .Should().Be(VocabularyWord.ComputeContentHash("STRAßE", "A STREET", null))
+            .And.NotBe(VocabularyWord.ComputeContentHash("STRASSE", "a street", null));
+    }
+
     [Fact]
     public void VocabularyWord_CreateLearner_SetsLearnerDefaults()
     {

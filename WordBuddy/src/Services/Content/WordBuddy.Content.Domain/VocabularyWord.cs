@@ -137,7 +137,12 @@ public sealed class VocabularyWord : Entity
 
     /// <summary>Computes the dedupe key: upper-case hex SHA-256 over the UTF-16LE bytes of the
     /// normalized Word, Definition and Example (null Example = empty), joined by U+001F. Mirrors
-    /// <c>CONVERT(char(64), HASHBYTES('SHA2_256', ...), 2)</c> over <c>NVARCHAR</c> in SQL Server.</summary>
+    /// <c>CONVERT(char(64), HASHBYTES('SHA2_256', ...), 2)</c> over <c>NVARCHAR</c> in SQL Server.
+    /// <para><b>Accepted limitation:</b> <see cref="string.ToUpperInvariant"/> and SQL Server's
+    /// collation-dependent <c>UPPER</c> can disagree for a few rare letters (for example <c>ß</c>,
+    /// ligatures). A word migrated by <c>UnifyVocabularyWords</c> and re-added later may then hash
+    /// differently and get a second row instead of a link — a harmless duplicate that breaks no
+    /// constraint and leaks nothing. Not corrected by design.</para></summary>
     public static string ComputeContentHash(string word, string definition, string? example)
     {
         string normalized = string.Concat(

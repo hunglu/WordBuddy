@@ -49,11 +49,13 @@ public sealed class PersonalVocabularyTests
             string learnerToken = await RegisterLearnerAsync(identity, ageGroup: "Adult");
             string adminToken = await LoginAsync(identity, AdminEmail, AdminPassword);
 
-            // Add a word to the learner's own list.
+            // Add a word to the learner's own list. Unique text per run — with dedupe-on-add, a fixed
+            // text would link to the word an earlier run already shared, and sharing it again would 409.
+            string word = $"ubiquitous-{Guid.NewGuid():N}";
             IAPIResponse addResponse = await content.PostAsync("/api/vocabulary", new APIRequestContextOptions
             {
                 Headers = AuthHeader(learnerToken),
-                DataObject = new { word = "ubiquitous", definition = "present everywhere", example = "Smartphones are ubiquitous." },
+                DataObject = new { word, definition = "present everywhere", example = "Smartphones are ubiquitous." },
             });
             addResponse.Ok.Should().BeTrue($"adding a word should succeed, got {addResponse.Status}: {await addResponse.TextAsync()}");
             JsonElement wordIdJson = (await addResponse.JsonAsync())!.Value;

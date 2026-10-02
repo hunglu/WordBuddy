@@ -31,4 +31,26 @@ public static class TestJwtTokenFactory
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    /// <summary>A service token shaped like Progress's <c>ServiceTokenProvider</c> output
+    /// (<c>sub = wordbuddy-progress</c>, <c>wb_service = <paramref name="service"/></c>).</summary>
+    public static string CreateServiceToken(string service = "progress")
+    {
+        Claim[] claims =
+        [
+            new(JwtRegisteredClaimNames.Sub, $"wordbuddy-{service}"),
+            new("wb_service", service),
+        ];
+
+        SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(ContentApiFactory.JwtSecret));
+        SigningCredentials credentials = new(signingKey, SecurityAlgorithms.HmacSha256);
+
+        JwtSecurityToken token = new(
+            issuer: ContentApiFactory.JwtIssuer,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }

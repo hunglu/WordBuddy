@@ -48,6 +48,11 @@ internal static class ServiceCollectionExtensions
             options.AddPolicy("CanShareVocabulary", policy => policy.RequireAssertion(context =>
                 string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
+
+            // Service-to-service only: Progress mints its own short-lived token carrying
+            // wb_service=progress. Identity never emits this claim, so no learner or admin token
+            // passes — regardless of age group or admin flag.
+            options.AddPolicy("InternalService", policy => policy.RequireClaim("wb_service", "progress"));
         });
 
         return services;
