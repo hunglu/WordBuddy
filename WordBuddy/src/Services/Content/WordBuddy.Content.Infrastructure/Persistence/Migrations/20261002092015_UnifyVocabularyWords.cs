@@ -16,13 +16,21 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
     /// <c>Shared</c> row, else the <c>PendingReview</c> row, else the oldest.</item>
     /// <item>A surviving <c>Private</c>/<c>Rejected</c> learner word whose hash equals a system word
     /// collapses into it (first system word by id); otherwise, if it equals another owner's
-    /// <c>Shared</c> word (an adopted copy), it collapses into that. The owner gets a non-author link.
+    /// <c>Shared</c> word (an adopted copy), it collapses into that — but never a <c>Child</c> owner's
+    /// copy into a shared word that is not <c>VisibleToChildren</c> (the runtime add path would not
+    /// link it either), so such a copy is kept with its authorship. The owner gets a non-author link.
     /// <c>Shared</c>/<c>PendingReview</c> words are never collapsed into another owner's or a system
     /// word, so the pool and the moderation queue keep every entry.</item>
     /// <item>Private words of different owners are never merged.</item>
     /// <item>Every merged-away id gets a <c>VocabularyWordIdRemaps</c> row (OldId → NewId) for
     /// downstream services (Progress recall stats).</item>
     /// </list>
+    /// <para><b>Large tables.</b> The lookup indexes the merge needs (<c>IX_VocabularyWords_ContentHash</c>
+    /// and a temp index on <c>#Learner</c>) are created before the data moves. Every step runs in the
+    /// migration's single transaction (no <c>suppressTransaction</c>, so a failure rolls back cleanly);
+    /// EF uses the connection's command timeout (30 s default) per batch — for a very large
+    /// <c>PersonalVocabularyWords</c> table, run the update with <c>Command Timeout=600</c> (or more)
+    /// added to the connection string.</para>
     /// <para><b>Down is lossy.</b> It rebuilds both old tables from the new ones: merged rows come back
     /// as fresh copies with new ids (Progress stats pointing at the old ids don't follow), a system word
     /// in several lessons goes back to its first lesson only, and a copy's owner age group is taken from
@@ -48,7 +56,8 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // 1. New tables. Indexes come after the data so the learner-uniqueness index validates it.
+            // 1. New tables. Unique indexes come after the data so they validate it; the content-hash
+            // lookup index comes first (see below) because the merge step searches by it.
             migrationBuilder.CreateTable(
                 name: "VocabularyWordIdRemaps",
                 columns: table => new
@@ -137,6 +146,11 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateIndex(
+                name: "IX_VocabularyWords_ContentHash",
+                table: "VocabularyWords",
+                column: "ContentHash");
+
             // 2. System words — same ids (audio blob names), never merged; one lesson link each.
             migrationBuilder.Sql($@"
 INSERT INTO [VocabularyWords]
@@ -159,14 +173,18 @@ CREATE TABLE #Learner (
     [OwnerUserId] uniqueidentifier NOT NULL,
     [ContentHash] char(64) NOT NULL,
     [ShareStatus] nvarchar(20) NOT NULL,
+    [OwnerAgeGroup] nvarchar(20) NOT NULL,
+    [VisibleToChildren] bit NOT NULL,
     [CreatedAtUtc] datetime2 NOT NULL,
     [GroupSurvivorId] uniqueidentifier NULL,
     [FinalId] uniqueidentifier NULL,
     [IsAuthor] bit NULL);
 
-INSERT INTO #Learner ([Id], [OwnerUserId], [ContentHash], [ShareStatus], [CreatedAtUtc])
-SELECT p.[Id], p.[OwnerUserId], {HashSql("p")}, p.[ShareStatus], p.[CreatedAtUtc]
+INSERT INTO #Learner ([Id], [OwnerUserId], [ContentHash], [ShareStatus], [OwnerAgeGroup], [VisibleToChildren], [CreatedAtUtc])
+SELECT p.[Id], p.[OwnerUserId], {HashSql("p")}, p.[ShareStatus], p.[OwnerAgeGroup], p.[VisibleToChildren], p.[CreatedAtUtc]
 FROM [PersonalVocabularyWords] p;
+
+CREATE INDEX [IX_Learner_ContentHash_OwnerUserId] ON #Learner ([ContentHash], [OwnerUserId]);
 
 -- Same owner, same hash: Shared wins, then PendingReview, then the oldest.
 WITH ranked AS (
@@ -179,7 +197,8 @@ WITH ranked AS (
 UPDATE l SET [GroupSurvivorId] = r.[SurvivorId]
 FROM #Learner l JOIN ranked r ON r.[Id] = l.[Id];
 
--- A Private/Rejected survivor collapses into a system word, else into another owner's Shared word.
+-- A Private/Rejected survivor collapses into a system word, else into another owner's Shared word
+-- — a Child's copy only into a child-visible one (same rule as the runtime add path).
 UPDATE s
 SET [FinalId] = COALESCE(sys.[Id], sh.[Id], s.[Id]),
     [IsAuthor] = CASE WHEN sys.[Id] IS NULL AND sh.[Id] IS NULL THEN 1 ELSE 0 END
@@ -194,6 +213,7 @@ OUTER APPLY (
     WHERE o.[Id] = o.[GroupSurvivorId] AND o.[ShareStatus] = N'Shared'
       AND o.[OwnerUserId] <> s.[OwnerUserId] AND o.[ContentHash] = s.[ContentHash]
       AND s.[ShareStatus] IN (N'Private', N'Rejected')
+      AND (s.[OwnerAgeGroup] <> N'Child' OR o.[VisibleToChildren] = 1)
     ORDER BY o.[CreatedAtUtc], o.[Id]) sh
 WHERE s.[Id] = s.[GroupSurvivorId];
 
@@ -253,11 +273,6 @@ DROP TABLE #Learner;
                 name: "IX_VocabularyWords_AudioAssetId",
                 table: "VocabularyWords",
                 column: "AudioAssetId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VocabularyWords_ContentHash",
-                table: "VocabularyWords",
-                column: "ContentHash");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VocabularyWords_NormalizedWord",

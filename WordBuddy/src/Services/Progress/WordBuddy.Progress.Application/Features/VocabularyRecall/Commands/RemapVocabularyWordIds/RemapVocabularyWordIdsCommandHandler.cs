@@ -11,7 +11,12 @@ namespace WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.Rema
 /// <summary>Rewrites recall stats from merged Content word ids to the surviving ids. Per user: with no
 /// stat for the new id, the old stat is re-pointed in place; otherwise its counts are merged into the
 /// new stat and the old stat is deleted. Idempotent — a second run finds no stats for the old ids.
-/// Sessions hold only aggregate counts (no word ids), so they need no rewrite.</summary>
+/// Sessions hold only aggregate counts (no word ids), so they need no rewrite.
+/// <para><b>Accepted limitation.</b> Progress does not keep the applied pairs. A recall result
+/// submitted with a merged-away (pre-migration) word id <i>after</i> Content's remap was
+/// acknowledged creates a stat under the old id that no later sync rewrites. The window is a UI
+/// session left open across the deploy; closing it would need Progress to persist applied remaps
+/// and map ids on submit — a design change, not made here.</para></summary>
 public sealed class RemapVocabularyWordIdsCommandHandler : ICommandHandler<RemapVocabularyWordIdsCommand>
 {
     private readonly IVocabularyRecallRepository _repository;

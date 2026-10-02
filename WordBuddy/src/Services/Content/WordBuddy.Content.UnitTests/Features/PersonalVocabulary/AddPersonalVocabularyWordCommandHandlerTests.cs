@@ -18,7 +18,7 @@ public class AddPersonalVocabularyWordCommandHandlerTests
     {
         _repository
             .Setup(r => r.AddAsync(It.IsAny<VocabularyWord>(), It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
+            .ReturnsAsync((VocabularyWord word, UserVocabularyWord _, CancellationToken _) => Result.Success(word.Id));
         _repository
             .Setup(r => r.LinkAsync(It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
@@ -57,6 +57,21 @@ public class AddPersonalVocabularyWordCommandHandlerTests
                 It.Is<UserVocabularyWord>(l => l.UserId == ownerId && l.VocabularyWordId == result.Value && l.IsAuthor),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_ConcurrentIdenticalAddWon_ReturnsExistingId()
+    {
+        SetupCandidates();
+        Guid existingId = Guid.NewGuid();
+        _repository
+            .Setup(r => r.AddAsync(It.IsAny<VocabularyWord>(), It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(existingId));
+
+        Result<Guid> result = await CreateHandler().HandleAsync(new AddPersonalVocabularyWordCommand(Guid.NewGuid(), AgeGroup.Child, "apple", "a fruit", null));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(existingId);
     }
 
     [Fact]

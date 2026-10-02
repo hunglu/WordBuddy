@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces;
@@ -128,15 +129,59 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         return Result.Success<IReadOnlyList<VocabularyWord>>(words);
     }
 
-    public async Task<Result> AddAsync(VocabularyWord word, UserVocabularyWord authorLink, CancellationToken ct = default)
+    public async Task<Result<Guid>> AddAsync(VocabularyWord word, UserVocabularyWord authorLink, CancellationToken ct = default)
     {
         _logger.LogDebug("Adding VocabularyWord with Id={WordId} and its author link", word.Id);
 
         await _dbContext.VocabularyWords.AddAsync(word, ct);
         await _dbContext.UserVocabularyWords.AddAsync(authorLink, ct);
-        await _dbContext.SaveChangesAsync(ct);
 
-        return Result.Success();
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return Result.Success(word.Id);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // A concurrent request by the same owner stored the same word first
+            // (UX_VocabularyWords_ContentHash_OwnerUserId_Learner). Return that word instead.
+            Detach(word, authorLink);
+        }
+
+        VocabularyWord? existing = await _dbContext.VocabularyWords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                w => w.Source == VocabularySource.Learner &&
+                     w.OwnerUserId == word.OwnerUserId &&
+                     w.ContentHash == word.ContentHash,
+                ct);
+
+        if (existing is null)
+        {
+            // The conflicting row is gone again (unlinked and deleted in between) — not an expected
+            // race; surface it as a conflict rather than throwing.
+            _logger.LogWarning("Concurrent add of WordId={WordId} conflicted but no existing word was found", word.Id);
+            return Result.Failure<Guid>(Error.Conflict(
+                "PersonalVocabularyWord.ConcurrentAdd", "The word was changed concurrently. Please try again."));
+        }
+
+        _logger.LogInformation(
+            "Concurrent add resolved to existing word: WordId={WordId}, ExistingWordId={ExistingWordId}",
+            word.Id, existing.Id);
+
+        bool linked = await _dbContext.UserVocabularyWords
+            .AnyAsync(l => l.UserId == authorLink.UserId && l.VocabularyWordId == existing.Id, ct);
+        if (!linked)
+        {
+            Result linkResult = await LinkAsync(
+                new UserVocabularyWord(Guid.NewGuid(), authorLink.UserId, existing.Id, isAuthor: true), ct);
+            if (linkResult.IsFailure)
+            {
+                return Result.Failure<Guid>(linkResult.Error);
+            }
+        }
+
+        return Result.Success(existing.Id);
     }
 
     public async Task<Result> UpdateAsync(VocabularyWord word, CancellationToken ct = default)
@@ -152,9 +197,35 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         _logger.LogDebug("Linking UserId={UserId} to WordId={WordId}", link.UserId, link.VocabularyWordId);
 
         await _dbContext.UserVocabularyWords.AddAsync(link, ct);
-        await _dbContext.SaveChangesAsync(ct);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // A concurrent request created the same (UserId, VocabularyWordId) link first
+            // (IX_UserVocabularyWords_UserId_VocabularyWordId) — the desired state already holds.
+            Detach(link);
+            _logger.LogInformation(
+                "Concurrent link resolved to existing link: UserId={UserId}, WordId={WordId}",
+                link.UserId, link.VocabularyWordId);
+        }
 
         return Result.Success();
+    }
+
+    /// <summary>SQL Server 2601 (unique index) / 2627 (unique constraint) duplicate-key errors.</summary>
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is SqlException { Number: 2601 or 2627 };
+
+    /// <summary>Stops tracking the entities of a failed save so the context can be reused.</summary>
+    private void Detach(params object[] entities)
+    {
+        foreach (object entity in entities)
+        {
+            _dbContext.Entry(entity).State = EntityState.Detached;
+        }
     }
 
     public async Task<Result> UnlinkAsync(UserVocabularyWord link, CancellationToken ct = default)

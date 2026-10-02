@@ -31,6 +31,9 @@ public sealed class UnifyVocabularyWordsMigrationTests : IAsyncLifetime
     private static readonly Guid OwnerF = Guid.NewGuid();
     private static readonly Guid OwnerG = Guid.NewGuid();
     private static readonly Guid OwnerH = Guid.NewGuid();
+    private static readonly Guid OwnerI = Guid.NewGuid();
+    private static readonly Guid OwnerJ = Guid.NewGuid();
+    private static readonly Guid OwnerK = Guid.NewGuid();
 
     private static readonly Guid A1 = Guid.NewGuid(); // apple, Private, older
     private static readonly Guid A2 = Guid.NewGuid(); // apple, Private, newer -> A1
@@ -42,6 +45,9 @@ public sealed class UnifyVocabularyWordsMigrationTests : IAsyncLifetime
     private static readonly Guid G1 = Guid.NewGuid(); // kiwi, Private, older -> G2
     private static readonly Guid G2 = Guid.NewGuid(); // kiwi, Shared, newer (Shared wins)
     private static readonly Guid H1 = Guid.NewGuid(); // pear, PendingReview (kept, not collapsed)
+    private static readonly Guid I1 = Guid.NewGuid(); // plum, Private, Child (kept: J1 not child-visible)
+    private static readonly Guid J1 = Guid.NewGuid(); // plum, Shared, VisibleToChildren = 0
+    private static readonly Guid K1 = Guid.NewGuid(); // plum, Private, Adult -> J1
 
     private readonly string _connectionString;
     private readonly ContentDbContext _dbContext;
@@ -90,7 +96,10 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
  ('{F1}', '{OwnerF}', N'Adult', N'secret', N'def', NULL, N'Private', 0, '2026-01-01'),
  ('{G1}', '{OwnerG}', N'Adult', N'kiwi', N'a fruit', NULL, N'Private', 0, '2026-01-01'),
  ('{G2}', '{OwnerG}', N'Adult', N'kiwi', N'a fruit', NULL, N'Shared', 0, '2026-01-05'),
- ('{H1}', '{OwnerH}', N'Adult', N'pear', N'a fruit', NULL, N'PendingReview', 0, '2026-01-04');
+ ('{H1}', '{OwnerH}', N'Adult', N'pear', N'a fruit', NULL, N'PendingReview', 0, '2026-01-04'),
+ ('{I1}', '{OwnerI}', N'Child', N'plum', N'a fruit', NULL, N'Private', 0, '2026-01-03'),
+ ('{J1}', '{OwnerJ}', N'Adult', N'plum', N'a fruit', NULL, N'Shared', 0, '2026-01-01'),
+ ('{K1}', '{OwnerK}', N'Adult', N'plum', N'a fruit', NULL, N'Private', 0, '2026-01-03');
 ");
     }
 
@@ -137,7 +146,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         HashSet<Guid> words = (await QueryAsync("SELECT Id FROM VocabularyWords")).Select(r => (Guid)r[0]!).ToHashSet();
         Dictionary<Guid, Guid> remaps = await GetRemapsAsync();
 
-        Guid[] formerIds = [System1, System2, A1, A2, B1, C1, D1, E1, F1, G1, G2, H1];
+        Guid[] formerIds = [System1, System2, A1, A2, B1, C1, D1, E1, F1, G1, G2, H1, I1, J1, K1];
         formerIds.Should().OnlyContain(id => words.Contains(id) || (remaps.ContainsKey(id) && words.Contains(remaps[id])));
     }
 
@@ -171,12 +180,13 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
     {
         Dictionary<Guid, Guid> remaps = await GetRemapsAsync();
 
-        remaps.Should().HaveCount(4);
+        remaps.Should().HaveCount(5);
         remaps[A2].Should().Be(A1, "same-owner duplicates merge into the oldest");
         remaps[C1].Should().Be(B1, "an adopted copy collapses into the shared word");
         new[] { System1, System2 }.Should().Contain(remaps[D1]);
         remaps[G1].Should().Be(G2, "the Shared row wins within an owner");
-        remaps.Should().NotContainKeys(E1, F1, H1);
+        remaps[K1].Should().Be(J1, "an adult's copy collapses into a shared word even if it is not child-visible");
+        remaps.Should().NotContainKeys(E1, F1, H1, I1, J1);
     }
 
     [Fact]
@@ -195,7 +205,24 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
             (OwnerF, F1, true),
             (OwnerG, G2, true),
             (OwnerH, H1, true),
+            (OwnerI, I1, true),
+            (OwnerJ, J1, true),
+            (OwnerK, J1, false),
         });
+    }
+
+    [Fact]
+    public async Task UnifyVocabularyWords_Up_KeepsChildCopyOfNonChildVisibleSharedWord()
+    {
+        Dictionary<Guid, Guid> remaps = await GetRemapsAsync();
+        List<(Guid UserId, Guid WordId, bool IsAuthor)> links = await GetLinksAsync();
+        List<object?[]> kept = await QueryAsync($"SELECT OwnerUserId, Source, ShareStatus FROM VocabularyWords WHERE Id = '{I1}'");
+
+        remaps.Should().NotContainKey(I1, "a Child is never linked to a shared word they could not see");
+        kept.Should().ContainSingle();
+        ((Guid)kept[0][0]!).Should().Be(OwnerI);
+        ((string)kept[0][1]!).Should().Be("Learner");
+        links.Where(l => l.UserId == OwnerI).Should().BeEquivalentTo(new[] { (OwnerI, I1, true) });
     }
 
     [Fact]

@@ -36,7 +36,11 @@ public static class ServiceCollectionExtensions
     /// pulls vocabulary word-id remaps from it.</summary>
     private static IServiceCollection AddContentRemapSync(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<ContentApiSettings>(configuration.GetSection(ContentApiSettings.SectionName));
+        // Fail fast at startup on a bad poll interval/delay/URL rather than inside the hosted service.
+        services.AddOptions<ContentApiSettings>()
+            .Bind(configuration.GetSection(ContentApiSettings.SectionName))
+            .ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<ContentApiSettings>, ContentApiSettingsValidator>());
         services.TryAddSingleton(TimeProvider.System);
 
         services.AddSingleton(sp =>

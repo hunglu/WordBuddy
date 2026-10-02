@@ -33,13 +33,17 @@ public interface IVocabularyWordRepository
     /// <summary>Returns words awaiting moderation, oldest first.</summary>
     Task<Result<IReadOnlyList<VocabularyWord>>> GetPendingModerationAsync(CancellationToken ct = default);
 
-    /// <summary>Adds a new word together with its author's link, in one save.</summary>
-    Task<Result> AddAsync(VocabularyWord word, UserVocabularyWord authorLink, CancellationToken ct = default);
+    /// <summary>Adds a new word together with its author's link, in one save, and returns its id. If a
+    /// concurrent request by the same owner already stored a word with the same content hash, nothing
+    /// new is stored and the existing word's id is returned (the owner linked to it) — the same outcome
+    /// as the non-racing dedupe path.</summary>
+    Task<Result<Guid>> AddAsync(VocabularyWord word, UserVocabularyWord authorLink, CancellationToken ct = default);
 
     /// <summary>Persists changes made to a word previously returned by <see cref="GetByIdAsync"/>.</summary>
     Task<Result> UpdateAsync(VocabularyWord word, CancellationToken ct = default);
 
-    /// <summary>Adds a link from a learner to an existing word.</summary>
+    /// <summary>Adds a link from a learner to an existing word. Idempotent under concurrency: if the
+    /// same link was created concurrently, succeeds without adding a second one.</summary>
     Task<Result> LinkAsync(UserVocabularyWord link, CancellationToken ct = default);
 
     /// <summary>Removes a link previously returned by <see cref="GetLinkAsync"/>.</summary>

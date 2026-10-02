@@ -78,7 +78,8 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
         VocabularyWord word = createResult.Value;
         UserVocabularyWord authorLink = new(Guid.NewGuid(), command.OwnerUserId, word.Id, isAuthor: true);
 
-        Result addResult = await _repository.AddAsync(word, authorLink, ct);
+        // The repository returns the existing word's id if a concurrent identical add won the race.
+        Result<Guid> addResult = await _repository.AddAsync(word, authorLink, ct);
         if (addResult.IsFailure)
         {
             _logger.LogWarning(
@@ -87,8 +88,10 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
             return Result.Failure<Guid>(addResult.Error);
         }
 
-        _logger.LogInformation("AddPersonalVocabularyWordCommand succeeded: WordId={WordId}, Created={Created}", word.Id, true);
-        return Result.Success(word.Id);
+        _logger.LogInformation(
+            "AddPersonalVocabularyWordCommand succeeded: WordId={WordId}, Created={Created}",
+            addResult.Value, addResult.Value == word.Id);
+        return Result.Success(addResult.Value);
     }
 
     /// <summary>The caller's own word wins, then a system word, then a shared word they may see —

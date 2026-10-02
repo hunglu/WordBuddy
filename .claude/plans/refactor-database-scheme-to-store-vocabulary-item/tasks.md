@@ -73,6 +73,14 @@
 - [x] (rev 2) E2E (api): `GET /internal/vocabulary-remaps` through the public origin does not reach Content (no JSON `items` payload) — pins that nginx/ingress don't route it — `e2e/api/WordBuddy.E2E.Api.Tests/InternalEndpointExposureTests.cs`, `ServiceUrls.cs` + `appsettings.json` (`Services:Public` = http://localhost:3000) — compiles; NOT run (needs the full stack)
 - [x] E2E: add "adopt a shared word, then delete it from My words; it stays in the shared pool" — API scenario `AdoptSharedWordThenDelete_WordStaysInSharedPool` added; no UI duplicate (Sam, 2026-10-02: the API test covers it). `e2e/api` compiles, `bddgen` generates OK. Running the suites moved to *Verified in /test* below.
 
+## Fix round 1 (review.md round 1)
+
+- [x] #1 major: concurrent duplicate add/adopt no longer 500s — `AddAsync` (now `Result<Guid>`) and `LinkAsync` catch SQL 2601/2627, detach, and resolve to the existing word/link; handler returns the repository's id — `Content.Infrastructure/Repositories/VocabularyWordRepository.cs`, `Content.Application/Interfaces/IVocabularyWordRepository.cs`, `AddPersonalVocabularyWordCommandHandler.cs`, `Content.UnitTests/.../AddPersonalVocabularyWordCommandHandlerTests.cs`, `Content.IntegrationTests/ConcurrentVocabularyAddTests.cs` (parallel HTTP + forced duplicate-key cases); LocalDB
+- [x] #2 major: migration folds a Child's Private/Rejected copy into another owner's Shared word only if that word is `VisibleToChildren` (old rows carry `OwnerAgeGroup`) — `20261002092015_UnifyVocabularyWords.cs`, `UnifyVocabularyWordsMigrationTests.cs` (I/J/K plum rows)
+- [x] #3 nit: `IX_VocabularyWords_ContentHash` created before the data move, temp index on `#Learner(ContentHash, OwnerUserId)`; final schema unchanged; timeout note (`Command Timeout=` in the connection string) in the migration XML doc, transaction kept — `20261002092015_UnifyVocabularyWords.cs`
+- [x] #4 nit: `ContentApiSettings` validated on start (`ContentApiSettingsValidator` + `ValidateOnStart`) — `Progress.Infrastructure/Settings/ContentApiSettingsValidator.cs`, `Progress.Infrastructure/Extensions/ServiceCollectionExtensions.cs`, `Progress.UnitTests/Infrastructure/ContentApiSettingsValidatorTests.cs`
+- [x] #5 nit: documented as accepted limitation (stale id submitted after ack) in XML docs; a real fix needs a design change — `RemapVocabularyWordIdsCommandHandler.cs`
+
 ## Verified in /test
 
 Moved here on Sam's decision (2026-10-02). These need the live stack with the `UnifyVocabularyWords`
