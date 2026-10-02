@@ -1,18 +1,18 @@
 # Living feature specs
 
-One file per feature, copied from `_template.md`. The `tester` agent updates the file(s) named in a
-proposal's `affects:` field when it merges that proposal, so these always match `main`.
+One file per feature, copied from `_template.md`. On merge, the `tester` agent updates every file
+named in the proposal's `affects:` field, so these specs always match `main`.
 
-| Feature | Spec | Status |
+| Feature | Spec | State |
 |---|---|---|
-| Auth (register/login/refresh) | _to backfill_ | shipped |
+| Auth (register / login / refresh) | _to backfill_ | shipped |
 | Lessons, vocabulary, grammar, daily phrases | _to backfill_ | shipped |
 | Quiz | _to backfill_ | shipped |
 | Progress | _to backfill_ | shipped |
 | Vocabulary builder & check-up | `vocabulary-builder.md` | shipped |
+| Vocabulary storage | `vocabulary.md` | shipped |
 | UI theme tokens | `ui-theme.md` | shipped |
 | App navigation (sidebar) | `app-navigation.md` | shipped |
-| Vocabulary storage | `vocabulary.md` | shipped |
 
-Backfilling a shipped feature: ask Claude "backfill docs/features/<name>.md from the code" —
-read-only against code, writes only this folder.
+**Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
+The task is read-only against code and writes only to this folder.

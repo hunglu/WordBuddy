@@ -82,3 +82,7 @@ When you finish (all tasks done, or stopped early), return:
   doc comments on public API surface; structured Serilog logging via `ILogger<T>` with message
   templates, never string interpolation; `Result<T>`/`Error` instead of exceptions or `null` for
   expected failures — these are non-negotiable repo conventions, not per-task decisions.
+
+## Writing style
+
+Follow `.claude/rules/writing-style.md` in every file and report you write: simple words, short, diagrams/tables over prose.

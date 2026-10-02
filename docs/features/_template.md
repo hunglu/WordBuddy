@@ -8,13 +8,16 @@ last-updated-by: <slug>
 
 # <Feature name>
 
+<One line: what the feature does for the learner.>
+
 ## What it does
 
-<Behaviour as it is on `main` today — user-visible, not implementation history.>
+<Behaviour on `main` today — user-visible, not implementation history. Add a diagram for any flow
+with 3+ steps or components.>
 
 ## Rules
 
-<Business rules, child vs adult differences, limits.>
+<Business rules as short bullets. Always include a **Child vs adult** bullet.>
 
 ## API
 
@@ -23,11 +26,11 @@ last-updated-by: <slug>
 
 ## UI
 
-<Routes/pages involved.>
+<Routes / pages involved.>
 
 ## Pending changes
 
-<Proposals not yet merged that will change this feature — added by `/propose`, removed by `/test` on merge.>
+<Unmerged proposals that will change this feature — added by `/propose`, removed by `/test` on merge.>
 
 - `<slug>` — <one-line goal> (#<issue>)
 

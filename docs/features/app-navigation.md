@@ -8,28 +8,29 @@ last-updated-by: 2-navigation-items-have-selected-state
 
 # App navigation (sidebar)
 
+Signed-in pages share one sidebar (`AppLayout`); exactly one item — the current page — is highlighted.
+
 ## What it does
 
-Signed-in pages share a sidebar (`AppLayout`) with Home, Lessons, My Vocabulary, Shared Pool and
-My Progress, plus Moderation for admins. Exactly one item is highlighted: the one for the current
-page.
+Items: Home, Lessons, My Vocabulary, Shared Pool, My Progress, and Moderation (admins only).
 
 ## Rules
 
-- **Home** is selected only on `/`.
-- **Lessons** and **My Progress** are selected on their route and every page under it
-  (e.g. `/lessons/42`).
-- **My Vocabulary** is selected only on `/vocabulary` and `/vocabulary/check` (the check-up page
-  has no sidebar item of its own).
-- **Shared Pool** (`/vocabulary/shared`) and **Moderation** (`/vocabulary/moderation`) are
-  selected only on their own route.
-- The selected item has the highlight style and `aria-current="page"`, so screen readers announce
-  the same item that sighted users see.
-- Children and adults get the same sidebar. Moderation is shown only to admins.
+| Item | Selected on |
+| --- | --- |
+| Home | `/` only |
+| Lessons | `/lessons` and every sub-route (e.g. `/lessons/42`) |
+| My Progress | `/progress` and every sub-route |
+| My Vocabulary | `/vocabulary` and `/vocabulary/check` (the check-up has no item of its own) |
+| Shared Pool | `/vocabulary/shared` only |
+| Moderation | `/vocabulary/moderation` only |
+
+- The selected item carries the highlight style **and** `aria-current="page"`, so screen readers announce the same item sighted users see.
+- **Child vs adult:** same sidebar. Moderation is visible to admins only.
 
 ## API
 
-None. UI only.
+None — UI only.
 
 | Method | Route | Service | Auth policy |
 |---|---|---|---|
@@ -42,6 +43,6 @@ None. UI only.
 
 ## Change history
 
-- `2-navigation-items-have-selected-state` — only the current page's sidebar item is selected;
-  `aria-current` follows the highlight (#5). Merged without a green E2E run; see that plan's
-  `test-report.md`.
+- `2-navigation-items-have-selected-state` (#5) — only the current page's item is selected;
+  `aria-current` follows the highlight. Merged before a green E2E run; scenarios passed later
+  (see that plan's `test-report.md`).

@@ -8,37 +8,47 @@ last-updated-by: vocabulary-builder-and-checkup
 
 # Vocabulary builder & check-up
 
+Learners build a personal word list, share words through a moderated pool, and check recall.
+
 ## What it does
 
-Learners keep a personal vocabulary list: they add their own words (word, definition, optional
-example), see them with a share-status badge, and delete them. An adult can submit one of their
-own words to a shared community pool. An admin must approve the word before anyone else sees it.
-Other learners can browse the pool and copy a word into their own list.
+**Share lifecycle** — a word is private until an admin approves it:
 
-A recall check picks N random words from the learner's own list (N from 1 to 50, chosen by the
-learner). The learner marks each word as known or still learning, then submits the batch. The
-Progress page shows how many words are known and how many are still learning, plus a list of
-recent check sessions.
+```mermaid
+stateDiagram-v2
+    [*] --> Private: learner adds word
+    Private --> PendingReview: owner requests share (adult only)
+    PendingReview --> Shared: admin approves (+ VisibleToChildren decision)
+    PendingReview --> Rejected: admin rejects
+    Rejected --> PendingReview: owner re-submits
+```
+
+**Recall check** — N random words from the learner's own list:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor L as Learner
+    participant C as Content
+    participant P as Progress
+    L->>C: GET /api/vocabulary/check?count=N (1–50)
+    C-->>L: N random own words
+    L->>L: mark each Known / Learning
+    L->>P: POST /api/progress/vocabulary-recall (word text copied)
+    P-->>L: 200 — stats + one session row
+```
+
+The Progress page shows Known vs Learning counts and recent sessions. Storage details: `vocabulary.md`.
 
 ## Rules
 
-- Words are private on creation. Sharing is opt-in per word and only moves the word to
-  `PendingReview`. It becomes `Shared` only after an admin approves it. A rejected word can be
-  re-submitted.
-- **Child accounts cannot share** (`CanShareVocabulary` policy: admin, or `age_group` not
-  `Child`). The UI also hides the Share button for children, but the server is what enforces it.
-- When approving, the admin makes a separate, explicit decision to set `VisibleToChildren`
-  (default `false`). The shared pool is filtered in the query handler: a Child caller only gets
-  pool words with `VisibleToChildren = true`. Adults see every `Shared` word.
-- Owner-only access: a learner can read, delete or share only their own words. A word owned by
-  someone else returns `NotFound`, so its existence is never revealed.
-- Recall status uses the most recent check: `Known` if the last check marked the word known,
-  otherwise `Learning`. Each submission (1 to 50 results) also records one session row for the
-  trend.
-- Deleting a word keeps its recall history in Progress. The word text is copied there at submit
-  time, and no cross-service call is made.
-- The shared pool is cached per child/adult variant (`content:vocabulary-shared:{childSafeOnly}`,
-  5 min absolute expiry). Moderation clears the cache.
+- **Status** = result of the latest check: `Known`, otherwise `Learning`.
+- **Owner-only access.** Another learner's word returns `NotFound`; its existence is never revealed.
+- **Delete keeps history.** Progress stores the word text at submit time; no cross-service call.
+- **Cache.** Shared pool cached per variant (`content:vocabulary-shared:{childSafeOnly}`, 5 min absolute); moderation clears it.
+- **Child vs adult:**
+  - A Child cannot share (`CanShareVocabulary`: admin, or `age_group` ≠ `Child`). The UI hides the button; the server enforces it.
+  - A Child sees only pool words with `VisibleToChildren = true` (default `false`, set by the admin on approval). Adults see every `Shared` word.
 
 ## API
 
@@ -58,11 +68,13 @@ recent check sessions.
 
 ## UI
 
-- `/vocabulary`: My Vocabulary (add form, list, share and delete)
-- `/vocabulary/check`: recall check
-- `/vocabulary/shared`: Shared Pool (add to my list)
-- `/vocabulary/moderation`: admin moderation queue (render-guarded on `isAdmin`)
-- `/progress`: Vocabulary Recall section (known and learning counts, recent sessions)
+| Route | Page |
+| --- | --- |
+| `/vocabulary` | My Vocabulary — add, list, share, delete |
+| `/vocabulary/check` | Recall check |
+| `/vocabulary/shared` | Shared Pool — add to my list |
+| `/vocabulary/moderation` | Admin moderation queue (render-guarded on `isAdmin`) |
+| `/progress` | Vocabulary Recall section — counts, recent sessions |
 
 ## Pending changes
 
@@ -70,5 +82,4 @@ _None._
 
 ## Change history
 
-- `vocabulary-builder-and-checkup`: personal vocabulary list, moderated shared pool, recall
-  check with progress (PR #10)
+- `vocabulary-builder-and-checkup` (PR #10) — personal list, moderated shared pool, recall check with progress

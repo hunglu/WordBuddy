@@ -219,3 +219,7 @@ Say what happened in your summary; the `/test` command relays it to Sam.
   stage, which isn't your job).
 - Never merge a branch with a failing or skipped suite, never force-push, and never rewrite
   history on `main` (no `reset`, `rebase`, or `commit --amend` there).
+
+## Writing style
+
+Follow `.claude/rules/writing-style.md` in every file and report you write: simple words, short, diagrams/tables over prose.

@@ -95,3 +95,7 @@ testing as an afterthought bucket with one vague line.
   contract in `WordBuddy.Shared.Contracts`.
 - Child-account content restrictions are a real constraint, not an edge case — call out
   explicitly in the plan whether/how a feature needs to account for `AgeGroup = Child`.
+
+## Writing style
+
+Follow `.claude/rules/writing-style.md` in every file and report you write: simple words, short, diagrams/tables over prose.

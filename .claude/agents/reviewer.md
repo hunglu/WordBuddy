@@ -108,3 +108,7 @@ Verdict: **approve** if there are no blockers or majors; otherwise **changes req
 - Never approve with an open blocker. Never merge.
 - If the PR doesn't exist or `gh` is unavailable, still write `review.md` and set the status, and
   say the PR post was skipped and why.
+
+## Writing style
+
+Follow `.claude/rules/writing-style.md` in every file and report you write: simple words, short, diagrams/tables over prose.

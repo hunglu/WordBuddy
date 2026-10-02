@@ -1,17 +1,11 @@
 # Roadmap
 
-Source of truth for *priority* is the GitHub Project board (see `../sdlc/github-integration.md`).
+The GitHub Project board is the source of truth for **priority** (`../sdlc/github-integration.md`).
 This file holds the themes that board items roll up to.
 
-## Now
-
-- Vocabulary builder & self check-up (`vocabulary-builder-and-checkup`, blocked on live-stack E2E run)
-
-## Next
-
-- SDLC tooling: GitHub Issues/Projects intake, `/status`, `/release`
-
-## Later
-
-- `AiTutorService` — Claude-powered tutor (tool use over Content/Quiz/Progress APIs)
-- Notification service: daily phrase reminders
+| Horizon | Theme |
+| --- | --- |
+| Now | Vocabulary storage follow-up: remove `VocabularyWordIdRemaps` + internal endpoints once every environment is migrated |
+| Next | SDLC tooling: `/release`; rate limiting across services |
+| Later | `AiTutorService` — Claude-powered tutor (tool use over Content / Quiz / Progress APIs) |
+| Later | Notification service: daily phrase reminders |
