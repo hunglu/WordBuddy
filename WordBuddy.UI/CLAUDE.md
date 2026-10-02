@@ -4,7 +4,8 @@
 # WordBuddy.UI
 
 React + TypeScript SPA served by Vite (versions: `package.json`), talking to the 5 backend
-microservices in `../WordBuddy`.
+microservices in `../WordBuddy`. Follow the `react-typescript` skill for the
+  exact shapes.
 
 ## Stack (as actually installed)
 
