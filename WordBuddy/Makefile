@@ -30,10 +30,12 @@ pack-shared:
 	dotnet pack src/Shared/WordBuddy.Shared.Contracts -o local-nuget-feed
 
 publish-shared:
-	dotnet nuget push "local-nuget-feed/*.nupkg" \
-		--source github-wordbuddy \
-		--api-key $(GITHUB_TOKEN) \
-		--skip-duplicate
+	for f in local-nuget-feed/*.nupkg; do \
+		dotnet nuget push "$$f" \
+			--source github-wordbuddy \
+			--api-key $(GITHUB_TOKEN) \
+			--skip-duplicate || exit 1; \
+	done
 
 ## --- local Kubernetes (kind) ---
 

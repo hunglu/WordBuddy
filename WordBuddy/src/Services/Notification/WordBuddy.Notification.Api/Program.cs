@@ -1,5 +1,6 @@
 using Serilog;
 using WordBuddy.Notification.Api.Extensions;
+using WordBuddy.Shared.Infrastructure.Health;
 using WordBuddy.Shared.Infrastructure.Observability;
 
 namespace WordBuddy.Notification.Api;
@@ -26,6 +27,9 @@ public sealed class Program
             .AddWordBuddyAuthentication(builder.Configuration)
             .AddWordBuddyServices()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
+
+        // Scaffold: no database or downstream dependencies yet, so readiness has no checks.
+        builder.Services.AddWordBuddyHealthChecks();
 
         WebApplication app = builder.Build();
 

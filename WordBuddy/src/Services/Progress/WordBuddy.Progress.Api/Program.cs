@@ -1,5 +1,7 @@
 using Serilog;
 using WordBuddy.Progress.Api.Extensions;
+using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Shared.Infrastructure.Health;
 using WordBuddy.Shared.Infrastructure.Observability;
 
 namespace WordBuddy.Progress.Api;
@@ -21,6 +23,9 @@ public sealed class Program
             .AddWordBuddyDatabase(builder.Configuration)
             .AddWordBuddyServices()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
+
+        builder.Services.AddWordBuddyHealthChecks()
+            .AddDbContextCheck<ProgressDbContext>(tags: [HealthCheckExtensions.ReadyTag]);
 
         WebApplication app = builder.Build();
 

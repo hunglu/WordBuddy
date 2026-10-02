@@ -1,5 +1,6 @@
 using Serilog;
 using WordBuddy.Identity.Infrastructure.Seeding;
+using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Identity.Api.Extensions;
 
@@ -20,6 +21,7 @@ internal static class WebApplicationExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.MapWordBuddyHealthChecks();
         app.MapControllers();
     }
 }

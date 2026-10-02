@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Progress.Api.Extensions;
 
@@ -23,6 +24,7 @@ internal static class WebApplicationExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.MapWordBuddyHealthChecks();
         app.MapControllers();
     }
 }

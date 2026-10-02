@@ -1,4 +1,5 @@
 using Serilog;
+using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Notification.Api.Extensions;
 
@@ -17,6 +18,7 @@ internal static class WebApplicationExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.MapWordBuddyHealthChecks();
         app.MapControllers();
 
         return Task.CompletedTask;

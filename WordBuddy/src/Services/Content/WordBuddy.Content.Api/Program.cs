@@ -1,5 +1,7 @@
 using Serilog;
 using WordBuddy.Content.Api.Extensions;
+using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Shared.Infrastructure.Health;
 using WordBuddy.Shared.Infrastructure.Observability;
 
 namespace WordBuddy.Content.Api;
@@ -21,6 +23,9 @@ public sealed class Program
             .AddWordBuddyDatabase(builder.Configuration)
             .AddWordBuddyServices()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
+
+        builder.Services.AddWordBuddyHealthChecks()
+            .AddDbContextCheck<ContentDbContext>(tags: [HealthCheckExtensions.ReadyTag]);
 
         WebApplication app = builder.Build();
 
