@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\WordBuddy.Progress.Application\WordBuddy.Progress.Application.csproj" />
     <ProjectReference Include="..\WordBuddy.Progress.Domain\WordBuddy.Progress.Domain.csproj" />
-    <ProjectReference Include="..\WordBuddy.Progress.Infrastructure\WordBuddy.Progress.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -17,6 +17,24 @@ independence model this follows.
 | POST | `/api/lessons` | Bearer | Creates a lesson (admin use) |
 | POST | `/api/media/upload` | Bearer | Uploads a media file (max 50MB; jpeg/png/mp3/wav/mp4) |
 | GET | `/api/media/{id}` | Anonymous | Streams a previously uploaded media file |
+| DELETE | `/api/vocabulary/{id}?confirm=true` | Bearer | Removes a word from the caller's list (see delete rule below) |
+| GET | `/api/vocabulary/shared` | Bearer | Community word pool; `isMine` is `true` only on the caller's own words |
+
+There are no internal (service-to-service) endpoints. The vocabulary id remap table and the
+`/internal/vocabulary-remaps` routes were removed (migration `DropVocabularyWordIdRemaps`).
+
+### Personal vocabulary delete rule
+
+| Caller | Word status | `?confirm=true` needed | Effect |
+|---|---|---|---|
+| Author | `Shared` | Yes, else 409 | Word handed over to WordBuddy (System owner); stays in the pool; adopters keep it |
+| Author | `PendingReview` | Yes, else 409 | Share request cancelled; word deleted if no one else links to it |
+| Author | `Private` / `Rejected` | No | Unlinked; deleted if no one else links to it |
+| Adopter | any | No | Unlinked only |
+
+The 409 error code is `PersonalVocabularyWord.DeleteConfirmationRequired`. A Child never authors a
+shared word, so the confirm path only applies to Adult callers. A transferred word that is not
+child-safe stays hidden from Child callers.
 
 Swagger UI: `http://localhost:5081/swagger` (Development only). Bearer tokens come from
 Identity — this service only validates them (same `Jwt:Secret`/`Jwt:Issuer` config), it never

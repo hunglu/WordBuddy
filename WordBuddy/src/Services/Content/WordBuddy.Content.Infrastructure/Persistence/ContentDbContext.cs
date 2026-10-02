@@ -17,7 +17,6 @@ public sealed class ContentDbContext : DbContext
     public DbSet<VocabularyWord> VocabularyWords => Set<VocabularyWord>();
     public DbSet<UserVocabularyWord> UserVocabularyWords => Set<UserVocabularyWord>();
     public DbSet<LessonVocabularyWord> LessonVocabularyWords => Set<LessonVocabularyWord>();
-    public DbSet<VocabularyWordIdRemap> VocabularyWordIdRemaps => Set<VocabularyWordIdRemap>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

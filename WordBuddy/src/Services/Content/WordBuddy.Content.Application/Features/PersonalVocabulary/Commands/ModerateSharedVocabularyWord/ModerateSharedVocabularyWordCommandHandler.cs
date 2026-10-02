@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Content.Application.Caching;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Shared.Kernel;
@@ -11,9 +12,6 @@ namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.Mod
 
 public sealed class ModerateSharedVocabularyWordCommandHandler : ICommandHandler<ModerateSharedVocabularyWordCommand>
 {
-    private const string SharedChildSafeCacheKey = "content:vocabulary-shared:True";
-    private const string SharedAllCacheKey = "content:vocabulary-shared:False";
-
     private readonly IVocabularyWordRepository _repository;
     private readonly IValidator<ModerateSharedVocabularyWordCommand> _validator;
     private readonly IDistributedCache _cache;
@@ -74,8 +72,8 @@ public sealed class ModerateSharedVocabularyWordCommandHandler : ICommandHandler
 
         // Cache-aside invalidation — delete both childSafeOnly variants rather than trying to
         // patch either in place.
-        await _cache.RemoveAsync(SharedChildSafeCacheKey, ct);
-        await _cache.RemoveAsync(SharedAllCacheKey, ct);
+        await _cache.RemoveAsync(SharedVocabularyCacheKeys.ChildSafe, ct);
+        await _cache.RemoveAsync(SharedVocabularyCacheKeys.All, ct);
 
         _logger.LogInformation("ModerateSharedVocabularyWordCommand succeeded: WordId={WordId}, Approve={Approve}", command.WordId, command.Approve);
         return Result.Success();

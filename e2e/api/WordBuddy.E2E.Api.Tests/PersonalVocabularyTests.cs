@@ -227,6 +227,109 @@ public sealed class PersonalVocabularyTests
         }
     }
 
+    [Fact]
+    public async Task AuthorDeleteOfSharedWord_NeedsConfirmThenHandsWordOverToWordBuddy()
+    {
+        IAPIRequestContext identity = await _fixture.NewContextAsync(ServiceUrls.Identity);
+        IAPIRequestContext content = await _fixture.NewContextAsync(ServiceUrls.Content);
+        try
+        {
+            string authorToken = await RegisterLearnerAsync(identity, ageGroup: "Adult");
+            string adopterToken = await RegisterLearnerAsync(identity, ageGroup: "Adult");
+            string adminToken = await LoginAsync(identity, AdminEmail, AdminPassword);
+
+            Guid wordId = await AddAndShareAsync(content, authorToken, $"handover-{Guid.NewGuid():N}");
+            (await content.PostAsync($"/api/vocabulary/moderation/{wordId}", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(adminToken),
+                DataObject = new { approve = true, visibleToChildren = true },
+            })).Status.Should().Be(204);
+            (await content.PostAsync($"/api/vocabulary/shared/{wordId}/add-to-mine", new APIRequestContextOptions { Headers = AuthHeader(adopterToken) }))
+                .Status.Should().Be(201);
+
+            JsonElement poolBefore = await GetJsonAsync(content, "/api/vocabulary/shared", authorToken);
+            poolBefore.EnumerateArray().Should().Contain(w => w.GetProperty("id").GetGuid() == wordId && w.GetProperty("isMine").GetBoolean());
+
+            // Without confirm: 409, word untouched.
+            IAPIResponse unconfirmed = await content.DeleteAsync($"/api/vocabulary/{wordId}", new APIRequestContextOptions { Headers = AuthHeader(authorToken) });
+            unconfirmed.Status.Should().Be(409);
+            (await unconfirmed.TextAsync()).Should().Contain("PersonalVocabularyWord.DeleteConfirmationRequired");
+
+            // With confirm: 204, gone from the author's list, still in the pool but no longer theirs.
+            (await content.DeleteAsync($"/api/vocabulary/{wordId}?confirm=true", new APIRequestContextOptions { Headers = AuthHeader(authorToken) }))
+                .Status.Should().Be(204);
+
+            (await GetJsonAsync(content, "/api/vocabulary/mine", authorToken)).EnumerateArray()
+                .Should().NotContain(w => w.GetProperty("id").GetGuid() == wordId);
+            (await GetJsonAsync(content, "/api/vocabulary/shared", authorToken)).EnumerateArray()
+                .Should().Contain(w => w.GetProperty("id").GetGuid() == wordId && !w.GetProperty("isMine").GetBoolean());
+            (await GetJsonAsync(content, "/api/vocabulary/mine", adopterToken)).EnumerateArray()
+                .Should().Contain(w => w.GetProperty("id").GetGuid() == wordId);
+
+            // The former owner can re-add it, as an adopter.
+            (await content.PostAsync($"/api/vocabulary/shared/{wordId}/add-to-mine", new APIRequestContextOptions { Headers = AuthHeader(authorToken) }))
+                .Status.Should().Be(201);
+            (await GetJsonAsync(content, "/api/vocabulary/mine", authorToken)).EnumerateArray()
+                .Should().Contain(w => w.GetProperty("id").GetGuid() == wordId && !w.GetProperty("isAuthor").GetBoolean());
+        }
+        finally
+        {
+            await identity.DisposeAsync();
+            await content.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AuthorDeleteOfPendingWord_NeedsConfirmThenCancelsShareRequest()
+    {
+        IAPIRequestContext identity = await _fixture.NewContextAsync(ServiceUrls.Identity);
+        IAPIRequestContext content = await _fixture.NewContextAsync(ServiceUrls.Content);
+        try
+        {
+            string authorToken = await RegisterLearnerAsync(identity, ageGroup: "Adult");
+            string adminToken = await LoginAsync(identity, AdminEmail, AdminPassword);
+
+            Guid wordId = await AddAndShareAsync(content, authorToken, $"pending-{Guid.NewGuid():N}");
+
+            (await content.DeleteAsync($"/api/vocabulary/{wordId}", new APIRequestContextOptions { Headers = AuthHeader(authorToken) }))
+                .Status.Should().Be(409);
+            (await content.DeleteAsync($"/api/vocabulary/{wordId}?confirm=true", new APIRequestContextOptions { Headers = AuthHeader(authorToken) }))
+                .Status.Should().Be(204);
+
+            (await GetJsonAsync(content, "/api/vocabulary/moderation/pending", adminToken)).EnumerateArray()
+                .Should().NotContain(w => w.GetProperty("id").GetGuid() == wordId);
+            (await GetJsonAsync(content, "/api/vocabulary/mine", authorToken)).EnumerateArray()
+                .Should().NotContain(w => w.GetProperty("id").GetGuid() == wordId);
+        }
+        finally
+        {
+            await identity.DisposeAsync();
+            await content.DisposeAsync();
+        }
+    }
+
+    private static async Task<Guid> AddAndShareAsync(IAPIRequestContext content, string token, string word)
+    {
+        IAPIResponse addResponse = await content.PostAsync("/api/vocabulary", new APIRequestContextOptions
+        {
+            Headers = AuthHeader(token),
+            DataObject = new { word, definition = "an e2e definition", example = (string?)null },
+        });
+        addResponse.Ok.Should().BeTrue($"adding a word should succeed, got {addResponse.Status}: {await addResponse.TextAsync()}");
+        Guid wordId = (await addResponse.JsonAsync())!.Value.GetGuid();
+
+        (await content.PostAsync($"/api/vocabulary/{wordId}/share", new APIRequestContextOptions { Headers = AuthHeader(token) }))
+            .Status.Should().Be(204);
+        return wordId;
+    }
+
+    private static async Task<JsonElement> GetJsonAsync(IAPIRequestContext content, string path, string token)
+    {
+        IAPIResponse response = await content.GetAsync(path, new APIRequestContextOptions { Headers = AuthHeader(token) });
+        response.Status.Should().Be(200, $"GET {path} should succeed, got {response.Status}: {await response.TextAsync()}");
+        return (await response.JsonAsync())!.Value;
+    }
+
     private static async Task<string> RegisterLearnerAsync(IAPIRequestContext identity, string ageGroup)
     {
         string email = $"vocab-e2e-{Guid.NewGuid():N}@example.com";

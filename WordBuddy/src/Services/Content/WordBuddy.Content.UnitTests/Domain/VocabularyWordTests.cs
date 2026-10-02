@@ -223,4 +223,109 @@ public class VocabularyWordTests
 
         word.IsVisibleTo(Guid.NewGuid(), AgeGroup.Adult).Should().BeFalse();
     }
+
+    [Fact]
+    public void VocabularyWord_TransferToSystem_SetsSystemOwnerAndKeepsShared()
+    {
+        VocabularyWord word = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        DateTime? moderatedAt = word.ModeratedAtUtc;
+        Guid? moderatedBy = word.ModeratedByUserId;
+
+        Result result = word.TransferToSystem();
+
+        result.IsSuccess.Should().BeTrue();
+        word.Source.Should().Be(VocabularySource.System);
+        word.OwnerUserId.Should().Be(SystemOwner.UserId);
+        word.OwnerAgeGroup.Should().BeNull();
+        word.ShareStatus.Should().Be(VocabularyShareStatus.Shared);
+        word.VisibleToChildren.Should().BeTrue();
+        word.ModeratedAtUtc.Should().Be(moderatedAt);
+        word.ModeratedByUserId.Should().Be(moderatedBy);
+    }
+
+    [Theory]
+    [InlineData("Private")]
+    [InlineData("PendingReview")]
+    [InlineData("Rejected")]
+    [InlineData("System")]
+    public void VocabularyWord_TransferToSystem_ReturnsConflictWhenNotShared(string state)
+    {
+        VocabularyWord word = state switch
+        {
+            "Private" => TestWords.Learner(Guid.NewGuid()),
+            "PendingReview" => TestWords.Pending(Guid.NewGuid()),
+            "Rejected" => Rejected(),
+            _ => TestWords.System(),
+        };
+        Guid ownerBefore = word.OwnerUserId;
+
+        Result result = word.TransferToSystem();
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        word.OwnerUserId.Should().Be(ownerBefore);
+    }
+
+    [Fact]
+    public void VocabularyWord_TransferToSystem_ReturnsConflictWhenAlreadyTransferred()
+    {
+        VocabularyWord word = TestWords.Transferred(visibleToChildren: true);
+
+        word.TransferToSystem().IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void VocabularyWord_CancelShareRequest_SetsPrivate()
+    {
+        VocabularyWord word = TestWords.Pending(Guid.NewGuid());
+
+        Result result = word.CancelShareRequest();
+
+        result.IsSuccess.Should().BeTrue();
+        word.ShareStatus.Should().Be(VocabularyShareStatus.Private);
+    }
+
+    [Theory]
+    [InlineData(VocabularyShareStatus.Private)]
+    [InlineData(VocabularyShareStatus.Shared)]
+    [InlineData(VocabularyShareStatus.Rejected)]
+    public void VocabularyWord_CancelShareRequest_ReturnsConflictWhenNotPendingReview(VocabularyShareStatus status)
+    {
+        VocabularyWord word = status switch
+        {
+            VocabularyShareStatus.Private => TestWords.Learner(Guid.NewGuid()),
+            VocabularyShareStatus.Shared => TestWords.Shared(Guid.NewGuid(), visibleToChildren: true),
+            _ => Rejected(),
+        };
+
+        Result result = word.CancelShareRequest();
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        word.ShareStatus.Should().Be(status);
+    }
+
+    [Fact]
+    public void VocabularyWord_IsVisibleTo_HidesTransferredNonChildSafeWordFromChild()
+    {
+        VocabularyWord word = TestWords.Transferred(visibleToChildren: false);
+
+        word.IsVisibleTo(Guid.NewGuid(), AgeGroup.Child).Should().BeFalse();
+        word.IsVisibleTo(Guid.NewGuid(), AgeGroup.Adult).Should().BeTrue();
+    }
+
+    [Fact]
+    public void VocabularyWord_IsVisibleTo_ShowsSystemLessonWordToChild()
+    {
+        VocabularyWord word = TestWords.System();
+
+        word.IsVisibleTo(Guid.NewGuid(), AgeGroup.Child).Should().BeTrue();
+    }
+
+    private static VocabularyWord Rejected()
+    {
+        VocabularyWord word = TestWords.Pending(Guid.NewGuid());
+        word.Reject(Guid.NewGuid());
+        return word;
+    }
 }

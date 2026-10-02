@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
+import { DeleteWordConfirmDialog, needsDeleteConfirmation } from '../components/vocabulary/DeleteWordConfirmDialog'
 import {
   useAddVocabularyWord,
   useDeleteVocabularyWord,
@@ -28,6 +29,20 @@ export function VocabularyBuilderPage(): ReactElement {
   const addWord = useAddVocabularyWord()
   const deleteWord = useDeleteVocabularyWord()
   const requestShare = useRequestShareVocabularyWord()
+  const [wordToConfirm, setWordToConfirm] = useState<PersonalVocabularyWord | null>(null)
+
+  const onDelete = (word: PersonalVocabularyWord): void => {
+    if (needsDeleteConfirmation(word)) {
+      setWordToConfirm(word)
+      return
+    }
+    deleteWord.mutate({ id: word.id })
+  }
+
+  const onConfirmDelete = (): void => {
+    if (!wordToConfirm) return
+    deleteWord.mutate({ id: wordToConfirm.id, confirm: true }, { onSettled: () => setWordToConfirm(null) })
+  }
 
   const {
     register,
@@ -148,7 +163,7 @@ export function VocabularyBuilderPage(): ReactElement {
                 )}
                 <button
                   type="button"
-                  onClick={() => deleteWord.mutate(word.id)}
+                  onClick={() => onDelete(word)}
                   disabled={deleteWord.isPending}
                   className="rounded-wb-md bg-wb-danger-soft px-3 py-1.5 text-sm font-semibold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
                 >
@@ -159,6 +174,13 @@ export function VocabularyBuilderPage(): ReactElement {
           ))}
         </div>
       )}
+
+      <DeleteWordConfirmDialog
+        word={wordToConfirm}
+        isPending={deleteWord.isPending}
+        onConfirm={onConfirmDelete}
+        onCancel={() => setWordToConfirm(null)}
+      />
     </motion.div>
   )
 }

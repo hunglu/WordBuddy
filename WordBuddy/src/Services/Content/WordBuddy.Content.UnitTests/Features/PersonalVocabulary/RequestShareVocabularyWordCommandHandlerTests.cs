@@ -67,4 +67,21 @@ public class RequestShareVocabularyWordCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.NotFound);
         _repository.Verify(r => r.UpdateAsync(It.IsAny<VocabularyWord>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task RequestShareVocabularyWordCommandHandler_HandleAsync_ReturnsConflictForTransferredWord()
+    {
+        Guid formerOwnerId = Guid.NewGuid();
+        VocabularyWord word = TestWords.Transferred(visibleToChildren: true);
+        _repository
+            .Setup(r => r.GetLinkAsync(formerOwnerId, word.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new UserVocabularyWord(Guid.NewGuid(), formerOwnerId, word, isAuthor: true)));
+        _repository.Setup(r => r.GetByIdAsync(word.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(word));
+
+        Result result = await CreateHandler().HandleAsync(new RequestShareVocabularyWordCommand(word.Id, formerOwnerId));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<VocabularyWord>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

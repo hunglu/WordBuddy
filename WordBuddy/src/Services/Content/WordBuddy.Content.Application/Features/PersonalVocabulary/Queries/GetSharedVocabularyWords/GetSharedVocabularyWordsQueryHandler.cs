@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Content.Application.Caching;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
@@ -10,7 +11,8 @@ using WordBuddy.Shared.Kernel;
 namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSharedVocabularyWords;
 
 /// <summary>High-read, low-mutation per CLAUDE.md's caching guidance — cached with a short absolute
-/// expiry, cache-aside invalidated by <c>ModerateSharedVocabularyWordCommand</c> on success.</summary>
+/// expiry, cache-aside invalidated by <c>ModerateSharedVocabularyWordCommand</c> and by a confirmed
+/// author delete. The cache is per age group, not per user: <c>IsMine</c> is set after the cache read.</summary>
 public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>>
 {
     private static readonly DistributedCacheEntryOptions CacheOptions = new()
@@ -35,7 +37,7 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
     public async Task<Result<IReadOnlyList<PersonalVocabularyWordDto>>> HandleAsync(GetSharedVocabularyWordsQuery query, CancellationToken ct = default)
     {
         bool childSafeOnly = query.RequestingAgeGroup == AgeGroup.Child;
-        string cacheKey = $"content:vocabulary-shared:{childSafeOnly}";
+        string cacheKey = SharedVocabularyCacheKeys.For(childSafeOnly);
 
         _logger.LogInformation("GetSharedVocabularyWordsQuery started: ChildSafeOnly={ChildSafeOnly}", childSafeOnly);
 
@@ -46,7 +48,7 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
             if (cachedDtos is not null)
             {
                 _logger.LogInformation("GetSharedVocabularyWordsQuery cache hit: ChildSafeOnly={ChildSafeOnly}", childSafeOnly);
-                return Result.Success(cachedDtos);
+                return Result.Success(SetIsMine(cachedDtos, query.RequestingUserId));
             }
         }
 
@@ -64,6 +66,9 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
         await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dtos), CacheOptions, ct);
 
         _logger.LogInformation("GetSharedVocabularyWordsQuery succeeded: Count={Count}, ChildSafeOnly={ChildSafeOnly}", dtos.Count, childSafeOnly);
-        return Result.Success(dtos);
+        return Result.Success(SetIsMine(dtos, query.RequestingUserId));
     }
+
+    private static IReadOnlyList<PersonalVocabularyWordDto> SetIsMine(IReadOnlyList<PersonalVocabularyWordDto> dtos, Guid requestingUserId) =>
+        dtos.Select(d => d with { IsMine = d.OwnerUserId == requestingUserId }).ToList();
 }

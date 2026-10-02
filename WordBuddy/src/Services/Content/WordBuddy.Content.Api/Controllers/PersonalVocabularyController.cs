@@ -100,11 +100,12 @@ public sealed class PersonalVocabularyController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Deletes a word from the caller's own personal vocabulary list.</summary>
+    /// <summary>Deletes a word from the caller's own personal vocabulary list. An author deleting a
+    /// <c>Shared</c> or <c>PendingReview</c> word must pass <c>?confirm=true</c>, otherwise 409.</summary>
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> DeleteWord(Guid id, CancellationToken ct)
+    public async Task<IActionResult> DeleteWord(Guid id, [FromQuery] bool confirm, CancellationToken ct)
     {
-        Result result = await _deleteWord.HandleAsync(new DeletePersonalVocabularyWordCommand(id, User.GetUserId()), ct);
+        Result result = await _deleteWord.HandleAsync(new DeletePersonalVocabularyWordCommand(id, User.GetUserId(), confirm), ct);
         if (result.IsFailure)
         {
             return result.ToProblemResult(this);
@@ -119,7 +120,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     [HttpGet("shared")]
     public async Task<IActionResult> GetSharedWords(CancellationToken ct)
     {
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getSharedWords.HandleAsync(new GetSharedVocabularyWordsQuery(User.GetAgeGroup()), ct);
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getSharedWords.HandleAsync(new GetSharedVocabularyWordsQuery(User.GetAgeGroup(), User.GetUserId()), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

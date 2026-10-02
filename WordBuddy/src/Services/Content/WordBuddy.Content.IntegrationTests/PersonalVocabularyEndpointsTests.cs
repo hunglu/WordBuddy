@@ -120,4 +120,131 @@ public sealed class PersonalVocabularyEndpointsTests
         HttpResponseMessage deleteAttempt = await otherUser.DeleteAsync($"/api/vocabulary/{wordId}");
         deleteAttempt.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    private static string UniqueWord(string prefix) => $"{prefix}-{Guid.NewGuid():N}";
+
+    private static async Task<Guid> AddAsync(HttpClient client, string word)
+    {
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest(word, "a definition", null));
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        return await response.Content.ReadFromJsonAsync<Guid>();
+    }
+
+    private static async Task<List<PersonalVocabularyWordDto>> GetListAsync(HttpClient client, string url)
+    {
+        HttpResponseMessage response = await client.GetAsync(url);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions))!;
+    }
+
+    /// <summary>The owner adds and shares a word; an admin approves it when <paramref name="approve"/>.</summary>
+    private async Task<Guid> AddAndShareAsync(HttpClient owner, string word, bool approve, bool visibleToChildren = true)
+    {
+        Guid id = await AddAsync(owner, word);
+        (await owner.PostAsync($"/api/vocabulary/{id}/share", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        if (approve)
+        {
+            HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+            (await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{id}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: visibleToChildren)))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        }
+
+        return id;
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PersonalVocabularyEndpoints_Delete_Returns409WithoutConfirm(bool approved)
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid id = await AddAndShareAsync(owner, UniqueWord("confirm"), approve: approved);
+
+        HttpResponseMessage response = await owner.DeleteAsync($"/api/vocabulary/{id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("PersonalVocabularyWord.DeleteConfirmationRequired");
+        (await GetListAsync(owner, "/api/vocabulary/mine")).Should().Contain(w => w.Id == id);
+    }
+
+    [Fact]
+    public async Task PersonalVocabularyEndpoints_Delete_TransfersSharedWordToSystem()
+    {
+        Guid ownerId = Guid.NewGuid();
+        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
+        HttpClient adopter = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid id = await AddAndShareAsync(owner, UniqueWord("transfer"), approve: true);
+        (await adopter.PostAsync($"/api/vocabulary/shared/{id}/add-to-mine", content: null)).StatusCode.Should().Be(HttpStatusCode.Created);
+        // Warm the pool cache so the test proves the delete invalidates it.
+        (await GetListAsync(owner, "/api/vocabulary/shared")).Should().Contain(w => w.Id == id && w.IsMine);
+
+        (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await GetListAsync(owner, "/api/vocabulary/mine")).Should().NotContain(w => w.Id == id);
+        PersonalVocabularyWordDto pooled = (await GetListAsync(owner, "/api/vocabulary/shared")).Should().ContainSingle(w => w.Id == id).Subject;
+        pooled.IsMine.Should().BeFalse();
+        pooled.OwnerUserId.Should().Be(SystemOwner.UserId);
+        (await GetListAsync(adopter, "/api/vocabulary/mine")).Should().Contain(w => w.Id == id);
+    }
+
+    [Fact]
+    public async Task PersonalVocabularyEndpoints_AddSharedToMine_FormerOwnerGetsAdopterLink()
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid id = await AddAndShareAsync(owner, UniqueWord("readd"), approve: true);
+        (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await owner.PostAsync($"/api/vocabulary/shared/{id}/add-to-mine", content: null)).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        (await GetListAsync(owner, "/api/vocabulary/mine")).Should().ContainSingle(w => w.Id == id).Which.IsAuthor.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PersonalVocabularyEndpoints_Delete_PendingReviewConfirmed_LeavesModerationQueue()
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+        string word = UniqueWord("pending");
+        Guid id = await AddAndShareAsync(owner, word, approve: false);
+        (await GetListAsync(admin, "/api/vocabulary/moderation/pending")).Should().Contain(w => w.Id == id);
+
+        (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await GetListAsync(admin, "/api/vocabulary/moderation/pending")).Should().NotContain(w => w.Id == id);
+        (await GetListAsync(owner, "/api/vocabulary/mine")).Should().NotContain(w => w.Id == id);
+        // Re-adding creates a new row, proving the orphaned word was deleted.
+        (await AddAsync(owner, word)).Should().NotBe(id);
+    }
+
+    [Fact]
+    public async Task PersonalVocabularyEndpoints_SharedPool_HidesTransferredNonChildSafeWordFromChild()
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient child = CreateClient(Guid.NewGuid(), "Child", isAdmin: false);
+        string word = UniqueWord("adultonly");
+        Guid id = await AddAndShareAsync(owner, word, approve: true, visibleToChildren: false);
+        (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await GetListAsync(child, "/api/vocabulary/shared")).Should().NotContain(w => w.Id == id);
+        (await child.PostAsync($"/api/vocabulary/shared/{id}/add-to-mine", content: null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // Typing the same word must not link the child to the (now system-owned) hidden word.
+        (await AddAsync(child, word)).Should().NotBe(id);
+    }
+
+    [Fact]
+    public async Task PersonalVocabularyEndpoints_SharedPool_IsMineTrueOnlyForOwner()
+    {
+        Guid ownerId = Guid.NewGuid();
+        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
+        HttpClient other = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid id = await AddAndShareAsync(owner, UniqueWord("ismine"), approve: true);
+
+        List<PersonalVocabularyWordDto> ownerPool = await GetListAsync(owner, "/api/vocabulary/shared");
+        List<PersonalVocabularyWordDto> otherPool = await GetListAsync(other, "/api/vocabulary/shared");
+
+        ownerPool.Should().ContainSingle(w => w.Id == id).Which.IsMine.Should().BeTrue();
+        ownerPool.Where(w => w.IsMine).Should().OnlyContain(w => w.OwnerUserId == ownerId);
+        otherPool.Should().ContainSingle(w => w.Id == id).Which.IsMine.Should().BeFalse();
+    }
 }

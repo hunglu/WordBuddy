@@ -8,6 +8,8 @@ namespace WordBuddy.Content.Application.DTOs;
 /// word, as opposed to adopting a shared word or matching a system word. Only authors may request
 /// sharing. Always <see langword="false"/> on the pool and moderation lists, which aren't
 /// caller-scoped.</param>
+/// <param name="IsMine">On the community pool only: whether the caller is the current owner of the
+/// word. <see langword="false"/> everywhere else, and for words handed over to the system owner.</param>
 public sealed record PersonalVocabularyWordDto(
     Guid Id,
     Guid OwnerUserId,
@@ -17,4 +19,5 @@ public sealed record PersonalVocabularyWordDto(
     VocabularyShareStatus ShareStatus,
     bool VisibleToChildren,
     DateTime CreatedAtUtc,
-    bool IsAuthor);
+    bool IsAuthor,
+    bool IsMine = false);

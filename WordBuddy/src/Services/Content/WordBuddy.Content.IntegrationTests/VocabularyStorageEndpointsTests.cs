@@ -232,7 +232,7 @@ public sealed class VocabularyStorageEndpointsTests
         await owner.PostAsync($"/api/vocabulary/{id}/share", content: null);
         await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{id}", new ModerateVocabularyWordRequest(true, true));
 
-        (await owner.DeleteAsync($"/api/vocabulary/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         (await GetListAsync(owner, "/api/vocabulary/mine")).Should().NotContain(w => w.Id == id);
         (await GetListAsync(owner, "/api/vocabulary/shared")).Should().Contain(w => w.Id == id);

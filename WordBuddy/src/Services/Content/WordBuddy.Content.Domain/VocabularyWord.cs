@@ -206,11 +206,45 @@ public sealed class VocabularyWord : Entity
         return Result.Success();
     }
 
+    /// <summary>Hands a <see cref="VocabularyShareStatus.Shared"/> learner word over to the system
+    /// owner when its author deletes it. The word stays in the community pool: share status,
+    /// <see cref="VisibleToChildren"/> and the moderation fields are kept.</summary>
+    public Result TransferToSystem()
+    {
+        if (Source != VocabularySource.Learner || ShareStatus != VocabularyShareStatus.Shared)
+        {
+            return Result.Failure(Error.Conflict(
+                "PersonalVocabularyWord.InvalidTransfer",
+                $"Word {Id} cannot be transferred to the system from its current status ({ShareStatus})."));
+        }
+
+        Source = VocabularySource.System;
+        OwnerUserId = SystemOwner.UserId;
+        OwnerAgeGroup = null;
+        return Result.Success();
+    }
+
+    /// <summary>Cancels a share request: moves a <see cref="VocabularyShareStatus.PendingReview"/>
+    /// word back to <see cref="VocabularyShareStatus.Private"/>.</summary>
+    public Result CancelShareRequest()
+    {
+        if (ShareStatus != VocabularyShareStatus.PendingReview)
+        {
+            return Result.Failure(Error.Conflict(
+                "PersonalVocabularyWord.InvalidShareCancellation",
+                $"Word {Id} has no share request to cancel ({ShareStatus})."));
+        }
+
+        ShareStatus = VocabularyShareStatus.Private;
+        return Result.Success();
+    }
+
     /// <summary>Whether a caller may see (and therefore be linked to) this word: they wrote it, it
-    /// is a system word, or it is <see cref="VocabularyShareStatus.Shared"/> — and, for a Child
-    /// caller, cleared as <see cref="VisibleToChildren"/>.</summary>
+    /// is a non-shared system (lesson) word, or it is <see cref="VocabularyShareStatus.Shared"/> —
+    /// and, for a Child caller, cleared as <see cref="VisibleToChildren"/>. A shared word always
+    /// applies the child filter, also after it was transferred to the system owner.</summary>
     public bool IsVisibleTo(Guid userId, AgeGroup ageGroup) =>
-        Source == VocabularySource.System ||
-        (Source == VocabularySource.Learner && OwnerUserId == userId) ||
-        (ShareStatus == VocabularyShareStatus.Shared && (ageGroup == AgeGroup.Adult || VisibleToChildren));
+        (ShareStatus == VocabularyShareStatus.Shared && (ageGroup == AgeGroup.Adult || VisibleToChildren)) ||
+        (ShareStatus != VocabularyShareStatus.Shared && Source == VocabularySource.System) ||
+        (Source == VocabularySource.Learner && OwnerUserId == userId);
 }
