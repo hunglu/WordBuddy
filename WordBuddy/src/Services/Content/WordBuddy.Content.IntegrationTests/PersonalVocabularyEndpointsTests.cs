@@ -18,7 +18,8 @@ namespace WordBuddy.Content.IntegrationTests;
 /// <c>CONTENT_TEST_CONNECTION_STRING</c>). Not run as part of a normal `dotnet build`/unit-test
 /// pass — see the coder's final report for how to run this against a live database.
 /// </summary>
-public sealed class PersonalVocabularyEndpointsTests : IClassFixture<ContentApiFactory>
+[Collection(ContentApiCollection.Name)]
+public sealed class PersonalVocabularyEndpointsTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {

@@ -127,6 +127,24 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.ToTable("Lessons", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Content.Domain.LessonVocabularyWord", b =>
+                {
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VocabularyWordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("LessonId", "VocabularyWordId");
+
+                    b.HasIndex("VocabularyWordId");
+
+                    b.ToTable("LessonVocabularyWords", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Content.Domain.MediaAsset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -148,11 +166,49 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.ToTable("MediaAssets", (string)null);
                 });
 
-            modelBuilder.Entity("WordBuddy.Content.Domain.PersonalVocabularyWord", b =>
+            modelBuilder.Entity("WordBuddy.Content.Domain.UserVocabularyWord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AddedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsAuthor")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VocabularyWordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VocabularyWordId");
+
+                    b.HasIndex("UserId", "VocabularyWordId")
+                        .IsUnique();
+
+                    b.ToTable("UserVocabularyWords", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Content.Domain.VocabularyWord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AudioAssetId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
@@ -172,8 +228,12 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ModeratedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("OwnerAgeGroup")
+                    b.Property<string>("NormalizedWord")
                         .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OwnerAgeGroup")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -181,6 +241,11 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ShareStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -195,47 +260,41 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AudioAssetId");
+
+                    b.HasIndex("ContentHash");
+
+                    b.HasIndex("NormalizedWord");
+
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("ShareStatus");
 
-                    b.ToTable("PersonalVocabularyWords", (string)null);
+                    b.HasIndex("ContentHash", "OwnerUserId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_VocabularyWords_ContentHash_OwnerUserId_Learner")
+                        .HasFilter("[Source] = 'Learner'");
+
+                    b.ToTable("VocabularyWords", (string)null);
                 });
 
-            modelBuilder.Entity("WordBuddy.Content.Domain.VocabularyItem", b =>
+            modelBuilder.Entity("WordBuddy.Content.Infrastructure.Persistence.VocabularyWordIdRemap", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<Guid>("OldId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("AudioAssetId")
+                    b.Property<Guid>("NewId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Definition")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                    b.Property<DateTime?>("PublishedAtUtc")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("Example")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.HasKey("OldId");
 
-                    b.Property<Guid>("LessonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.HasIndex("PublishedAtUtc");
 
-                    b.Property<string>("Word")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AudioAssetId");
-
-                    b.HasIndex("LessonId");
-
-                    b.ToTable("VocabularyItems", (string)null);
+                    b.ToTable("VocabularyWordIdRemaps", (string)null);
                 });
 
             modelBuilder.Entity("WordBuddy.Content.Domain.DailyPhrase", b =>
@@ -270,18 +329,40 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("WordBuddy.Content.Domain.VocabularyItem", b =>
+            modelBuilder.Entity("WordBuddy.Content.Domain.LessonVocabularyWord", b =>
+                {
+                    b.HasOne("WordBuddy.Content.Domain.Lesson", null)
+                        .WithMany("VocabularyWords")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WordBuddy.Content.Domain.VocabularyWord", "VocabularyWord")
+                        .WithMany()
+                        .HasForeignKey("VocabularyWordId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("VocabularyWord");
+                });
+
+            modelBuilder.Entity("WordBuddy.Content.Domain.UserVocabularyWord", b =>
+                {
+                    b.HasOne("WordBuddy.Content.Domain.VocabularyWord", "VocabularyWord")
+                        .WithMany()
+                        .HasForeignKey("VocabularyWordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("VocabularyWord");
+                });
+
+            modelBuilder.Entity("WordBuddy.Content.Domain.VocabularyWord", b =>
                 {
                     b.HasOne("WordBuddy.Content.Domain.MediaAsset", "Audio")
                         .WithMany()
                         .HasForeignKey("AudioAssetId")
                         .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("WordBuddy.Content.Domain.Lesson", null)
-                        .WithMany("VocabularyItems")
-                        .HasForeignKey("LessonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Audio");
                 });
@@ -292,7 +373,7 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
 
                     b.Navigation("GrammarRules");
 
-                    b.Navigation("VocabularyItems");
+                    b.Navigation("VocabularyWords");
                 });
 #pragma warning restore 612, 618
         }

@@ -15,7 +15,8 @@ namespace WordBuddy.Progress.IntegrationTests;
 /// <c>PROGRESS_TEST_CONNECTION_STRING</c>). Not run as part of a normal `dotnet build`/unit-test
 /// pass — see the coder's final report for how to run this against a live database.
 /// </summary>
-public sealed class VocabularyRecallEndpointsTests : IClassFixture<ProgressApiFactory>
+[Collection(ProgressApiCollection.Name)]
+public sealed class VocabularyRecallEndpointsTests
 {
     private readonly ProgressApiFactory _factory;
 

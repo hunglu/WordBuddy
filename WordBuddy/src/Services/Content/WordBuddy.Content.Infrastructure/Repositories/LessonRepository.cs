@@ -42,7 +42,7 @@ internal sealed class LessonRepository : ILessonRepository
 
         Lesson? lesson = await _dbContext.Lessons
             .AsNoTracking()
-            .Include(l => l.VocabularyItems).ThenInclude(v => v.Audio)
+            .Include(l => l.VocabularyWords.OrderBy(v => v.SortOrder)).ThenInclude(v => v.VocabularyWord!).ThenInclude(w => w.Audio)
             .Include(l => l.GrammarRules)
             .Include(l => l.DailyPhrases).ThenInclude(d => d.Audio)
             .Include(l => l.DailyPhrases).ThenInclude(d => d.Video)

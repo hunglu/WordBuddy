@@ -158,6 +158,73 @@ public sealed class PersonalVocabularyTests
         }
     }
 
+    [Fact]
+    public async Task AdoptSharedWordThenDelete_WordStaysInSharedPool()
+    {
+        IAPIRequestContext identity = await _fixture.NewContextAsync(ServiceUrls.Identity);
+        IAPIRequestContext content = await _fixture.NewContextAsync(ServiceUrls.Content);
+        try
+        {
+            string authorToken = await RegisterLearnerAsync(identity, ageGroup: "Adult");
+            string adopterToken = await RegisterLearnerAsync(identity, ageGroup: "Adult");
+            string adminToken = await LoginAsync(identity, AdminEmail, AdminPassword);
+
+            // Unique text per run — identical text would dedupe onto an earlier run's word.
+            string word = $"serendipity-{Guid.NewGuid():N}";
+            IAPIResponse addResponse = await content.PostAsync("/api/vocabulary", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(authorToken),
+                DataObject = new { word, definition = "a happy accident", example = (string?)null },
+            });
+            addResponse.Ok.Should().BeTrue();
+            Guid wordId = (await addResponse.JsonAsync())!.Value.GetGuid();
+
+            (await content.PostAsync($"/api/vocabulary/{wordId}/share", new APIRequestContextOptions { Headers = AuthHeader(authorToken) }))
+                .Status.Should().Be(204);
+            (await content.PostAsync($"/api/vocabulary/moderation/{wordId}", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(adminToken),
+                DataObject = new { approve = true, visibleToChildren = true },
+            })).Status.Should().Be(204);
+
+            // Adopt: the returned id is the shared word's own id (a link, not a copy).
+            IAPIResponse adoptResponse = await content.PostAsync($"/api/vocabulary/shared/{wordId}/add-to-mine", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(adopterToken),
+            });
+            adoptResponse.Status.Should().Be(201, $"adopting should succeed, got {adoptResponse.Status}: {await adoptResponse.TextAsync()}");
+            (await adoptResponse.JsonAsync())!.Value.GetGuid().Should().Be(wordId);
+
+            JsonElement mine = (await (await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(adopterToken),
+            })).JsonAsync())!.Value;
+            mine.EnumerateArray().Should().Contain(w =>
+                w.GetProperty("id").GetGuid() == wordId && !w.GetProperty("isAuthor").GetBoolean());
+
+            // Delete from My words: gone from the adopter's list, still in the shared pool.
+            (await content.DeleteAsync($"/api/vocabulary/{wordId}", new APIRequestContextOptions { Headers = AuthHeader(adopterToken) }))
+                .Status.Should().Be(204);
+
+            JsonElement mineAfter = (await (await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(adopterToken),
+            })).JsonAsync())!.Value;
+            mineAfter.EnumerateArray().Should().NotContain(w => w.GetProperty("id").GetGuid() == wordId);
+
+            JsonElement shared = (await (await content.GetAsync("/api/vocabulary/shared", new APIRequestContextOptions
+            {
+                Headers = AuthHeader(adopterToken),
+            })).JsonAsync())!.Value;
+            shared.EnumerateArray().Should().Contain(w => w.GetProperty("id").GetGuid() == wordId);
+        }
+        finally
+        {
+            await identity.DisposeAsync();
+            await content.DisposeAsync();
+        }
+    }
+
     private static async Task<string> RegisterLearnerAsync(IAPIRequestContext identity, string ageGroup)
     {
         string email = $"vocab-e2e-{Guid.NewGuid():N}@example.com";

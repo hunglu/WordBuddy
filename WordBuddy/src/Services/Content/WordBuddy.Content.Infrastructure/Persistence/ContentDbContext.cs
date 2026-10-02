@@ -11,11 +11,13 @@ public sealed class ContentDbContext : DbContext
     }
 
     public DbSet<Lesson> Lessons => Set<Lesson>();
-    public DbSet<VocabularyItem> VocabularyItems => Set<VocabularyItem>();
     public DbSet<GrammarRule> GrammarRules => Set<GrammarRule>();
     public DbSet<DailyPhrase> DailyPhrases => Set<DailyPhrase>();
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
-    public DbSet<PersonalVocabularyWord> PersonalVocabularyWords => Set<PersonalVocabularyWord>();
+    public DbSet<VocabularyWord> VocabularyWords => Set<VocabularyWord>();
+    public DbSet<UserVocabularyWord> UserVocabularyWords => Set<UserVocabularyWord>();
+    public DbSet<LessonVocabularyWord> LessonVocabularyWords => Set<LessonVocabularyWord>();
+    public DbSet<VocabularyWordIdRemap> VocabularyWordIdRemaps => Set<VocabularyWordIdRemap>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

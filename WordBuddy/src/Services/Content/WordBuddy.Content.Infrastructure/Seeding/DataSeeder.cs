@@ -28,10 +28,10 @@ public static class DataSeeder
         Lesson vocabularyLesson = new(
             Guid.NewGuid(), "Animals", "Learn the names of common animals.",
             LessonType.Vocabulary, Level.Beginner, AgeGroup.Child);
-        vocabularyLesson.AddVocabularyItem(new VocabularyItem(Guid.NewGuid(), vocabularyLesson.Id, "Dog", "A common domesticated animal.", "The dog barked loudly."));
-        vocabularyLesson.AddVocabularyItem(new VocabularyItem(Guid.NewGuid(), vocabularyLesson.Id, "Cat", "A small domesticated feline.", "The cat is sleeping."));
-        vocabularyLesson.AddVocabularyItem(new VocabularyItem(Guid.NewGuid(), vocabularyLesson.Id, "Bird", "A warm-blooded egg-laying animal with wings.", "The bird flew away."));
-        vocabularyLesson.AddVocabularyItem(new VocabularyItem(Guid.NewGuid(), vocabularyLesson.Id, "Fish", "A cold-blooded animal that lives in water.", "The fish swam in the pond."));
+        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Dog", "A common domesticated animal.", "The dog barked loudly."));
+        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Cat", "A small domesticated feline.", "The cat is sleeping."));
+        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Bird", "A warm-blooded egg-laying animal with wings.", "The bird flew away."));
+        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Fish", "A cold-blooded animal that lives in water.", "The fish swam in the pond."));
 
         Lesson grammarLesson = new(
             Guid.NewGuid(), "Present Simple", "Learn how to use the present simple tense.",

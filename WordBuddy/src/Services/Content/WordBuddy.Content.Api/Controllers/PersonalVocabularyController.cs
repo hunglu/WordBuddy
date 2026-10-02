@@ -123,7 +123,8 @@ public sealed class PersonalVocabularyController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Copies a shared pool word into the caller's own list as a new private entry.</summary>
+    /// <summary>Adds a shared pool word to the caller's own list (a link, not a copy). Idempotent;
+    /// returns the shared word's id.</summary>
     [HttpPost("shared/{id:guid}/add-to-mine")]
     public async Task<IActionResult> AddSharedWordToMyList(Guid id, CancellationToken ct)
     {

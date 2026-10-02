@@ -18,12 +18,12 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
     };
 
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly IDistributedCache _cache;
     private readonly ILogger<GetSharedVocabularyWordsQueryHandler> _logger;
 
     public GetSharedVocabularyWordsQueryHandler(
-        IPersonalVocabularyWordRepository repository,
+        IVocabularyWordRepository repository,
         IDistributedCache cache,
         ILogger<GetSharedVocabularyWordsQueryHandler> logger)
     {
@@ -50,7 +50,7 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
             }
         }
 
-        Result<IReadOnlyList<PersonalVocabularyWord>> wordsResult = await _repository.GetSharedAsync(childSafeOnly, ct);
+        Result<IReadOnlyList<VocabularyWord>> wordsResult = await _repository.GetSharedAsync(childSafeOnly, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(
@@ -59,21 +59,11 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
             return Result.Failure<IReadOnlyList<PersonalVocabularyWordDto>>(wordsResult.Error);
         }
 
-        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(ToDto).ToList();
+        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(PersonalVocabularyWordMapper.ToDto).ToList();
 
         await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dtos), CacheOptions, ct);
 
         _logger.LogInformation("GetSharedVocabularyWordsQuery succeeded: Count={Count}, ChildSafeOnly={ChildSafeOnly}", dtos.Count, childSafeOnly);
         return Result.Success(dtos);
     }
-
-    private static PersonalVocabularyWordDto ToDto(PersonalVocabularyWord word) => new(
-        word.Id,
-        word.OwnerUserId,
-        word.Word,
-        word.Definition,
-        word.Example,
-        word.ShareStatus,
-        word.VisibleToChildren,
-        word.CreatedAtUtc);
 }

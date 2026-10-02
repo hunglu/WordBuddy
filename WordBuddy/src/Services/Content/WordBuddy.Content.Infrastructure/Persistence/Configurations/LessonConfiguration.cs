@@ -17,11 +17,11 @@ public sealed class LessonConfiguration : IEntityTypeConfiguration<Lesson>
         builder.Property(l => l.Level).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(l => l.TargetAgeGroup).HasConversion<string>().HasMaxLength(20).IsRequired();
 
-        builder.HasMany(l => l.VocabularyItems)
+        builder.HasMany(l => l.VocabularyWords)
             .WithOne()
             .HasForeignKey(v => v.LessonId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(l => l.VocabularyItems).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(l => l.VocabularyWords).UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasMany(l => l.GrammarRules)
             .WithOne()

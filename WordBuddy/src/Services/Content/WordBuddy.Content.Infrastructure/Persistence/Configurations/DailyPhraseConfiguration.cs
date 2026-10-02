@@ -14,7 +14,7 @@ public sealed class DailyPhraseConfiguration : IEntityTypeConfiguration<DailyPhr
         builder.Property(d => d.Phrase).HasMaxLength(500).IsRequired();
         builder.Property(d => d.Translation).HasMaxLength(500).IsRequired();
 
-        // NoAction, not SetNull — see the comment in VocabularyItemConfiguration for why.
+        // NoAction, not SetNull — see the comment in VocabularyWordConfiguration for why.
         builder.HasOne(d => d.Audio)
             .WithMany()
             .HasForeignKey(d => d.AudioAssetId)

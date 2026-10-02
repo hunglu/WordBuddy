@@ -15,6 +15,14 @@ public interface IVocabularyRecallRepository
     Task<Result<IReadOnlyList<VocabularyRecallStat>>> GetStatsByUserAsync(Guid userId, CancellationToken ct = default);
 
     Task<Result<IReadOnlyList<VocabularyRecallSession>>> GetRecentSessionsByUserAsync(Guid userId, int take, CancellationToken ct = default);
+
+    /// <summary>Returns change-tracked stats (all users) whose <see cref="VocabularyRecallStat.VocabularyWordId"/>
+    /// is in <paramref name="vocabularyWordIds"/>.</summary>
+    Task<Result<IReadOnlyList<VocabularyRecallStat>>> GetTrackedStatsByWordIdsAsync(IReadOnlyCollection<Guid> vocabularyWordIds, CancellationToken ct = default);
+
+    /// <summary>Deletes <paramref name="statsToRemove"/> and saves every change made to stats returned
+    /// by <see cref="GetTrackedStatsByWordIdsAsync"/>, in one save.</summary>
+    Task<Result> SaveRemappedStatsAsync(IReadOnlyList<VocabularyRecallStat> statsToRemove, CancellationToken ct = default);
 }
 
 /// <summary>One word's outcome within a recall-check submission.</summary>

@@ -4,6 +4,7 @@ using WordBuddy.Progress.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.Progress.Commands.RecordProgress;
 using WordBuddy.Progress.Application.Features.Progress.Queries.GetUserProgress;
+using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.RemapVocabularyWordIds;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.SubmitVocabularyRecallCheck;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Queries.GetVocabularyRecallProgress;
 
@@ -23,6 +24,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<SubmitVocabularyRecallCheckCommand>, SubmitVocabularyRecallCheckCommandValidator>();
 
         services.AddScoped<IQueryHandler<GetVocabularyRecallProgressQuery, VocabularyRecallProgressDto>, GetVocabularyRecallProgressQueryHandler>();
+
+        services.AddScoped<ICommandHandler<RemapVocabularyWordIdsCommand>, RemapVocabularyWordIdsCommandHandler>();
+        services.AddScoped<IValidator<RemapVocabularyWordIdsCommand>, RemapVocabularyWordIdsCommandValidator>();
 
         return services;
     }

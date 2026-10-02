@@ -80,4 +80,26 @@ internal sealed class VocabularyRecallRepository : IVocabularyRecallRepository
 
         return Result.Success<IReadOnlyList<VocabularyRecallSession>>(sessions);
     }
+
+    public async Task<Result<IReadOnlyList<VocabularyRecallStat>>> GetTrackedStatsByWordIdsAsync(IReadOnlyCollection<Guid> vocabularyWordIds, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Querying tracked VocabularyRecallStats by word ids: Count={Count}", vocabularyWordIds.Count);
+
+        List<VocabularyRecallStat> stats = await _dbContext.VocabularyRecallStats
+            .AsTracking()
+            .Where(s => vocabularyWordIds.Contains(s.VocabularyWordId))
+            .ToListAsync(ct);
+
+        return Result.Success<IReadOnlyList<VocabularyRecallStat>>(stats);
+    }
+
+    public async Task<Result> SaveRemappedStatsAsync(IReadOnlyList<VocabularyRecallStat> statsToRemove, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Saving remapped VocabularyRecallStats: Removed={Removed}", statsToRemove.Count);
+
+        _dbContext.VocabularyRecallStats.RemoveRange(statsToRemove);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return Result.Success();
+    }
 }

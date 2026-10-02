@@ -14,13 +14,13 @@ public sealed class ModerateSharedVocabularyWordCommandHandler : ICommandHandler
     private const string SharedChildSafeCacheKey = "content:vocabulary-shared:True";
     private const string SharedAllCacheKey = "content:vocabulary-shared:False";
 
-    private readonly IPersonalVocabularyWordRepository _repository;
+    private readonly IVocabularyWordRepository _repository;
     private readonly IValidator<ModerateSharedVocabularyWordCommand> _validator;
     private readonly IDistributedCache _cache;
     private readonly ILogger<ModerateSharedVocabularyWordCommandHandler> _logger;
 
     public ModerateSharedVocabularyWordCommandHandler(
-        IPersonalVocabularyWordRepository repository,
+        IVocabularyWordRepository repository,
         IValidator<ModerateSharedVocabularyWordCommand> validator,
         IDistributedCache cache,
         ILogger<ModerateSharedVocabularyWordCommandHandler> logger)
@@ -44,7 +44,7 @@ public sealed class ModerateSharedVocabularyWordCommandHandler : ICommandHandler
             return Result.Failure(Error.Validation("ModerateSharedVocabularyWord.Validation", validation.ToString()));
         }
 
-        Result<PersonalVocabularyWord> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
+        Result<VocabularyWord> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
         if (wordResult.IsFailure)
         {
             _logger.LogWarning("ModerateSharedVocabularyWordCommand word not found: WordId={WordId}", command.WordId);
