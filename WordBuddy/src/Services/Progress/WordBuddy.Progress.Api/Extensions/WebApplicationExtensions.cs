@@ -1,7 +1,7 @@
-using WordBuddy.Shared.Infrastructure.Health;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Progress.Api.Extensions;
 

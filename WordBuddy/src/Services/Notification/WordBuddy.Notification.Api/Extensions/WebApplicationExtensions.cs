@@ -1,5 +1,5 @@
-using WordBuddy.Shared.Infrastructure.Health;
 using Serilog;
+using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Notification.Api.Extensions;
 

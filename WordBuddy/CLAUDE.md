@@ -119,7 +119,7 @@ target not chosen yet). Rebuild images only after `make publish-shared` if a sha
 | Service | Image | k8s Deployment | Ingress prefix |
 | --- | --- | --- | --- |
 | Identity | `wordbuddy-identity:dev` | `identity-api` | `/api/auth` |
-| Content | `wordbuddy-content:dev` | `content-api` | `/api/lessons`, `/api/media` |
+| Content | `wordbuddy-content:dev` | `content-api` | `/api/lessons`, `/api/media`, `/api/vocabulary` |
 | Quiz | `wordbuddy-quiz:dev` | `quiz-api` | `/api/quiz` |
 | Progress | `wordbuddy-progress:dev` | `progress-api` | `/api/progress` |
 | Notification | `wordbuddy-notification:dev` | `notification-api` | — |

@@ -27,7 +27,7 @@ URL" to point at. Instead, `apiClient` (`src/api/client.ts`) uses a **relative**
 (`/api`), and routing to the right service happens by path prefix:
 
 - **Dev**: `vite.config.ts`'s `server.proxy` maps `/api/auth` → Identity (`:5080`),
-  `/api/lessons`+`/api/media` → Content (`:5081`), `/api/quiz` → Quiz (`:5082`),
+  `/api/lessons`+`/api/media`+`/api/vocabulary` → Content (`:5081`), `/api/quiz` → Quiz (`:5082`),
   `/api/progress` → Progress (`:5083`).
 - **Docker/Kubernetes** (Phase 4): this app's own Nginx (see `nginx.conf`) does the same
   path-based `proxy_pass` routing at a single origin (`:80`), and the `k8s/` Ingress in the

@@ -1,14 +1,14 @@
 ---
 title: New Feature to build up vocabulary and check up
-status: changes-requested
+status: implemented
 type: new
 issue: none
 pr: 10
 affects: docs/features/vocabulary-builder.md
 supersedes: none
-version: 1.3
+version: 1.4
 created: 2026-09-23T00:00:00+07:00
-updated: 2026-10-02T08:50:13+07:00
+updated: 2026-10-02T10:29:59+07:00
 ---
 
 ## Problem

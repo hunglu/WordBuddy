@@ -33,6 +33,13 @@ spec:
                 name: content-api
                 port:
                   number: 8080
+          - path: /api/vocabulary
+            pathType: Prefix
+            backend:
+              service:
+                name: content-api
+                port:
+                  number: 8080
           - path: /api/quiz
             pathType: Prefix
             backend:

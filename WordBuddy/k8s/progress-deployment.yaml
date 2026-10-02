@@ -42,13 +42,13 @@ spec:
               memory: 512Mi
           readinessProbe:
             httpGet:
-              path: /swagger/index.html
+              path: /health/ready
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /swagger/index.html
+              path: /health
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 20

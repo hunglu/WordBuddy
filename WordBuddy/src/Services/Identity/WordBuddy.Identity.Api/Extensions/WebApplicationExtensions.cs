@@ -1,6 +1,6 @@
-using WordBuddy.Shared.Infrastructure.Health;
 using Serilog;
 using WordBuddy.Identity.Infrastructure.Seeding;
+using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Identity.Api.Extensions;
 
