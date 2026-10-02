@@ -1,14 +1,14 @@
 ---
 title: New Feature to build up vocabulary and check up
-status: reviewed
+status: done
 type: new
 issue: none
 pr: 10
 affects: docs/features/vocabulary-builder.md
 supersedes: none
-version: 1.7
+version: 1.8
 created: 2026-09-23T00:00:00+07:00
-updated: 2026-10-02T11:04:32+07:00
+updated: 2026-10-02T12:00:00+07:00
 ---
 
 ## Problem
@@ -39,7 +39,12 @@ Both children and adults — existing child-account content restrictions still a
 
 _Not specified._
 
-## Test status (2026-10-01)
+## Test status (2026-10-02)
+
+Every suite passed on `feature/vocabulary-builder-and-checkup` against the live stack: backend
+unit 36, integration 6, E2E API 7, E2E UI 15. Merged through PR #10. See `test-report.md`.
+
+## Test status (2026-10-01, superseded)
 
 Ran everything against the live docker compose stack (migrations `AddPersonalVocabularyWords` and
 `AddVocabularyRecall` were already applied at service startup). All the feature's own tests pass:
