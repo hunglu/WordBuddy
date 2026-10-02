@@ -42,3 +42,7 @@ Sam which one.
 - No application code changed.
 - Exactly one commit (`<slug>: review round <n>`) and one push this round.
 - Board Status matches the verdict (In review / In progress), or the skip reason is reported.
+
+## Scope suggestions
+
+If the subagent report has a `## Scope suggestions` list, post it as **one issue comment** before reporting back (`docs/sdlc/github-integration.md` → Scope suggestions; `gh issue comment`, ask-gated). Never edit the issue body or title. Include the suggestions in the report to Sam.

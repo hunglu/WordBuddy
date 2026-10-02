@@ -46,3 +46,11 @@ Argument: `$ARGUMENTS` is the slug. If missing, list the folders under `.claude/
 - `proposal.md` frontmatter now reads `status: planned`.
 - No file outside `.claude/plans/<slug>/` was modified.
 - Board Status is **Planned**, or the skip reason is reported.
+
+## Scope suggestions
+
+If the subagent report has a `## Scope suggestions` list, post it as **one issue comment** before reporting back (`docs/sdlc/github-integration.md` → Scope suggestions; `gh issue comment`, ask-gated). Never edit the issue body or title. Include the suggestions in the report to Sam.
+
+## Task list on the issue
+
+After `tasks.md` is written, post its checklist as one issue comment with the marker `<!-- wordbuddy-tasks: <slug> -->`. On a re-plan, PATCH that comment instead of posting a new one (`docs/sdlc/github-integration.md` → Task list; ask-gated). Never edit the issue body.

@@ -86,3 +86,7 @@ When you finish (all tasks done, or stopped early), return:
 ## Writing style
 
 Follow `.claude/rules/writing-style.md` in every file and report you write: simple words, short, diagrams/tables over prose.
+
+## Scope suggestions
+
+An idea that would extend the original issue beyond its goal: do **not** implement it. List it in your final report under `## Scope suggestions` (one line each: suggestion — rationale). The stage command posts it as an issue comment.

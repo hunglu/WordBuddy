@@ -95,3 +95,11 @@ and doesn't block the round.
 - This run added exactly one commit and made one push (`git log --oneline` before/after; a local
   `git merge origin/main` for conflict resolution isn't counted).
 - Board sync ran (or the reason it was skipped is reported).
+
+## Scope suggestions
+
+If the subagent report has a `## Scope suggestions` list, post it as **one issue comment** before reporting back (`docs/sdlc/github-integration.md` → Scope suggestions; `gh issue comment`, ask-gated). Never edit the issue body or title. Include the suggestions in the report to Sam.
+
+## Task list on the issue
+
+At the end of every run (first, fix round, wip), update the task-list comment (marker `<!-- wordbuddy-tasks: <slug> -->`) with the current `tasks.md` checklist — PATCH, never a second comment (`docs/sdlc/github-integration.md` → Task list; ask-gated). No comment yet → create it.

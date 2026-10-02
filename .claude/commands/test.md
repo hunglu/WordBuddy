@@ -91,3 +91,7 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 - The tester changed only allowlisted paths (`docs/sdlc/workflow.md` → Merge guard): test
   projects, `e2e/`, `docs/features/`, and in `.claude/plans/<slug>/` only `test-report.md`,
   `proposal.md`, `review.md` — apart from the merge commit itself.
+
+## Scope suggestions
+
+If the subagent report has a `## Scope suggestions` list, post it as **one issue comment** before reporting back (`docs/sdlc/github-integration.md` → Scope suggestions; `gh issue comment`, ask-gated). Never edit the issue body or title. Include the suggestions in the report to Sam.

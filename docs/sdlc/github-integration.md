@@ -124,6 +124,72 @@ gh issue edit <issue> -R hunglu/WordBuddy --add-assignee @me         # /code sta
 - Board sync is a GitHub write, not a git commit.
 - Assignee is `@me` (the authenticated account), never a hard-coded login.
 
+## Task list → issue comment
+
+**Rule:** the issue carries the current `tasks.md` checklist in **one** comment, kept in sync.
+Comment, not sub-issues: one place to read, no extra board cards.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as /plan
+    participant C as /code
+    participant I as Issue #n
+    P->>I: gh issue comment (tasks.md checklist + marker)
+    C->>I: find comment by marker → PATCH body (ticked boxes)
+    Note over C,I: every /code run (first, fix round, wip)
+    P->>I: re-plan → PATCH same comment
+```
+
+- **Body:** a heading, the `tasks.md` checklist copied as-is (`- [ ]` / `- [x]`), and a last line `<!-- wordbuddy-tasks: <slug> -->`.
+- **Create** (`/plan`, no comment with the marker yet):
+
+  ```bash
+  gh issue comment <issue> -R hunglu/WordBuddy --body-file <tmp file>   # ask-gated
+  ```
+
+- **Update** (`/code` each run; `/plan` re-run) — edit that comment, never post a second one:
+
+  ```bash
+  gh api repos/hunglu/WordBuddy/issues/<issue>/comments --paginate \
+    --jq '.[] | select(.body | contains("wordbuddy-tasks: <slug>")) | .id'           # find id
+  gh api -X PATCH repos/hunglu/WordBuddy/issues/comments/<id> -F body=@<tmp file>   # ask-gated
+  ```
+
+- Skip when `issue:` is `none` / `pending`. `gh` missing or Sam declines → report and continue; never blocks the stage.
+- The issue body is not touched.
+
+## Scope suggestions → issue comment
+
+**Rule:** a suggestion that would extend the original issue is recorded as an **issue comment**.
+The issue body (title, description) is never edited.
+
+```mermaid
+flowchart LR
+    S["/plan · /code · /review · /test<br/>finds an out-of-scope idea"] --> R["agent report:<br/>## Scope suggestions"]
+    R --> C["command posts<br/>gh issue comment (ask-gated)"]
+    C --> I[Issue #n — body unchanged]
+    R -. not in this PR .-> X[current change stays in scope]
+```
+
+- **What counts:** a new behaviour, rule, endpoint or follow-up beyond the issue's goal. Not: bugs inside the current change (fix them) or review findings (they go in `review.md`).
+- **Who posts:** the stage command, after its subagent returns. Agents list them under `## Scope suggestions` in their report; the planner also writes them to `plan.md` → Open questions.
+- **Scope does not grow silently.** A suggestion is never implemented in the current PR unless Sam accepts it; an accepted one becomes a scope revision (`## Revisions`) or a new `/propose`.
+- **One comment per stage run**, all suggestions in one list:
+
+  ```bash
+  gh issue comment <issue> -R hunglu/WordBuddy --body-file <tmp file>   # ask-gated
+  ```
+
+  ```markdown
+  **Scope suggestions — /<stage> (<slug>)**
+
+  - <suggestion> — <rationale, one line>
+  ```
+
+- Skip when `issue:` is `none` / `pending` (list them in the report instead). `gh` missing or Sam declines → report and continue; never blocks the stage.
+- Never `gh issue edit --body` / `--title` to record scope.
+
 ## Step 6 (optional) — GitHub MCP instead of `gh`
 
 Only needed if Claude should operate Projects through tools instead of `gh` commands. Free; uses a
