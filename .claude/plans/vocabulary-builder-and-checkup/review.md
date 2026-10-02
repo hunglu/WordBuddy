@@ -1,11 +1,47 @@
 # Review: New Feature to build up vocabulary and check up (needs-fixes round)
 
-PR: #10 · Round 2 · Reviewed commit: d41853a · 2026-10-02T10:43:53+07:00
+PR: #10 · Round 3 · Reviewed commit: 7c1ca69 · 2026-10-02T11:04:32+07:00
 
 ## Verdict
-Changes requested. Findings 2-5 from round 1 are fixed. Finding 1 is only partly fixed: every nginx `/api/` location ends in a slash, so the calls the UI makes without a trailing slash (`POST /api/vocabulary`, `GET /api/lessons`, `GET/POST /api/progress`) still go to the SPA fallback.
+Approve. The round-2 blocker is fixed: all six `/api/*` nginx locations are now `^~ /api/<x>` with no trailing slash, so both the bare and the sub-path calls reach the right service. The whole-PR pass found no blockers or majors.
 
 ## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `WordBuddy.UI/nginx.conf:31-72` | A prefix without a slash also matches siblings such as `/api/authx` or `/api/progress-old`. No such route exists today, and the matched service would just return 404, so this is harmless. | None needed. If a colliding prefix is ever added, use `location = /api/<x>` plus `^~ /api/<x>/`. |
+| 2 | nit | `*/WordBuddy.*.Api.csproj` (5 files), `WordBuddy.Shared.Infrastructure.csproj` | Roughly 50 lines of churn per file are line-ending changes. Ignoring whitespace and CR, the real change is only the HealthChecks EF package, Shared.Infrastructure 1.0.2 and the `FrameworkReference`. | Optional: add a `.gitattributes` rule for `*.csproj` so future diffs stay readable. |
+
+Verified for round 3 (by reading; `nginx -t` was not run):
+- **Routing of every call in `src/api/*.ts`** (relative to `baseURL: '/api'`):
+  - `/auth/login` and `/auth/register` go to identity-api.
+  - `/lessons` and `/lessons/{id}` go to content-api.
+  - `/vocabulary`, `/vocabulary/mine`, `/{id}`, `/{id}/share`, `/shared`, `/shared/{id}/add-to-mine`, `/check?count=`, `/moderation/pending` and `/moderation/{id}` go to content-api.
+  - `/progress`, `/progress/vocabulary-recall` (GET and POST) go to progress-api.
+  - The `/api/quiz` and `/api/media` blocks match the same way.
+  - No two `/api/*` prefixes overlap, so the longest-prefix choice is unambiguous.
+- **Static-file regex:** `^~` on the longest matching prefix stops nginx from evaluating regex locations, so `/api/media/x.png` (or any `/api/...` ending in `.js`/`.css`) is proxied and never served from disk.
+- **`proxy_pass $<x>_upstream;`:** the variable has no URI part, so nginx forwards the original request URI and query string unchanged (`/api/vocabulary/check?count=5` arrives as-is). The `resolver` and `set` lines are unchanged.
+- **No regressions:** `location = /index.html` (no-cache), the static regex and the SPA fallback `location /` are unchanged. `client_max_body_size 50m` stays on `/api/media` only. The diff touches only the six location lines.
+
+Whole-PR pass (`origin/main...7c1ca69`, 31 files):
+- **nginx and Ingress:** `/api/vocabulary` is routed to content-api in both. All `/api/*` locations use `^~` with no trailing slash.
+- **k8s probes:** readiness uses `/health/ready` and liveness uses `/health`.
+- **Health helper:** liveness has no dependency checks, readiness runs the checks tagged `ready`, and both endpoints allow anonymous access. The EF health-check package version matches EF Core 10.0.12.
+- **Service wiring:** Program.cs and WebApplicationExtensions are wired in all 5 services, and the usings are ordered.
+- **Rest of the diff:** the integration-test JSON options fix, the Makefile `publish-shared` loop, and the CLAUDE.md route-table edits (Sam-approved) are all fine.
+- **Conventions:** no secrets, no cross-service references, no `.Result`/`.Wait()`.
+
+## Plan conformance
+Fix round 3 addresses round-2 finding 1 and nothing else (nginx.conf plus the proposal bookkeeping). All of the needs-fixes items from `test-report.md` and the review findings from rounds 1 and 2 are now covered. Live verification (container rebuild, `nginx -t`, E2E) is left to `/test`. Board sync is skipped because `issue: none`.
+
+## Previous rounds
+
+PR: #10 · Round 2 · Reviewed commit: d41853a · 2026-10-02T10:43:53+07:00
+
+### Verdict
+Changes requested. Findings 2-5 from round 1 are fixed. Finding 1 is only partly fixed: every nginx `/api/` location ends in a slash, so the calls the UI makes without a trailing slash (`POST /api/vocabulary`, `GET /api/lessons`, `GET/POST /api/progress`) still go to the SPA fallback.
+
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | blocker | `WordBuddy.UI/nginx.conf:38,53,60,67` | Nginx matches `^~ /api/vocabulary/` as a literal string prefix, so `/api/vocabulary` with no slash does not match it. No other location matches either: the regex only applies to static extensions, and `= /index.html` is an exact match. The request falls through to `location / { try_files $uri $uri/ /index.html; }`. The UI makes these calls without a slash: `vocabulary.ts:11` `POST /vocabulary` (add word: nginx returns 405 for a POST to static content), `lessons.ts:5` `GET /lessons` (returns index.html with status 200, so the lessons list gets HTML instead of an array), `progress.ts:11,15` `POST/GET /progress` (405 / HTML). In the container, the add-word flow, the lessons page and the progress dashboard all break. This gap was already in the `/api/lessons/` and `/api/progress/` blocks before this PR, and round 1 did not report it for those two. The Vite dev proxy and the k8s Ingress `Prefix` paths are not affected. | Drop the trailing slash from the prefix: `location ^~ /api/vocabulary`, `^~ /api/lessons`, `^~ /api/progress` (and `/api/quiz`, `/api/media`, `/api/auth` for consistency). Alternatively, add an exact `location = /api/<x>` block next to each one. |
@@ -19,10 +55,11 @@ Verified fixed (round-1 findings):
 
 The fix round introduced no new issues. `nginx -t` and YAML lint were not run; I reviewed by reading.
 
-## Plan conformance
+### Plan conformance
 Fix round 2 addresses the round-1 findings only. CLAUDE.md edits were Sam-approved. No out-of-scope changes. Board sync is skipped because `issue: none`.
 
-## Previous rounds
+---
+
 
 PR: #10 · Round 1 · Reviewed commit: 580e022 · 2026-10-02T08:50:13+07:00
 
