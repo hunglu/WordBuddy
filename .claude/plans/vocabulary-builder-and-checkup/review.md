@@ -1,11 +1,35 @@
 # Review: New Feature to build up vocabulary and check up (needs-fixes round)
 
-PR: #10 · Round 1 · Reviewed commit: 580e022 · 2026-10-02T08:50:13+07:00
+PR: #10 · Round 2 · Reviewed commit: d41853a · 2026-10-02T10:43:53+07:00
 
 ## Verdict
-Changes requested. The nginx fix is correct for the five routes it touches. But neither nginx nor the k8s Ingress routes `/api/vocabulary/*`, which is the feature's own API, so the vocabulary UI flow will still fail behind Docker or Kubernetes once login works.
+Changes requested. Findings 2-5 from round 1 are fixed. Finding 1 is only partly fixed: every nginx `/api/` location ends in a slash, so the calls the UI makes without a trailing slash (`POST /api/vocabulary`, `GET /api/lessons`, `GET/POST /api/progress`) still go to the SPA fallback.
 
 ## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | blocker | `WordBuddy.UI/nginx.conf:38,53,60,67` | Nginx matches `^~ /api/vocabulary/` as a literal string prefix, so `/api/vocabulary` with no slash does not match it. No other location matches either: the regex only applies to static extensions, and `= /index.html` is an exact match. The request falls through to `location / { try_files $uri $uri/ /index.html; }`. The UI makes these calls without a slash: `vocabulary.ts:11` `POST /vocabulary` (add word: nginx returns 405 for a POST to static content), `lessons.ts:5` `GET /lessons` (returns index.html with status 200, so the lessons list gets HTML instead of an array), `progress.ts:11,15` `POST/GET /progress` (405 / HTML). In the container, the add-word flow, the lessons page and the progress dashboard all break. This gap was already in the `/api/lessons/` and `/api/progress/` blocks before this PR, and round 1 did not report it for those two. The Vite dev proxy and the k8s Ingress `Prefix` paths are not affected. | Drop the trailing slash from the prefix: `location ^~ /api/vocabulary`, `^~ /api/lessons`, `^~ /api/progress` (and `/api/quiz`, `/api/media`, `/api/auth` for consistency). Alternatively, add an exact `location = /api/<x>` block next to each one. |
+
+Verified fixed (round-1 findings):
+- **R1-1 (partial):** `^~ /api/vocabulary/` routes to `content-api:8080`, and the CLAUDE.md route tables include `/api/vocabulary`. `/vocabulary/mine`, `/shared`, `/shared/{id}/add-to-mine`, `/check`, `/moderation/*`, `/{id}` and `/{id}/share` are covered. The bare path is not (see finding 1).
+- **R1-2:** `ingress.yaml` adds `/api/vocabulary` with `pathType: Prefix` to content-api:8080. A k8s Prefix match covers both `/api/vocabulary` and `/api/vocabulary/...`.
+- **R1-3:** every `/api/` location uses `^~`, so the static-extension regex no longer takes `/api/media/*.png|jpg`.
+- **R1-4:** all 5 Deployments use readiness `/health/ready` and liveness `/health` on port 8080, with initial delays of 10s/15s unchanged. `/health` has no dependency checks, so a down DB, or a slow migration at startup, only marks the pod NotReady. Kubernetes does not restart it, so the pods won't flap.
+- **R1-5:** in all 5 `WebApplicationExtensions.cs` files, `using Serilog;` now comes first.
+
+The fix round introduced no new issues. `nginx -t` and YAML lint were not run; I reviewed by reading.
+
+## Plan conformance
+Fix round 2 addresses the round-1 findings only. CLAUDE.md edits were Sam-approved. No out-of-scope changes. Board sync is skipped because `issue: none`.
+
+## Previous rounds
+
+PR: #10 · Round 1 · Reviewed commit: 580e022 · 2026-10-02T08:50:13+07:00
+
+### Verdict
+Changes requested. The nginx fix is correct for the five routes it touches. But neither nginx nor the k8s Ingress routes `/api/vocabulary/*`, which is the feature's own API, so the vocabulary UI flow will still fail behind Docker or Kubernetes once login works.
+
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | blocker | `WordBuddy.UI/nginx.conf:30-65` | There is no `location /api/vocabulary/`. `src/api/vocabulary.ts` calls `/api/vocabulary`, `/api/vocabulary/mine`, `/shared`, `/check` and `/moderation/pending`. In dev, `vite.config.ts:25` proxies these to Content, but in the container they fall through to the SPA fallback `location /`. A GET returns `index.html` with status 200, so TanStack Query gets an HTML string where it expects an array, and the page either crashes or shows nothing. A POST to `/api/vocabulary` (add word) returns 405 from static serving. The `vocabulary.feature` UI scenario will still fail after the login fix. | Add `location /api/vocabulary` (no trailing slash, so it also matches `POST /api/vocabulary`) with `set $content_upstream http://content-api:8080; proxy_pass $content_upstream;` and the same headers. Add `/api/vocabulary` to `WordBuddy.UI/README.md` and to the routing table in `WordBuddy/CLAUDE.md` (that file is ask-gated, so propose the change to Sam). |
@@ -22,5 +46,5 @@ Verified, no issue found:
 - **Integration test fix:** a test-only change. `JsonSerializerDefaults.Web` plus `JsonStringEnumConverter` matches the API's serialization.
 - **Makefile `publish-shared`:** the per-file loop with `|| exit 1` is correct. `$$f` is escaped properly. Note that if `local-nuget-feed/` is empty, the unexpanded glob is pushed and the push fails loudly, which is acceptable.
 
-## Plan conformance
+### Plan conformance
 This round implements the two fixes named in `test-report.md` → Failures (nginx path, `/health` endpoints) and the test-only JSON fix. The Makefile change was added on Sam's request and is out of the plan's scope, but harmless. It also misses the third routing gap (`/api/vocabulary`, findings 1–2), which will surface as the next E2E UI failure. Live verification (container rebuild, E2E) is deferred to `/test`.
