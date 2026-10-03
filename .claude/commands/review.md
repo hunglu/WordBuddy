@@ -27,7 +27,8 @@ Sam which one.
 3. **Invoke the `reviewer` subagent** (`subagent_type: reviewer`) with the slug, `proposal.md`,
    `plan.md` and `tasks.md`. It writes `review.md`, posts it on the PR, sets the status, makes
    the round's single commit and push, and runs board sync (In review / In progress). Pushes, PR
-   posts and board writes are ask-gated — Sam approves each.
+   posts and board writes are ask-gated — Sam approves each. A reusable lesson (e.g. a repeated
+   finding) is appended to `docs/ai/learnings.md` in the same commit — never to a `CLAUDE.md`.
 
 4. **Report back**: verdict, count of blockers / majors / nits, the top findings, the commit sha
    and the board sync result.
