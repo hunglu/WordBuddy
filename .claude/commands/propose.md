@@ -20,7 +20,18 @@ anything else.
 
 ## Steps
 
-1. **Derive the slug.** Kebab-case the title (lowercase, spaces → hyphens, strip punctuation). If
+1. **Derive the slug.** Kebab-case the title (lowercase, spaces → hyphens, strip punctuation).
+   When the proposal links an issue, prefix `WB-<n>_` everywhere the issue is named:
+
+   | String | Format | Example |
+   | --- | --- | --- |
+   | slug / folder | `WB-<n>_<kebab-title>` | `WB-12_defect-on-sharing-word` |
+   | branch | `feature/<slug>` | `feature/WB-12_defect-on-sharing-word` |
+   | proposal `title:`, PR title | `WB-<n>_<Issue title>` | `WB-12_Defect on sharing word` |
+   | commits, pending lines, markers | use the slug | `WB-12_defect-on-sharing-word: implement` |
+
+   The GitHub issue's own title is not changed. An issue created later in step 5 also gets the
+   prefix — rename before anything is committed. `issue: pending` → no prefix. If
    `.claude/plans/<slug>/` already exists, stop and tell Sam — don't silently overwrite an
    existing proposal. Suggest either a different title or running `/plan <slug>` if they meant to
    continue that existing one.
