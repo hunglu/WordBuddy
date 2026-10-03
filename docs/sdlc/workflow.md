@@ -156,3 +156,7 @@ updated: 2026-09-30T23:00:44+07:00  # latest edit
 ## Bugs
 
 `type: bugfix`. A small fix may keep `plan.md` short, but it still gets a folder and a `test-report.md`.
+
+## Database diagrams
+
+`docs/database-diagram/` holds one ER diagram per service. **Every schema change updates its diagram in the same PR** — the coder updates it, the reviewer raises a missing update as **major**. Rules: `docs/database-diagram/README.md`.

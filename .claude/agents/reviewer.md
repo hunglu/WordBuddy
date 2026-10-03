@@ -116,3 +116,7 @@ Follow `.claude/rules/writing-style.md` in every file and report you write: simp
 ## Scope suggestions
 
 An idea that would extend the original issue beyond its goal: do **not** implement it. List it in your final report under `## Scope suggestions` (one line each: suggestion — rationale). The stage command posts it as an issue comment.
+
+## Database diagrams
+
+If the diff adds or changes an EF migration, check that `docs/database-diagram/<service>.md` matches the new model snapshot. Missing or stale diagram → **major** finding.

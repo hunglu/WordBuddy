@@ -4,6 +4,7 @@
 
 | Path | Content | Mutability |
 | --- | --- | --- |
+| `database-diagram/` | ER diagram per service database | updated in the same PR as every schema change |
 | `architecture.md` | System diagrams (Mermaid): services, request flows | update when topology changes |
 | `product/roadmap.md` | Themes and priorities — the rationale behind the backlog | edit freely |
 | `features/<feature>.md` | **Living spec** — how a feature behaves on `main` today | updated by `/test` on every merge |
