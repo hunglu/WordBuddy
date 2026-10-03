@@ -111,9 +111,20 @@ public sealed class DeletePersonalVocabularyWordCommandHandler : ICommandHandler
         if (authorShareStatus == VocabularyShareStatus.Shared)
         {
             // The word stays in the pool under a new owner — drop both pool variants so IsMine
-            // and ownership are fresh at once.
-            await _cache.RemoveAsync(SharedVocabularyCacheKeys.ChildSafe, ct);
-            await _cache.RemoveAsync(SharedVocabularyCacheKeys.All, ct);
+            // and ownership are fresh at once. The handover is already saved, so a cache failure
+            // must not fail the request — the entries expire on their own.
+            try
+            {
+                await _cache.RemoveAsync(SharedVocabularyCacheKeys.ChildSafe, ct);
+                await _cache.RemoveAsync(SharedVocabularyCacheKeys.All, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "DeletePersonalVocabularyWordCommand could not clear shared pool cache after transfer: WordId={WordId}",
+                    command.WordId);
+            }
 
             _logger.LogInformation("DeletePersonalVocabularyWordCommand succeeded: WordId={WordId}, TransferredToSystem={TransferredToSystem}", command.WordId, true);
             return Result.Success();

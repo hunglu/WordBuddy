@@ -149,6 +149,31 @@ public class DeletePersonalVocabularyWordCommandHandlerTests
     }
 
     [Fact]
+    public async Task DeletePersonalVocabularyWordCommandHandler_HandleAsync_ReturnsSuccessWhenCacheRemovalFailsAfterTransfer()
+    {
+        Guid ownerId = Guid.NewGuid();
+        VocabularyWord word = TestWords.Shared(ownerId, visibleToChildren: true);
+        UserVocabularyWord link = SetupLink(ownerId, word, isAuthor: true);
+        _cache
+            .Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Redis unavailable"));
+
+        Result result = await CreateHandler().HandleAsync(new DeletePersonalVocabularyWordCommand(word.Id, ownerId, Confirm: true));
+
+        result.IsSuccess.Should().BeTrue();
+        word.OwnerUserId.Should().Be(SystemOwner.UserId);
+        _repository.Verify(r => r.UnlinkAsync(link, It.IsAny<CancellationToken>()), Times.Once);
+        _logger.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<InvalidOperationException>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task DeletePersonalVocabularyWordCommandHandler_HandleAsync_CancelsShareRequestAndDeletesWhenPendingReviewConfirmed()
     {
         Guid ownerId = Guid.NewGuid();

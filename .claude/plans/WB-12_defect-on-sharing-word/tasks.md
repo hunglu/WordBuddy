@@ -62,3 +62,10 @@
 
 - [x] `e2e/api`: update `PersonalVocabularyTests` — 409 without confirm; confirm transfers word (stays in pool, `isMine = false`, former owner re-adds as adopter); `PendingReview` confirm-delete; remove or rewrite `InternalEndpointExposureTests` (routes gone → 404). — PersonalVocabularyTests.cs; InternalEndpointExposureTests.cs rewritten (404 on Content). Built; not run (needs full stack)
 - [x] `e2e/ui`: scenarios — confirm dialog on shared-word delete with handover text; after confirm the word is gone from My Vocabulary and shown in the pool with **Add to My List**; owner sees "Your word" badge, not **Add to My List**, on own words. — new features/vocabulary-sharing.feature + steps/vocabulary-sharing.steps.ts. bddgen OK; not run (needs full stack)
+
+## Fix round 1 (review.md)
+
+- [x] #1 major: failed delete shows an error; confirm dialog stays open on error; plain delete 409 opens the confirm dialog. — WordBuddy.UI/src/pages/VocabularyBuilderPage.tsx, DeleteWordConfirmDialog.tsx (`errorMessage` prop)
+- [x] #2 nit: cache removal after transfer can't fail the request — catch, log `Warning`, return success. — DeletePersonalVocabularyWordCommandHandler.cs; new unit test `..._ReturnsSuccessWhenCacheRemovalFailsAfterTransfer`
+- [x] #3 nit: dialog closes on Escape and backdrop click, traps Tab focus, returns focus to the trigger. — DeleteWordConfirmDialog.tsx
+- [x] #4 nit: LF restored on every file that was LF on `main` (new files follow their folder). Working-tree diff vs `main` = 1733+/2427− (code only), same as `--ignore-cr-at-eol`. — 36 files, no `.gitattributes`
