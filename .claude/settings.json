@@ -74,10 +74,13 @@
   "enabledMcpjsonServers": [],
   "hooks": {
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-audit.js\"", "timeout": 10 }] }
+      { "matcher": "Bash|PowerShell", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-audit.js\"", "timeout": 10 }] }
     ],
     "PostToolUse": [
-      { "matcher": "Write|Edit|MultiEdit", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-audit.js\"" }] }
+      { "matcher": "Write|Edit|MultiEdit", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-audit.js\"", "timeout": 10 },
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-cs.js\"", "timeout": 60 }
+      ] }
     ]
   }
 }

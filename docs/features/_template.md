@@ -33,6 +33,11 @@ with 3+ steps or components.>
 <Unmerged proposals that will change this feature — added by `/propose`, removed by `/test` on merge.>
 
 - `<slug>` — <one-line goal> (#<issue>)
+  - ADDED: <new rule / endpoint / screen>
+  - MODIFIED: <existing rule> → <new behaviour>
+  - REMOVED: <rule / endpoint that goes away>
+
+(Keep only the delta lines that apply. `/test` folds them into the sections above on merge.)
 
 ## Change history
 

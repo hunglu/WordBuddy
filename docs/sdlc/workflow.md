@@ -98,7 +98,7 @@ flowchart TD
    - Anything changed on the branch after the review **does** appear — including conflict-resolution edits, which exist only in HEAD.
    - A non-zero exit from `git merge-tree` means the reviewed code conflicts with `main`; any resolution is unreviewed → guard fails. Always test the exit code: on conflict the output is not a usable `base`.
 
-   **Allowlist:** `**/*.UnitTests/**`, `**/*.IntegrationTests/**`, `e2e/**`, `docs/features/**`, and in `.claude/plans/<slug>/` only `test-report.md`, `proposal.md`, `review.md`.
+   **Allowlist:** `**/*.UnitTests/**`, `**/*.IntegrationTests/**`, `e2e/**`, `docs/features/**`, `docs/ai/learnings.md`, and in `.claude/plans/<slug>/` only `test-report.md`, `proposal.md`, `review.md`.
    (`review.md` is allowed because the reviewer commits it after the commit it reviewed; `plan.md` and `tasks.md` are not.)
    Any other path → do not merge; status `needs-fixes` with "changed after review — run `/review`".
 3. **Every suite ran in this session and passed.** A skipped suite is not a pass.
@@ -156,6 +156,15 @@ updated: 2026-09-30T23:00:44+07:00  # latest edit
 ## Bugs
 
 `type: bugfix`. A small fix may keep `plan.md` short, but it still gets a folder and a `test-report.md`.
+
+## Learnings
+
+`docs/ai/learnings.md` collects reusable lessons, so no stage ever writes into a `CLAUDE.md`.
+
+- `/review` and `/test` append at most a few one-line entries, inside their own bookkeeping commit.
+- Only append; never edit or delete earlier entries.
+- Monthly, Sam reviews the file in one PR: promote each entry to `CLAUDE.md`, `.claude/rules/` or a
+  skill, or delete it.
 
 ## Database diagrams
 

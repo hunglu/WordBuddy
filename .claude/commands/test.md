@@ -38,7 +38,8 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 
 4. **Write `.claude/plans/<slug>/test-report.md`** summarizing what ran and the outcome (this can
    be done by the tester subagent directly, or by you from its report — either way it must exist
-   after this command).
+   after this command). If the run taught a reusable lesson, the tester appends it to
+   `docs/ai/learnings.md` (format in that file) before its commit — never to a `CLAUDE.md`.
 
 5. **Status, approval, and merge are done by the tester subagent**, in the order set by
    `.claude/agents/tester.md` (steps 1–5), with **one commit + one push per run**: resolve the PR
@@ -89,7 +90,7 @@ Argument: `$ARGUMENTS` is the slug. If missing, list folders under `.claude/plan
 - Board Status: Done after a merge, In progress after `needs-fixes`, or the skip reason is
   reported.
 - The tester changed only allowlisted paths (`docs/sdlc/workflow.md` → Merge guard): test
-  projects, `e2e/`, `docs/features/`, and in `.claude/plans/<slug>/` only `test-report.md`,
+  projects, `e2e/`, `docs/features/`, `docs/ai/learnings.md`, and in `.claude/plans/<slug>/` only `test-report.md`,
   `proposal.md`, `review.md` — apart from the merge commit itself.
 
 ## Scope suggestions

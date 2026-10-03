@@ -127,12 +127,16 @@ same edit session as any status change — one version bump).
    the tree id plus conflict lines, so its output must never be used as `$base`.
    Every listed path must be on the allowlist: `**/*.UnitTests/**`, `**/*.IntegrationTests/**`,
    `e2e/**`, `.claude/plans/<slug>/test-report.md`, `.claude/plans/<slug>/proposal.md`, `.claude/plans/<slug>/review.md`,
-   `docs/features/**`. Record the output in `test-report.md`.
+   `docs/features/**`, `docs/ai/learnings.md`. Record the output in `test-report.md`.
 3. Every suite ran in this session with zero failures. A `Skipped` suite is not a pass.
 
 If a test can only pass by changing application code, don't change it — report it. Only
 allowlisted files may be in this run's commit. Stage specific paths, never `git add -A`/`.`, and
 no Co-Authored-By trailer.
+
+**Learnings:** if this run taught a reusable, generic lesson, append one line per lesson to
+`docs/ai/learnings.md` (format in that file) and include it in this run's commit. Never edit a
+`CLAUDE.md`.
 
 **Step 2 — Not approved (one commit):** set `status: needs-fixes` (bump `version`, set
 `updated`), verdict line "Not merged — <reason>". Commit the test files you wrote,

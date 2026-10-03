@@ -94,7 +94,8 @@ Verdict: **approve** if there are no blockers or majors; otherwise **changes req
    `pr:` edit is part of the same edit session (one bump).
 
 4. **One commit + one push.** Commit on `feature/<slug>` only `.claude/plans/<slug>/review.md`
-   and `proposal.md` (including any pending `pr:` edit):
+   and `proposal.md` (including any pending `pr:` edit), plus `docs/ai/learnings.md` if you
+   appended a reusable lesson (format in that file; never edit a `CLAUDE.md`):
    `git commit -m "<slug>: review round <n>"` (no Co-Authored-By trailer), then
    `git push origin feature/<slug>` (ask-gated). That is the round's only commit and push.
 
