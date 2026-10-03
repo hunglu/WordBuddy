@@ -46,7 +46,11 @@ export function useDeleteVocabularyWord() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteVocabularyWord,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY })
+      // A confirmed delete of a shared word changes its owner in the pool.
+      queryClient.invalidateQueries({ queryKey: SHARED_WORDS_KEY })
+    },
   })
 }
 

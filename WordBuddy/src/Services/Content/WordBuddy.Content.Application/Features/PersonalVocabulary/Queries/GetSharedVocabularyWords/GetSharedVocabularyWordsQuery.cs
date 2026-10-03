@@ -7,5 +7,6 @@ namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetS
 /// <summary><paramref name="RequestingAgeGroup"/> comes from the authenticated caller's JWT. The
 /// handler — not just the controller's <c>[Authorize]</c> policy — filters to
 /// <see cref="VocabularyWord.VisibleToChildren"/> items when the requester is a Child, so a
-/// Child-authenticated call can never receive a pool item a moderator didn't explicitly clear.</summary>
-public sealed record GetSharedVocabularyWordsQuery(AgeGroup RequestingAgeGroup) : IQuery<IReadOnlyList<PersonalVocabularyWordDto>>;
+/// Child-authenticated call can never receive a pool item a moderator didn't explicitly clear.
+/// <paramref name="RequestingUserId"/> (also from the JWT) sets <c>IsMine</c> on each item.</summary>
+public sealed record GetSharedVocabularyWordsQuery(AgeGroup RequestingAgeGroup, Guid RequestingUserId) : IQuery<IReadOnlyList<PersonalVocabularyWordDto>>;

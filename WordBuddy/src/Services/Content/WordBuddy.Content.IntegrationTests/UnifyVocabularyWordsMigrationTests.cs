@@ -18,6 +18,10 @@ public sealed class UnifyVocabularyWordsMigrationTests : IAsyncLifetime
 {
     private const string BeforeMigration = "20260924082936_AddPersonalVocabularyWords";
 
+    /// <summary>Stop here: the later <c>DropVocabularyWordIdRemaps</c> migration removes the remap
+    /// table this test inspects.</summary>
+    private const string UnifyMigration = "20261002092015_UnifyVocabularyWords";
+
     private static readonly Guid LessonId = Guid.NewGuid();
     private static readonly Guid AudioId = Guid.NewGuid();
     private static readonly Guid System1 = Guid.NewGuid();
@@ -68,7 +72,7 @@ public sealed class UnifyVocabularyWordsMigrationTests : IAsyncLifetime
     {
         await _dbContext.GetService<IMigrator>().MigrateAsync(BeforeMigration);
         await SeedOldSchemaAsync();
-        await _dbContext.Database.MigrateAsync();
+        await _dbContext.GetService<IMigrator>().MigrateAsync(UnifyMigration);
     }
 
     public async Task DisposeAsync()

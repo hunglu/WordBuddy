@@ -108,7 +108,6 @@ services:
       ConnectionStrings__DefaultConnection: ${PROGRESS_CONNECTION_STRING}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER}
-      ContentApi__BaseUrl: http://content-api:8080
     ports:
       - "5083:8080"
 

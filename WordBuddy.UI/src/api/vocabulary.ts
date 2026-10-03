@@ -21,8 +21,14 @@ export async function requestShareVocabularyWord(id: string): Promise<void> {
   await apiClient.post(`/vocabulary/${id}/share`)
 }
 
-export async function deleteVocabularyWord(id: string): Promise<void> {
-  await apiClient.delete(`/vocabulary/${id}`)
+export interface DeleteVocabularyWordPayload {
+  id: string
+  /** Required by the API when the author deletes a `Shared` or `PendingReview` word (else 409). */
+  confirm?: boolean
+}
+
+export async function deleteVocabularyWord({ id, confirm }: DeleteVocabularyWordPayload): Promise<void> {
+  await apiClient.delete(`/vocabulary/${id}`, { params: confirm ? { confirm: true } : undefined })
 }
 
 export async function getSharedVocabularyWords(): Promise<PersonalVocabularyWord[]> {

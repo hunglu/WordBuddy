@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -36,7 +38,7 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Setup(r => r.GetSharedAsync(false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<VocabularyWord>>([CreateSharedWord(true), CreateSharedWord(false)]));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult));
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid()));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(2);
@@ -50,10 +52,49 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Setup(r => r.GetSharedAsync(true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<VocabularyWord>>([CreateSharedWord(true)]));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Child));
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Child, Guid.NewGuid()));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().OnlyContain(dto => dto.VisibleToChildren);
         _repository.Verify(r => r.GetSharedAsync(true, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_SetsIsMineForCaller()
+    {
+        Guid callerId = Guid.NewGuid();
+        VocabularyWord own = TestWords.Shared(callerId, visibleToChildren: true);
+        VocabularyWord other = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        VocabularyWord transferred = TestWords.Transferred(visibleToChildren: true);
+        _repository
+            .Setup(r => r.GetSharedAsync(false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlyList<VocabularyWord>>([own, other, transferred]));
+
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, callerId));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Single(d => d.Id == own.Id).IsMine.Should().BeTrue();
+        result.Value.Single(d => d.Id == other.Id).IsMine.Should().BeFalse();
+        result.Value.Single(d => d.Id == transferred.Id).IsMine.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_SetsIsMineForCallerOnCacheHit()
+    {
+        Guid callerId = Guid.NewGuid();
+        VocabularyWord own = TestWords.Shared(callerId, visibleToChildren: true);
+        VocabularyWord transferred = TestWords.Transferred(visibleToChildren: true);
+        // The cached list is shared by all callers of one age group, so it never stores IsMine = true.
+        List<PersonalVocabularyWordDto> cachedDtos = [PersonalVocabularyWordMapper.ToDto(own), PersonalVocabularyWordMapper.ToDto(transferred)];
+        _cache
+            .Setup(c => c.GetAsync("content:vocabulary-shared:False", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(cachedDtos)));
+
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, callerId));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Single(d => d.Id == own.Id).IsMine.Should().BeTrue();
+        result.Value.Single(d => d.Id == transferred.Id).IsMine.Should().BeFalse();
+        _repository.Verify(r => r.GetSharedAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

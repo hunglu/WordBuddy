@@ -195,4 +195,21 @@ public class AddPersonalVocabularyWordCommandHandlerTests
         _repository.Verify(r => r.FindByContentHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         VerifyNoNewWord();
     }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_SkipsInvisibleSystemDuplicateForChild()
+    {
+        VocabularyWord transferred = TestWords.Transferred(visibleToChildren: false);
+        SetupCandidates(transferred);
+        Guid childId = Guid.NewGuid();
+
+        Result<Guid> result = await CreateHandler().HandleAsync(new AddPersonalVocabularyWordCommand(childId, AgeGroup.Child, "apple", "a fruit", null));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBe(transferred.Id);
+        _repository.Verify(r => r.LinkAsync(It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repository.Verify(
+            r => r.AddAsync(It.IsAny<VocabularyWord>(), It.Is<UserVocabularyWord>(l => l.UserId == childId && l.IsAuthor), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

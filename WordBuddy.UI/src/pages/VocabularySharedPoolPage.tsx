@@ -26,14 +26,20 @@ export function VocabularySharedPoolPage(): ReactElement {
               <p className="text-wb-ink-muted">{word.definition}</p>
               {word.example && <p className="text-sm italic text-wb-ink-muted">"{word.example}"</p>}
 
-              <button
-                type="button"
-                onClick={() => addToMyList.mutate(word.id)}
-                disabled={addToMyList.isPending}
-                className="mt-2 self-start rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
-              >
-                Add to My List
-              </button>
+              {word.isMine ? (
+                <span className="mt-2 self-start rounded-wb-pill border border-wb-share-shared-border bg-wb-share-shared-bg px-3 py-1 text-xs font-semibold text-wb-share-shared-ink">
+                  Your word
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => addToMyList.mutate(word.id)}
+                  disabled={addToMyList.isPending}
+                  className="mt-2 self-start rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
+                >
+                  Add to My List
+                </button>
+              )}
             </div>
           ))}
         </div>

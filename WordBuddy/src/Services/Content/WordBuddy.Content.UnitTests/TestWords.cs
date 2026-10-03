@@ -22,6 +22,14 @@ internal static class TestWords
         return w;
     }
 
+    /// <summary>A shared learner word whose author deleted it, so it now belongs to the system owner.</summary>
+    public static VocabularyWord Transferred(bool visibleToChildren, string word = "apple", string definition = "a fruit", string? example = null)
+    {
+        VocabularyWord w = Shared(Guid.NewGuid(), visibleToChildren, word, definition, example);
+        w.TransferToSystem();
+        return w;
+    }
+
     public static VocabularyWord System(string word = "apple", string definition = "a fruit", string example = "I ate an apple.") =>
         VocabularyWord.CreateSystem(Guid.NewGuid(), word, definition, example);
 }

@@ -16,8 +16,6 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetMyVoc
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetRandomVocabularyWordsForCheck;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSharedVocabularyWords;
-using WordBuddy.Content.Application.Features.VocabularyRemaps.Commands.AcknowledgeVocabularyWordIdRemaps;
-using WordBuddy.Content.Application.Features.VocabularyRemaps.Queries.GetPendingVocabularyWordIdRemaps;
 
 namespace WordBuddy.Content.Application.Extensions;
 
@@ -59,12 +57,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<GetRandomVocabularyWordsForCheckQuery>, GetRandomVocabularyWordsForCheckQueryValidator>();
 
         services.AddScoped<IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetPendingVocabularyModerationQueryHandler>();
-
-        services.AddScoped<IQueryHandler<GetPendingVocabularyWordIdRemapsQuery, IReadOnlyList<VocabularyWordIdRemapDto>>, GetPendingVocabularyWordIdRemapsQueryHandler>();
-        services.AddScoped<IValidator<GetPendingVocabularyWordIdRemapsQuery>, GetPendingVocabularyWordIdRemapsQueryValidator>();
-
-        services.AddScoped<ICommandHandler<AcknowledgeVocabularyWordIdRemapsCommand>, AcknowledgeVocabularyWordIdRemapsCommandHandler>();
-        services.AddScoped<IValidator<AcknowledgeVocabularyWordIdRemapsCommand>, AcknowledgeVocabularyWordIdRemapsCommandValidator>();
 
         return services;
     }

@@ -1,9 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import axios from 'axios'
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
+import { DeleteWordConfirmDialog, needsDeleteConfirmation } from '../components/vocabulary/DeleteWordConfirmDialog'
 import {
   useAddVocabularyWord,
   useDeleteVocabularyWord,
@@ -28,6 +30,39 @@ export function VocabularyBuilderPage(): ReactElement {
   const addWord = useAddVocabularyWord()
   const deleteWord = useDeleteVocabularyWord()
   const requestShare = useRequestShareVocabularyWord()
+  const [wordToConfirm, setWordToConfirm] = useState<PersonalVocabularyWord | null>(null)
+
+  const onDelete = (word: PersonalVocabularyWord): void => {
+    deleteWord.reset()
+    if (needsDeleteConfirmation(word)) {
+      setWordToConfirm(word)
+      return
+    }
+    deleteWord.mutate(
+      { id: word.id },
+      {
+        onError: (error) => {
+          // The word was shared elsewhere since the list loaded: the API asks for confirmation.
+          if (axios.isAxiosError(error) && error.response?.status === 409) {
+            deleteWord.reset()
+            setWordToConfirm(word)
+          }
+        },
+      },
+    )
+  }
+
+  const onConfirmDelete = (): void => {
+    if (!wordToConfirm) return
+    deleteWord.mutate({ id: wordToConfirm.id, confirm: true }, { onSuccess: () => setWordToConfirm(null) })
+  }
+
+  const onCancelDelete = (): void => {
+    deleteWord.reset()
+    setWordToConfirm(null)
+  }
+
+  const deleteErrorMessage = "Couldn't delete this word right now. Please try again."
 
   const {
     register,
@@ -116,6 +151,12 @@ export function VocabularyBuilderPage(): ReactElement {
       {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading your words…</p>}
       {isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load your vocabulary right now.</p>}
 
+      {deleteWord.isError && !wordToConfirm && (
+        <p role="alert" className="mt-4 text-lg text-wb-danger">
+          {deleteErrorMessage}
+        </p>
+      )}
+
       {words && words.length === 0 && (
         <p className="mt-8 text-lg text-wb-ink-muted">You haven't added any words yet — start above!</p>
       )}
@@ -148,7 +189,7 @@ export function VocabularyBuilderPage(): ReactElement {
                 )}
                 <button
                   type="button"
-                  onClick={() => deleteWord.mutate(word.id)}
+                  onClick={() => onDelete(word)}
                   disabled={deleteWord.isPending}
                   className="rounded-wb-md bg-wb-danger-soft px-3 py-1.5 text-sm font-semibold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
                 >
@@ -159,6 +200,14 @@ export function VocabularyBuilderPage(): ReactElement {
           ))}
         </div>
       )}
+
+      <DeleteWordConfirmDialog
+        word={wordToConfirm}
+        isPending={deleteWord.isPending}
+        errorMessage={deleteWord.isError ? deleteErrorMessage : null}
+        onConfirm={onConfirmDelete}
+        onCancel={onCancelDelete}
+      />
     </motion.div>
   )
 }

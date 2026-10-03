@@ -90,6 +90,9 @@ export interface PersonalVocabularyWord {
   /** On "my words" / recall check: whether the caller wrote this word (only authors may share it).
    * Always `false` on the shared pool and moderation lists. */
   isAuthor: boolean
+  /** On the shared pool only: whether the caller currently owns this word. `false` everywhere else,
+   * and for words handed over to WordBuddy. */
+  isMine: boolean
 }
 
 /** A word as returned by the random-selection-for-check endpoint — same shape as

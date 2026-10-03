@@ -98,7 +98,7 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
     /// within each group, the repository's id order. Invisible candidates are ignored entirely.</summary>
     private static VocabularyWord? PickVisibleDuplicate(IReadOnlyList<VocabularyWord> candidates, Guid userId, AgeGroup ageGroup) =>
         candidates.FirstOrDefault(w => w.Source == VocabularySource.Learner && w.OwnerUserId == userId)
-        ?? candidates.FirstOrDefault(w => w.Source == VocabularySource.System)
+        ?? candidates.FirstOrDefault(w => w.Source == VocabularySource.System && w.IsVisibleTo(userId, ageGroup))
         ?? candidates.FirstOrDefault(w => w.IsVisibleTo(userId, ageGroup));
 
     private async Task<Result<Guid>> LinkToExistingAsync(VocabularyWord existing, AddPersonalVocabularyWordCommand command, CancellationToken ct)
