@@ -1,14 +1,14 @@
 ---
 title: WB-12_Defect on sharing word
-status: implemented
+status: reviewed
 type: bugfix
 issue: 12
 pr: 13
 affects: docs/features/vocabulary.md, docs/features/vocabulary-builder.md
 supersedes: none
-version: 5.0
+version: 6.0
 created: 2026-10-03T00:05:53+07:00
-updated: 2026-10-03T19:46:40+07:00
+updated: 2026-10-03T20:27:20+07:00
 ---
 
 ## Problem
