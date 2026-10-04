@@ -28,7 +28,11 @@ event; dashboards and challenges are projections of those events.
 | D11 | In the MVP the UI reports correctness and response time. Server-side answer checking is required before `vocabulary-challenges`. |
 | D12 | `ReviewLog` is append-only; rows are deleted only on account erasure (needs a `UserDeleted` event, not yet available). |
 | D13 | Proposal #2 backfills Progress by republishing `LearnerWordAdded` for every existing learner word. |
-| D14 | One `Lexeme` per normalized word in the migration; parts of speech may be merged and are split later by an admin. |
+| D14 | One `Lexeme` per normalized word **and part of speech** (unique pair). Existing words get an empty part of speech; auto-fill (#4) sets it and moves senses to the right lexeme. Reason: IPA, audio, forms and CEFR differ by part of speech ("record", "run"). |
+| D15 | `LessonVocabularyWords` is renamed to `LessonSenses`. |
+| D16 | A lexeme is deleted when its last sense is deleted, so no learner text stays behind. |
+| D17 | No environment holds real learner data yet. If migrating existing rows becomes too complex, wipe the Content database and re-seed. |
+| D18 | Sense enrichment fields (image, collocations, synonyms, register note, topic tags, multiple examples) come with auto-fill (#4). |
 
 ## 2. Domain model
 

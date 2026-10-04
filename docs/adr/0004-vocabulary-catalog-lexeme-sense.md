@@ -25,12 +25,12 @@ erDiagram
     Lexeme ||--o{ Sense : has
     Sense ||--o{ SenseTranslation : "translated as"
     Sense ||--o{ LearnerWord : "learned as"
-    Sense ||--o{ LessonVocabularyWords : "used in"
+    Sense ||--o{ LessonSenses : "used in"
 ```
 
 | Entity | Meaning | Key fields |
 | --- | --- | --- |
-| `Lexeme` (new) | One headword | Lemma, normalized lemma, part of speech, IPA (UK/US), pronunciation audio, syllables, word forms, CEFR level, frequency rank |
+| `Lexeme` (new) | One headword: a spelling **and** a part of speech | Lemma, normalized lemma, part of speech (nullable until known), IPA (UK/US), pronunciation audio (UK/US), syllables, word forms, CEFR level, frequency rank; unique (normalized lemma, part of speech) |
 | `Sense` (= `VocabularyWords`, same `Id`) | One meaning of a lexeme | `LexemeId`, definition, examples, image, collocations, synonyms/antonyms, register note, topic tags, `ContentHash`, `AudioAssetId`, `Source`, `OwnerUserId`, `ShareStatus`, `VisibleToChildren` |
 | `SenseTranslation` (new) | One translation of a sense | `SenseId`, `Locale`, `Text`; unique (`SenseId`, `Locale`) |
 | `LearnerWord` (= `UserVocabularyWords`, same `Id`) | A sense in one learner's list | `UserId`, `SenseId`, `AddedBy` (Learner / Supporter / List), `AddedAtUtc`, `IsAuthor`, `PersonalContext` (optional) |
@@ -40,16 +40,25 @@ erDiagram
 - **Lifecycle unchanged.** Dedupe (`ContentHash`), adopt, share, moderation, delete and hand-over
   to System keep their current rules. They apply to a `Sense`. A `Lexeme` has no share status. A
   caller sees lexeme data only through a `Sense` the caller may see.
+- **Lexeme key = spelling + part of speech.** Pronunciation, word forms and CEFR level can differ
+  by part of speech ("record" noun /ˈrek.ɔːd/ vs verb /rɪˈkɔːd/; "run" → runs vs ran). Part of
+  speech is empty for existing words; auto-fill (later proposal) sets it and moves each sense to
+  the matching lexeme.
+- **Orphan lexemes are deleted.** When the last sense of a lexeme is deleted, the lexeme is
+  deleted too, so no learner text stays behind.
 - **Translations are rows per locale**, not a language-specific column.
 - **Ownership (D1).** Content owns `Lexeme`, `Sense`, `SenseTranslation` and `LearnerWord`.
   Progress owns learning state (ADR 0005) and stores `SenseId` as a plain id. The five services
   stay as they are.
 - **Migration** (proposal `vocabulary-lexeme-sense-model`, one Content migration):
-  1. Create one `Lexeme` per distinct `NormalizedWord`.
+  1. Create one `Lexeme` per distinct `NormalizedWord`, with part of speech empty.
   2. Each `VocabularyWords` row becomes a `Sense` with the same `Id` and its `LexemeId`.
   3. Each `UserVocabularyWords` row becomes a `LearnerWord`: `AddedBy = Learner`,
      `PersonalContext = null`.
-  4. No API or behaviour change. `GET /api/lessons/{id}` JSON stays the same.
+  4. `LessonVocabularyWords` becomes `LessonSenses`.
+  5. No API or behaviour change. `GET /api/lessons/{id}` JSON stays the same.
+  - No environment holds real learner data yet (local compose and kind only). If migrating the
+    existing rows becomes too complex, the fallback is to wipe the Content database and re-seed.
 
 ### Alternatives considered
 
@@ -66,8 +75,11 @@ erDiagram
   already routes to Content. No new health check.
 - Cache keys: `content:sense:{id}`, `content:lexeme:{id}`.
   `content:vocabulary-shared:{childSafeOnly}` is kept.
-- Grouping by normalized word merges parts of speech ("bank" noun / verb) into one `Lexeme`.
-  This is accepted. An admin can split them later. The `ß` dedupe limitation remains.
+- Until auto-fill sets the part of speech, all senses of one spelling share one lexeme with an
+  empty part of speech. Its IPA, audio and forms stay empty until then, so nothing wrong is shown.
+- The migrated lemma may come from a learner's private text. This is harmless while lexemes are
+  hidden; the lemma is re-derived from visible senses before lexemes are shown.
+- The `ß` dedupe limitation remains.
 - Living specs `vocabulary.md`, `vocabulary-builder.md` and `database-diagram/content.md` are
   updated when proposal #1 merges.
 
@@ -85,3 +97,6 @@ erDiagram
 | --- | --- | --- |
 | Translation language | Vietnamese only, or the user's native language | Proposal #1 |
 | Lexeme pronunciation audio | Existing audio stays on `Sense`. New lexeme audio needs its own name (for example `lexeme-{id}-{locale}.mp3`). | Proposal #1 |
+
+Sense enrichment fields (image, collocations, synonyms/antonyms, register note, topic tags,
+multiple examples) are added with the auto-fill proposal, which fills them.
