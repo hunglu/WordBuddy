@@ -16,11 +16,11 @@ public class GetMyVocabularyWordsQueryHandlerTests
 
     private GetMyVocabularyWordsQueryHandler CreateHandler() => new(_repository.Object, _logger.Object);
 
-    private async Task<PersonalVocabularyWordDto> GetSingleAsync(Guid userId, UserVocabularyWord link)
+    private async Task<PersonalVocabularyWordDto> GetSingleAsync(Guid userId, LearnerWord link)
     {
         _repository
             .Setup(r => r.GetLinkedToUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<UserVocabularyWord>>([link]));
+            .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWord>>([link]));
 
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(userId));
 
@@ -32,9 +32,9 @@ public class GetMyVocabularyWordsQueryHandlerTests
     public async Task GetMyVocabularyWordsQueryHandler_HandleAsync_AuthoredWord_ReportsWordsOwnValues()
     {
         Guid ownerId = Guid.NewGuid();
-        VocabularyWord word = TestWords.Pending(ownerId, "apple", "a fruit", "eg");
+        Sense word = TestWords.Pending(ownerId, "apple", "a fruit", "eg");
 
-        PersonalVocabularyWordDto dto = await GetSingleAsync(ownerId, new UserVocabularyWord(Guid.NewGuid(), ownerId, word, isAuthor: true));
+        PersonalVocabularyWordDto dto = await GetSingleAsync(ownerId, new LearnerWord(Guid.NewGuid(), ownerId, word, isAuthor: true));
 
         dto.Should().BeEquivalentTo(new PersonalVocabularyWordDto(
             word.Id, ownerId, "apple", "a fruit", "eg", VocabularyShareStatus.PendingReview, false, word.CreatedAtUtc, IsAuthor: true));
@@ -44,8 +44,8 @@ public class GetMyVocabularyWordsQueryHandlerTests
     public async Task GetMyVocabularyWordsQueryHandler_HandleAsync_AdoptedSharedWord_ReportsLegacyCopyValues()
     {
         Guid adopterId = Guid.NewGuid();
-        VocabularyWord shared = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
-        UserVocabularyWord link = new(Guid.NewGuid(), adopterId, shared, isAuthor: false);
+        Sense shared = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        LearnerWord link = new(Guid.NewGuid(), adopterId, shared, isAuthor: false);
 
         PersonalVocabularyWordDto dto = await GetSingleAsync(adopterId, link);
 
@@ -61,9 +61,9 @@ public class GetMyVocabularyWordsQueryHandlerTests
     public async Task GetMyVocabularyWordsQueryHandler_HandleAsync_LinkedSystemWord_ReportsRequesterAsOwnerAndNotAuthor()
     {
         Guid userId = Guid.NewGuid();
-        VocabularyWord system = TestWords.System();
+        Sense system = TestWords.System();
 
-        PersonalVocabularyWordDto dto = await GetSingleAsync(userId, new UserVocabularyWord(Guid.NewGuid(), userId, system, isAuthor: false));
+        PersonalVocabularyWordDto dto = await GetSingleAsync(userId, new LearnerWord(Guid.NewGuid(), userId, system, isAuthor: false));
 
         dto.OwnerUserId.Should().Be(userId);
         dto.ShareStatus.Should().Be(VocabularyShareStatus.Private);

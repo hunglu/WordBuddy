@@ -39,7 +39,7 @@ public sealed class GetRandomVocabularyWordsForCheckQueryHandler : IQueryHandler
                 Error.Validation("GetRandomVocabularyWordsForCheck.Validation", validation.ToString()));
         }
 
-        Result<IReadOnlyList<UserVocabularyWord>> wordsResult = await _repository.GetRandomLinkedToUserAsync(query.OwnerUserId, query.Count, ct);
+        Result<IReadOnlyList<LearnerWord>> wordsResult = await _repository.GetRandomLinkedToUserAsync(query.OwnerUserId, query.Count, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(

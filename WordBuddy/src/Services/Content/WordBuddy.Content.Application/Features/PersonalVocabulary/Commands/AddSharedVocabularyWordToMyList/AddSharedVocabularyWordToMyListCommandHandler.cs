@@ -40,14 +40,14 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
             return Result.Failure<Guid>(Error.Validation("AddSharedVocabularyWordToMyList.Validation", validation.ToString()));
         }
 
-        Result<VocabularyWord> sourceResult = await _repository.GetByIdAsync(command.SharedWordId, ct);
+        Result<Sense> sourceResult = await _repository.GetByIdAsync(command.SharedWordId, ct);
         if (sourceResult.IsFailure)
         {
             _logger.LogWarning("AddSharedVocabularyWordToMyListCommand source word not found: SharedWordId={SharedWordId}", command.SharedWordId);
             return Result.Failure<Guid>(sourceResult.Error);
         }
 
-        VocabularyWord source = sourceResult.Value;
+        Sense source = sourceResult.Value;
 
         bool notVisibleToRequester =
             source.ShareStatus != VocabularyShareStatus.Shared ||
@@ -65,7 +65,7 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
                 $"Word {command.SharedWordId} is not available in the shared pool."));
         }
 
-        Result<UserVocabularyWord> existingLink = await _repository.GetLinkAsync(command.RequestingUserId, source.Id, ct);
+        Result<LearnerWord> existingLink = await _repository.GetLinkAsync(command.RequestingUserId, source.Id, ct);
         if (existingLink.IsSuccess)
         {
             _logger.LogInformation("AddSharedVocabularyWordToMyListCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", source.Id, true);
@@ -73,7 +73,7 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
         }
 
         bool isAuthor = source.OwnerUserId == command.RequestingUserId;
-        UserVocabularyWord link = new(Guid.NewGuid(), command.RequestingUserId, source.Id, isAuthor);
+        LearnerWord link = new(Guid.NewGuid(), command.RequestingUserId, source.Id, isAuthor);
 
         Result linkResult = await _repository.LinkAsync(link, ct);
         if (linkResult.IsFailure)

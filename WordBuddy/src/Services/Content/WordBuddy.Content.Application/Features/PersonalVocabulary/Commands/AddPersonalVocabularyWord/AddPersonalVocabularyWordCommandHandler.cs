@@ -42,9 +42,9 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
             return Result.Failure<Guid>(Error.Validation("AddPersonalVocabularyWord.Validation", validation.ToString()));
         }
 
-        string contentHash = VocabularyWord.ComputeContentHash(command.Word, command.Definition, command.Example);
+        string contentHash = Sense.ComputeContentHash(command.Word, command.Definition, command.Example);
 
-        Result<IReadOnlyList<VocabularyWord>> candidatesResult = await _repository.FindByContentHashAsync(contentHash, ct);
+        Result<IReadOnlyList<Sense>> candidatesResult = await _repository.FindByContentHashAsync(contentHash, ct);
         if (candidatesResult.IsFailure)
         {
             _logger.LogWarning(
@@ -53,14 +53,25 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
             return Result.Failure<Guid>(candidatesResult.Error);
         }
 
-        VocabularyWord? existing = PickVisibleDuplicate(candidatesResult.Value, command.OwnerUserId, command.OwnerAgeGroup);
+        Sense? existing = PickVisibleDuplicate(candidatesResult.Value, command.OwnerUserId, command.OwnerAgeGroup);
         if (existing is not null)
         {
             return await LinkToExistingAsync(existing, command, ct);
         }
 
-        Result<VocabularyWord> createResult = VocabularyWord.CreateLearner(
+        // New sense: find or create its lexeme (part of speech unknown) first.
+        Result<Lexeme> lexemeResult = await _repository.GetOrCreateLexemeAsync(command.Word, ct);
+        if (lexemeResult.IsFailure)
+        {
+            _logger.LogWarning(
+                "AddPersonalVocabularyWordCommand failed to get or create lexeme: {ErrorCode} — {ErrorDescription}",
+                lexemeResult.Error.Code, lexemeResult.Error.Description);
+            return Result.Failure<Guid>(lexemeResult.Error);
+        }
+
+        Result<Sense> createResult = Sense.CreateLearner(
             Guid.NewGuid(),
+            lexemeResult.Value.Id,
             command.OwnerUserId,
             command.OwnerAgeGroup,
             command.Word,
@@ -75,8 +86,8 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
             return Result.Failure<Guid>(createResult.Error);
         }
 
-        VocabularyWord word = createResult.Value;
-        UserVocabularyWord authorLink = new(Guid.NewGuid(), command.OwnerUserId, word.Id, isAuthor: true);
+        Sense word = createResult.Value;
+        LearnerWord authorLink = new(Guid.NewGuid(), command.OwnerUserId, word.Id, isAuthor: true);
 
         // The repository returns the existing word's id if a concurrent identical add won the race.
         Result<Guid> addResult = await _repository.AddAsync(word, authorLink, ct);
@@ -96,14 +107,14 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
 
     /// <summary>The caller's own word wins, then a system word, then a shared word they may see —
     /// within each group, the repository's id order. Invisible candidates are ignored entirely.</summary>
-    private static VocabularyWord? PickVisibleDuplicate(IReadOnlyList<VocabularyWord> candidates, Guid userId, AgeGroup ageGroup) =>
+    private static Sense? PickVisibleDuplicate(IReadOnlyList<Sense> candidates, Guid userId, AgeGroup ageGroup) =>
         candidates.FirstOrDefault(w => w.Source == VocabularySource.Learner && w.OwnerUserId == userId)
         ?? candidates.FirstOrDefault(w => w.Source == VocabularySource.System && w.IsVisibleTo(userId, ageGroup))
         ?? candidates.FirstOrDefault(w => w.IsVisibleTo(userId, ageGroup));
 
-    private async Task<Result<Guid>> LinkToExistingAsync(VocabularyWord existing, AddPersonalVocabularyWordCommand command, CancellationToken ct)
+    private async Task<Result<Guid>> LinkToExistingAsync(Sense existing, AddPersonalVocabularyWordCommand command, CancellationToken ct)
     {
-        Result<UserVocabularyWord> linkResult = await _repository.GetLinkAsync(command.OwnerUserId, existing.Id, ct);
+        Result<LearnerWord> linkResult = await _repository.GetLinkAsync(command.OwnerUserId, existing.Id, ct);
         if (linkResult.IsSuccess)
         {
             _logger.LogInformation("AddPersonalVocabularyWordCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", existing.Id, true);
@@ -111,7 +122,7 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
         }
 
         bool isAuthor = existing.Source == VocabularySource.Learner && existing.OwnerUserId == command.OwnerUserId;
-        UserVocabularyWord link = new(Guid.NewGuid(), command.OwnerUserId, existing.Id, isAuthor);
+        LearnerWord link = new(Guid.NewGuid(), command.OwnerUserId, existing.Id, isAuthor);
 
         Result addLinkResult = await _repository.LinkAsync(link, ct);
         if (addLinkResult.IsFailure)

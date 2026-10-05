@@ -48,7 +48,7 @@ public sealed class DeletePersonalVocabularyWordCommandHandler : ICommandHandler
             return Result.Failure(Error.Validation("DeletePersonalVocabularyWord.Validation", validation.ToString()));
         }
 
-        Result<UserVocabularyWord> linkResult = await _repository.GetLinkAsync(command.RequestingUserId, command.WordId, ct);
+        Result<LearnerWord> linkResult = await _repository.GetLinkAsync(command.RequestingUserId, command.WordId, ct);
         if (linkResult.IsFailure)
         {
             _logger.LogWarning(
@@ -57,19 +57,19 @@ public sealed class DeletePersonalVocabularyWordCommandHandler : ICommandHandler
             return Result.Failure(linkResult.Error);
         }
 
-        UserVocabularyWord link = linkResult.Value;
+        LearnerWord link = linkResult.Value;
 
         VocabularyShareStatus? authorShareStatus = null;
         if (link.IsAuthor)
         {
-            Result<VocabularyWord> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
+            Result<Sense> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
             if (wordResult.IsFailure)
             {
                 _logger.LogWarning("DeletePersonalVocabularyWordCommand word not found: WordId={WordId}", command.WordId);
                 return Result.Failure(wordResult.Error);
             }
 
-            VocabularyWord word = wordResult.Value;
+            Sense word = wordResult.Value;
             if (word.ShareStatus is VocabularyShareStatus.Shared or VocabularyShareStatus.PendingReview)
             {
                 if (!command.Confirm)

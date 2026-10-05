@@ -22,7 +22,7 @@ public sealed class GetMyVocabularyWordsQueryHandler : IQueryHandler<GetMyVocabu
     {
         _logger.LogInformation("GetMyVocabularyWordsQuery started: OwnerUserId={OwnerUserId}", query.OwnerUserId);
 
-        Result<IReadOnlyList<UserVocabularyWord>> wordsResult = await _repository.GetLinkedToUserAsync(query.OwnerUserId, ct);
+        Result<IReadOnlyList<LearnerWord>> wordsResult = await _repository.GetLinkedToUserAsync(query.OwnerUserId, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(

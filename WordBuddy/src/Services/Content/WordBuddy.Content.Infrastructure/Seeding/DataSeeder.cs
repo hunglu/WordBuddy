@@ -28,10 +28,20 @@ public static class DataSeeder
         Lesson vocabularyLesson = new(
             Guid.NewGuid(), "Animals", "Learn the names of common animals.",
             LessonType.Vocabulary, Level.Beginner, AgeGroup.Child);
-        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Dog", "A common domesticated animal.", "The dog barked loudly."));
-        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Cat", "A small domesticated feline.", "The cat is sleeping."));
-        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Bird", "A warm-blooded egg-laying animal with wings.", "The bird flew away."));
-        vocabularyLesson.AddVocabularyWord(VocabularyWord.CreateSystem(Guid.NewGuid(), "Fish", "A cold-blooded animal that lives in water.", "The fish swam in the pond."));
+        (string Word, string Definition, string Example)[] seedWords =
+        [
+            ("Dog", "A common domesticated animal.", "The dog barked loudly."),
+            ("Cat", "A small domesticated feline.", "The cat is sleeping."),
+            ("Bird", "A warm-blooded egg-laying animal with wings.", "The bird flew away."),
+            ("Fish", "A cold-blooded animal that lives in water.", "The fish swam in the pond."),
+        ];
+        foreach ((string word, string definition, string example) in seedWords)
+        {
+            // One lexeme per seed word, part of speech not known yet (null).
+            Lexeme lexeme = Lexeme.Create(Guid.NewGuid(), word).Value;
+            await dbContext.Lexemes.AddAsync(lexeme);
+            vocabularyLesson.AddVocabularyWord(Sense.CreateSystem(Guid.NewGuid(), lexeme.Id, word, definition, example));
+        }
 
         Lesson grammarLesson = new(
             Guid.NewGuid(), "Present Simple", "Learn how to use the present simple tense.",

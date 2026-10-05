@@ -40,7 +40,7 @@ public sealed class RequestShareVocabularyWordCommandHandler : ICommandHandler<R
             return Result.Failure(Error.Validation("RequestShareVocabularyWord.Validation", validation.ToString()));
         }
 
-        Result<UserVocabularyWord> linkResult = await _repository.GetLinkAsync(command.RequestingUserId, command.WordId, ct);
+        Result<LearnerWord> linkResult = await _repository.GetLinkAsync(command.RequestingUserId, command.WordId, ct);
         if (linkResult.IsFailure)
         {
             _logger.LogWarning(
@@ -59,7 +59,7 @@ public sealed class RequestShareVocabularyWordCommandHandler : ICommandHandler<R
                 $"Word {command.WordId} can only be submitted for review by its author."));
         }
 
-        Result<VocabularyWord> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
+        Result<Sense> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
         if (wordResult.IsFailure)
         {
             _logger.LogWarning("RequestShareVocabularyWordCommand word not found: WordId={WordId}", command.WordId);

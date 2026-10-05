@@ -18,25 +18,25 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
     {
         _repository
             .Setup(r => r.GetLinkAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<UserVocabularyWord>(Error.NotFound("PersonalVocabularyWord.NotFound", "not found")));
+            .ReturnsAsync(Result.Failure<LearnerWord>(Error.NotFound("PersonalVocabularyWord.NotFound", "not found")));
         _repository
-            .Setup(r => r.LinkAsync(It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.LinkAsync(It.IsAny<LearnerWord>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
     }
 
     private AddSharedVocabularyWordToMyListCommandHandler CreateHandler() =>
         new(_repository.Object, _validator, _logger.Object);
 
-    private void SetupSource(VocabularyWord source) =>
+    private void SetupSource(Sense source) =>
         _repository.Setup(r => r.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(source));
 
     private void VerifyNoLink() =>
-        _repository.Verify(r => r.LinkAsync(It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repository.Verify(r => r.LinkAsync(It.IsAny<LearnerWord>(), It.IsAny<CancellationToken>()), Times.Never);
 
     [Fact]
     public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_SharedWord_CreatesNonAuthorLinkAndReturnsSharedId()
     {
-        VocabularyWord source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
         SetupSource(source);
         Guid requesterId = Guid.NewGuid();
 
@@ -46,7 +46,7 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
         result.Value.Should().Be(source.Id);
         _repository.Verify(
             r => r.LinkAsync(
-                It.Is<UserVocabularyWord>(l => l.UserId == requesterId && l.VocabularyWordId == source.Id && !l.IsAuthor),
+                It.Is<LearnerWord>(l => l.UserId == requesterId && l.SenseId == source.Id && !l.IsAuthor),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -54,12 +54,12 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
     [Fact]
     public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_AlreadyLinked_IsIdempotent()
     {
-        VocabularyWord source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
         SetupSource(source);
         Guid requesterId = Guid.NewGuid();
         _repository
             .Setup(r => r.GetLinkAsync(requesterId, source.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(new UserVocabularyWord(Guid.NewGuid(), requesterId, source, isAuthor: false)));
+            .ReturnsAsync(Result.Success(new LearnerWord(Guid.NewGuid(), requesterId, source, isAuthor: false)));
 
         Result<Guid> result = await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, requesterId, AgeGroup.Adult));
 
@@ -70,7 +70,7 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
     [Fact]
     public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_ChildAndNonChildVisibleWord_ReturnsNotFound()
     {
-        VocabularyWord source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: false);
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: false);
         SetupSource(source);
 
         Result<Guid> result = await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), AgeGroup.Child));
@@ -83,19 +83,19 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
     [Fact]
     public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_ChildAndChildVisibleWord_Links()
     {
-        VocabularyWord source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
         SetupSource(source);
 
         Result<Guid> result = await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), AgeGroup.Child));
 
         result.IsSuccess.Should().BeTrue();
-        _repository.Verify(r => r.LinkAsync(It.IsAny<UserVocabularyWord>(), It.IsAny<CancellationToken>()), Times.Once);
+        _repository.Verify(r => r.LinkAsync(It.IsAny<LearnerWord>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_WordNotShared_ReturnsNotFoundWithoutLinking()
     {
-        VocabularyWord source = TestWords.Learner(Guid.NewGuid());
+        Sense source = TestWords.Learner(Guid.NewGuid());
         SetupSource(source);
 
         Result<Guid> result = await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), AgeGroup.Adult));
@@ -108,7 +108,7 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
     [Fact]
     public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_SystemWord_ReturnsNotFound()
     {
-        VocabularyWord source = TestWords.System();
+        Sense source = TestWords.System();
         SetupSource(source);
 
         Result<Guid> result = await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), AgeGroup.Adult));
@@ -123,7 +123,7 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
         Guid sourceId = Guid.NewGuid();
         _repository
             .Setup(r => r.GetByIdAsync(sourceId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<VocabularyWord>(Error.NotFound("PersonalVocabularyWord.NotFound", "not found")));
+            .ReturnsAsync(Result.Failure<Sense>(Error.NotFound("PersonalVocabularyWord.NotFound", "not found")));
 
         Result<Guid> result = await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(sourceId, Guid.NewGuid(), AgeGroup.Adult));
 

@@ -41,11 +41,11 @@ public sealed class GetLessonDetailQueryHandler : IQueryHandler<GetLessonDetailQ
             lesson.Level,
             lesson.TargetAgeGroup,
             // The JSON stays "vocabularyItems" with the same shape; words now come through
-            // LessonVocabularyWords. System words always carry a non-empty Example.
+            // LessonSenses. System words always carry a non-empty Example.
             lesson.VocabularyWords
-                .Where(link => link.VocabularyWord is not null)
+                .Where(link => link.Sense is not null)
                 .OrderBy(link => link.SortOrder)
-                .Select(link => link.VocabularyWord!)
+                .Select(link => link.Sense!)
                 .Select(v => new VocabularyItemDto(v.Id, v.Word, v.Definition, v.Example ?? string.Empty, ToDto(v.Audio)))
                 .ToList(),
             lesson.GrammarRules

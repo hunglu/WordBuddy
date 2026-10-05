@@ -52,7 +52,7 @@ public sealed class GetSharedVocabularyWordsQueryHandler : IQueryHandler<GetShar
             }
         }
 
-        Result<IReadOnlyList<VocabularyWord>> wordsResult = await _repository.GetSharedAsync(childSafeOnly, ct);
+        Result<IReadOnlyList<Sense>> wordsResult = await _repository.GetSharedAsync(childSafeOnly, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(
