@@ -3,8 +3,10 @@
 Lessons, vocabulary, grammar rules, daily phrases, and media assets (text/image/audio/video) for
 WordBuddy.
 
-Owns the `Lesson`, `Vocabulary`, `Grammar`, `DailyPhrase`, and `MediaAsset` domain entities, plus
-the `Level`, `LessonType`, and `MediaAssetType` enums. Has zero project references to any other
+Owns the `Lesson`, `Grammar`, `DailyPhrase`, and `MediaAsset` domain entities, and the vocabulary
+catalog `Lexeme` → `Sense` → `SenseTranslation`, with `LearnerWord` (a learner's list) and
+`LessonSense` (lesson links) — see ADR 0004. Enums: `Level`, `LessonType`, `MediaAssetType`,
+`PartOfSpeech`, `CefrLevel`, `LearnerWordAddedBy`. Has zero project references to any other
 WordBuddy service or shared project — see the root [`CLAUDE.md`](../../../CLAUDE.md) for the
 independence model this follows.
 

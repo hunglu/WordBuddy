@@ -1,6 +1,6 @@
 # 0004 — Vocabulary catalog: Lexeme and Sense
 
-- Status: proposed
+- Status: accepted (implemented in WB-16, PR #17)
 - Date: 2026-10-04
 
 ## Context
