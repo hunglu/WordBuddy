@@ -1,14 +1,14 @@
 ---
 title: WB-21_Messaging RabbitMQ foundation
-status: implemented
+status: reviewed
 type: new
 issue: 21
-pr: none
+pr: 30
 affects: docs/features/messaging.md
 supersedes: none
-version: 1.3
+version: 1.4
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-05T17:37:17+07:00
+updated: 2026-10-05T21:15:28+07:00
 ---
 
 ## Problem
