@@ -1,14 +1,14 @@
 ---
 title: WB-16_Vocabulary lexeme sense model
-status: implemented
+status: reviewed
 type: change
 issue: 16
-pr: none
+pr: 17
 affects: docs/features/vocabulary.md
 supersedes: refactor-database-scheme-to-store-vocabulary-item
-version: 3.1
+version: 3.2
 created: 2026-10-04T23:49:41+07:00
-updated: 2026-10-05T09:00:00+07:00
+updated: 2026-10-05T09:53:12+07:00
 ---
 
 ## Problem
@@ -48,3 +48,4 @@ Both. Child vs. adult behaviour stays exactly as it is today.
   `LessonSenses`; lexeme key = normalized lemma + part of speech (NULL until auto-fill); orphan
   lexemes deleted; wipe-and-reseed fallback only with Sam's approval; sense enrichment fields out
   of scope (ADR 0004, idea.md D14–D18).
+- **v3.2 — 2026-10-05T09:53:12+07:00** — Review round 1: approved (3 nits); `pr: 17` recorded.
