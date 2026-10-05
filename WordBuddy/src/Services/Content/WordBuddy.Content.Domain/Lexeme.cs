@@ -17,23 +17,38 @@ public sealed class Lexeme : Entity
     /// with <see cref="PartOfSpeech"/>.</summary>
     public string NormalizedLemma { get; private set; }
 
+    /// <summary>Part of speech; <see langword="null"/> while not known yet.</summary>
     public PartOfSpeech? PartOfSpeech { get; private set; }
 
+    /// <summary>British IPA transcription.</summary>
     public string? IpaUk { get; private set; }
+
+    /// <summary>American IPA transcription.</summary>
     public string? IpaUs { get; private set; }
 
     /// <summary>British pronunciation audio (<c>lexeme-{id}-en-GB.mp3</c>).</summary>
     public Guid? UkAudioAssetId { get; private set; }
+    /// <summary>Navigation to the British audio asset.</summary>
     public MediaAsset? UkAudio { get; private set; }
 
     /// <summary>American pronunciation audio (<c>lexeme-{id}-en-US.mp3</c>).</summary>
     public Guid? UsAudioAssetId { get; private set; }
+    /// <summary>Navigation to the American audio asset.</summary>
     public MediaAsset? UsAudio { get; private set; }
 
+    /// <summary>Syllable split, for example <c>ap·ple</c>.</summary>
     public string? Syllables { get; private set; }
+
+    /// <summary>Inflected forms (plural, past tense, ...), stored as a JSON list.</summary>
     public IReadOnlyList<string> WordForms { get; private set; }
+
+    /// <summary>CEFR level of the headword.</summary>
     public CefrLevel? CefrLevel { get; private set; }
+
+    /// <summary>Rank in a frequency list; lower is more common.</summary>
     public int? FrequencyRank { get; private set; }
+
+    /// <summary>When the lexeme was created (UTC).</summary>
     public DateTime CreatedAtUtc { get; private set; }
 
     private Lexeme(Guid id, string lemma, string normalizedLemma, PartOfSpeech? partOfSpeech, DateTime createdAtUtc)

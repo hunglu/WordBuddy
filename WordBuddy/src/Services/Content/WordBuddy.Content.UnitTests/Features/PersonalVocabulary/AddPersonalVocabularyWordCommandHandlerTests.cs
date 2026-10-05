@@ -65,6 +65,18 @@ public class AddPersonalVocabularyWordCommandHandlerTests
     }
 
     [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_SystemOwner_ReturnsInvalidOwnerWithoutCreatingLexeme()
+    {
+        SetupCandidates();
+
+        Result<Guid> result = await CreateHandler().HandleAsync(new AddPersonalVocabularyWordCommand(SystemOwner.UserId, AgeGroup.Adult, "apple", "a fruit", null));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("PersonalVocabularyWord.InvalidOwner");
+        VerifyNoNewWord();
+    }
+
+    [Fact]
     public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_LexemeFailure_ReturnsErrorWithoutAdding()
     {
         SetupCandidates();
