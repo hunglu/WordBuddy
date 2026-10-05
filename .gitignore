@@ -41,4 +41,5 @@ e2e/ui/.features-gen/
 ## Claude
 .claude/settings.local.json
 .claude/logs/
-docs/local-*
+docs/local*
+!docs/*.example

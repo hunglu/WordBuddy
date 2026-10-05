@@ -1,0 +1,23 @@
+# Local overrides (personal, not in git)
+
+Copy to `docs/local-overrides.md` (gitignored) and edit. CLAUDE.md loads it every session.
+Never put secrets here: no connection strings, tokens, keys or passwords.
+
+## Me
+
+- Name: <your name>
+- GitHub login: <login>
+
+## Local environment
+
+| Item | Value |
+| --- | --- |
+| OS / shell | <e.g. Windows 11, PowerShell + Git Bash> |
+| SQL Server for integration tests | <e.g. `(localdb)\mssqllocaldb`> |
+| kubectl context for WordBuddy | <e.g. `kind-wordbuddy`> |
+| Docker runtime | <e.g. Docker Desktop> |
+
+## Preferences for Claude
+
+- <e.g. reply in short bullets; ASCII diagrams in chat>
+- <e.g. run unit tests only unless I ask for integration tests>
