@@ -301,10 +301,13 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
     private static bool IsUniqueViolation(DbUpdateException ex) =>
         ex.InnerException is SqlException { Number: 2601 or 2627 };
 
+    /// <summary>Name of the Senses → Lexemes foreign key; SQL Server quotes it in a 547 message.</summary>
+    private const string LexemeForeignKeyName = "FK_Senses_Lexemes_LexemeId";
+
     /// <summary>SQL Server 547 (constraint conflict) on the Senses → Lexemes foreign key.</summary>
     private static bool IsLexemeForeignKeyViolation(DbUpdateException ex) =>
         ex.InnerException is SqlException { Number: 547 } sqlException &&
-        sqlException.Message.Contains("LexemeId", StringComparison.Ordinal);
+        sqlException.Message.Contains(LexemeForeignKeyName, StringComparison.Ordinal);
 
     /// <summary>Stops tracking the entities of a failed save so the context can be reused.</summary>
     private void Detach(params object[] entities)

@@ -110,11 +110,10 @@ public sealed class Sense : Entity
         string definition,
         string? example)
     {
-        if (ownerUserId == Guid.Empty || ownerUserId == SystemOwner.UserId)
+        Result ownerCheck = ValidateLearnerOwner(ownerUserId);
+        if (ownerCheck.IsFailure)
         {
-            return Result.Failure<Sense>(Error.Validation(
-                "PersonalVocabularyWord.InvalidOwner",
-                "A learner word must be owned by a learner, not the system owner."));
+            return Result.Failure<Sense>(ownerCheck.Error);
         }
 
         return Result.Success(new Sense(
@@ -132,6 +131,16 @@ public sealed class Sense : Entity
             visibleToChildren: false,
             DateTime.UtcNow));
     }
+
+    /// <summary>Checks that a learner sense has a real learner owner (not empty, not the system
+    /// owner). <see cref="CreateLearner"/> runs the same check; callers run it first so no lexeme
+    /// is created for a sense that would be rejected.</summary>
+    public static Result ValidateLearnerOwner(Guid ownerUserId) =>
+        ownerUserId == Guid.Empty || ownerUserId == SystemOwner.UserId
+            ? Result.Failure(Error.Validation(
+                "PersonalVocabularyWord.InvalidOwner",
+                "A learner word must be owned by a learner, not the system owner."))
+            : Result.Success();
 
     /// <summary>Normalizes a word for lookup: trims spaces and upper-cases it. Mirrors SQL's
     /// <c>UPPER(LTRIM(RTRIM(...)))</c>, which trims spaces only.</summary>

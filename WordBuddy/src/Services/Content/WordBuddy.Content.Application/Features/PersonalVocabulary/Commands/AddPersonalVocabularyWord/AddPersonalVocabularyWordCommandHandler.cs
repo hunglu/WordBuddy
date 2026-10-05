@@ -59,6 +59,16 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
             return await LinkToExistingAsync(existing, command, ct);
         }
 
+        // Reject an invalid owner before the lexeme is saved, so a failed add leaves no orphan lexeme.
+        Result ownerCheck = Sense.ValidateLearnerOwner(command.OwnerUserId);
+        if (ownerCheck.IsFailure)
+        {
+            _logger.LogWarning(
+                "AddPersonalVocabularyWordCommand rejected word: {ErrorCode} — {ErrorDescription}",
+                ownerCheck.Error.Code, ownerCheck.Error.Description);
+            return Result.Failure<Guid>(ownerCheck.Error);
+        }
+
         // New sense: find or create its lexeme (part of speech unknown) first.
         Result<Lexeme> lexemeResult = await _repository.GetOrCreateLexemeAsync(command.Word, ct);
         if (lexemeResult.IsFailure)

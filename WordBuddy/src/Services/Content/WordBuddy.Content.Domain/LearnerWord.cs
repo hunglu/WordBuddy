@@ -14,9 +14,13 @@ public sealed class LearnerWord : Entity
     /// Identity's data).</summary>
     public Guid UserId { get; private set; }
 
+    /// <summary>The linked sense (the former vocabulary word id).</summary>
     public Guid SenseId { get; private set; }
+
+    /// <summary>Navigation to the linked sense.</summary>
     public Sense? Sense { get; private set; }
 
+    /// <summary>When the learner added the word to their list (UTC).</summary>
     public DateTime AddedAtUtc { get; private set; }
 
     /// <summary><see langword="true"/> when the learner wrote the word; <see langword="false"/> when
@@ -31,6 +35,7 @@ public sealed class LearnerWord : Entity
     /// or put in an event. Always <see langword="null"/> today.</summary>
     public string? PersonalContext { get; private set; }
 
+    /// <summary>Creates a link added by the learner, with no personal context.</summary>
     public LearnerWord(Guid id, Guid userId, Guid senseId, bool isAuthor)
         : base(id)
     {
