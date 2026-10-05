@@ -42,7 +42,7 @@ public sealed class ModerateSharedVocabularyWordCommandHandler : ICommandHandler
             return Result.Failure(Error.Validation("ModerateSharedVocabularyWord.Validation", validation.ToString()));
         }
 
-        Result<VocabularyWord> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
+        Result<Sense> wordResult = await _repository.GetByIdAsync(command.WordId, ct);
         if (wordResult.IsFailure)
         {
             _logger.LogWarning("ModerateSharedVocabularyWordCommand word not found: WordId={WordId}", command.WordId);

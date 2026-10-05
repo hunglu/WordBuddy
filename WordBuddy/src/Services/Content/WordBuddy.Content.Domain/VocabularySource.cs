@@ -1,6 +1,6 @@
 namespace WordBuddy.Content.Domain;
 
-/// <summary>Where a <see cref="VocabularyWord"/> came from.</summary>
+/// <summary>Where a <see cref="Sense"/> came from.</summary>
 public enum VocabularySource
 {
     /// <summary>An admin-authored lesson word, owned by <see cref="SystemOwner.UserId"/>. Its id

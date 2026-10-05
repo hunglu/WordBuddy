@@ -22,9 +22,9 @@ public class GetRandomVocabularyWordsForCheckQueryHandlerTests
     public async Task GetRandomVocabularyWordsForCheckQueryHandler_HandleAsync_ValidCount_ReturnsLinkedWordsAsRequesterOwned()
     {
         Guid ownerId = Guid.NewGuid();
-        VocabularyWord own = TestWords.Learner(ownerId, "apple");
-        VocabularyWord adopted = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, "banana");
-        List<UserVocabularyWord> links =
+        Sense own = TestWords.Learner(ownerId, "apple");
+        Sense adopted = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, "banana");
+        List<LearnerWord> links =
         [
             new(Guid.NewGuid(), ownerId, own, isAuthor: true),
             new(Guid.NewGuid(), ownerId, adopted, isAuthor: false),
@@ -32,7 +32,7 @@ public class GetRandomVocabularyWordsForCheckQueryHandlerTests
 
         _repository
             .Setup(r => r.GetRandomLinkedToUserAsync(ownerId, 2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<UserVocabularyWord>>(links));
+            .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWord>>(links));
 
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(ownerId, 2));
 

@@ -2,12 +2,12 @@ using WordBuddy.Content.Domain;
 
 namespace WordBuddy.Content.Application.DTOs;
 
-/// <summary>Projects <see cref="VocabularyWord"/>s and <see cref="UserVocabularyWord"/> links onto
+/// <summary>Projects <see cref="Sense"/>s and <see cref="LearnerWord"/> links onto
 /// <see cref="PersonalVocabularyWordDto"/>, keeping the values callers saw before words were unified.</summary>
 public static class PersonalVocabularyWordMapper
 {
     /// <summary>Pool / moderation view: the word as it is.</summary>
-    public static PersonalVocabularyWordDto ToDto(VocabularyWord word) => new(
+    public static PersonalVocabularyWordDto ToDto(Sense word) => new(
         word.Id,
         word.OwnerUserId,
         word.Word,
@@ -21,9 +21,9 @@ public static class PersonalVocabularyWordMapper
     /// <summary>Caller-scoped view through a link. For words the caller didn't write, the values
     /// match the old private copy: owner = caller, <see cref="VocabularyShareStatus.Private"/>, not
     /// child-visible, created when the link was added.</summary>
-    public static PersonalVocabularyWordDto ToDto(UserVocabularyWord link)
+    public static PersonalVocabularyWordDto ToDto(LearnerWord link)
     {
-        VocabularyWord word = link.VocabularyWord
+        Sense word = link.Sense
             ?? throw new InvalidOperationException($"Link {link.Id} was loaded without its word.");
 
         return link.IsAuthor

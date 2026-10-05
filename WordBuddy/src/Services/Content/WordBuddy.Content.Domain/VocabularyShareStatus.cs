@@ -1,6 +1,6 @@
 namespace WordBuddy.Content.Domain;
 
-/// <summary>Moderation lifecycle of a <see cref="VocabularyWord"/>'s sharing state.</summary>
+/// <summary>Moderation lifecycle of a <see cref="Sense"/>'s sharing state.</summary>
 public enum VocabularyShareStatus
 {
     Private,

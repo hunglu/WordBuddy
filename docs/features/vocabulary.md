@@ -93,6 +93,10 @@ erDiagram
 - Deleting an own `Shared` or `PendingReview` word opens a confirm dialog (see `vocabulary-builder.md`).
 - `/vocabulary/shared`: own words show a "Your word" badge instead of **Add to My List**.
 
+## Pending changes
+
+- WB-16_vocabulary-lexeme-sense-model — split `VocabularyWords` into `Lexeme` + `Sense` (same ids), add `LearnerWord` fields and `SenseTranslation`; no behaviour change (#16)
+
 ## Change history
 
 - `refactor-database-scheme-to-store-vocabulary-item` (#6) — one `VocabularyWords` table plus user and lesson link tables; adopt creates a link; Progress pulls id remaps

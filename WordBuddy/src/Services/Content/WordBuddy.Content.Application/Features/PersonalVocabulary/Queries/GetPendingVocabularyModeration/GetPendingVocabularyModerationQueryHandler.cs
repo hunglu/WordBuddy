@@ -22,7 +22,7 @@ public sealed class GetPendingVocabularyModerationQueryHandler : IQueryHandler<G
     {
         _logger.LogInformation("GetPendingVocabularyModerationQuery started");
 
-        Result<IReadOnlyList<VocabularyWord>> wordsResult = await _repository.GetPendingModerationAsync(ct);
+        Result<IReadOnlyList<Sense>> wordsResult = await _repository.GetPendingModerationAsync(ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(

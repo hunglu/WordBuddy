@@ -24,12 +24,12 @@ public class ModerateSharedVocabularyWordCommandHandlerTests
     private ModerateSharedVocabularyWordCommandHandler CreateHandler() =>
         new(_repository.Object, _validator, _cache.Object, _logger.Object);
 
-    private static VocabularyWord CreatePendingWord() => TestWords.Pending(Guid.NewGuid());
+    private static Sense CreatePendingWord() => TestWords.Pending(Guid.NewGuid());
 
     [Fact]
     public async Task HandleAsync_ApproveWithVisibleToChildrenTrue_SetsSharedAndVisible()
     {
-        VocabularyWord word = CreatePendingWord();
+        Sense word = CreatePendingWord();
         Guid moderatorId = Guid.NewGuid();
 
         _repository.Setup(r => r.GetByIdAsync(word.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(word));
@@ -46,7 +46,7 @@ public class ModerateSharedVocabularyWordCommandHandlerTests
     [Fact]
     public async Task HandleAsync_ApproveWithVisibleToChildrenFalse_SetsSharedNotVisible()
     {
-        VocabularyWord word = CreatePendingWord();
+        Sense word = CreatePendingWord();
 
         _repository.Setup(r => r.GetByIdAsync(word.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(word));
         _repository.Setup(r => r.UpdateAsync(word, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
@@ -61,7 +61,7 @@ public class ModerateSharedVocabularyWordCommandHandlerTests
     [Fact]
     public async Task HandleAsync_Reject_SetsRejected()
     {
-        VocabularyWord word = CreatePendingWord();
+        Sense word = CreatePendingWord();
 
         _repository.Setup(r => r.GetByIdAsync(word.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(word));
         _repository.Setup(r => r.UpdateAsync(word, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
@@ -78,7 +78,7 @@ public class ModerateSharedVocabularyWordCommandHandlerTests
         Guid wordId = Guid.NewGuid();
         _repository
             .Setup(r => r.GetByIdAsync(wordId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<VocabularyWord>(Error.NotFound("PersonalVocabularyWord.NotFound", "not found")));
+            .ReturnsAsync(Result.Failure<Sense>(Error.NotFound("PersonalVocabularyWord.NotFound", "not found")));
 
         Result result = await CreateHandler().HandleAsync(new ModerateSharedVocabularyWordCommand(wordId, true, true, Guid.NewGuid()));
 

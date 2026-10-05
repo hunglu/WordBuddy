@@ -14,9 +14,11 @@ public sealed class ContentDbContext : DbContext
     public DbSet<GrammarRule> GrammarRules => Set<GrammarRule>();
     public DbSet<DailyPhrase> DailyPhrases => Set<DailyPhrase>();
     public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
-    public DbSet<VocabularyWord> VocabularyWords => Set<VocabularyWord>();
-    public DbSet<UserVocabularyWord> UserVocabularyWords => Set<UserVocabularyWord>();
-    public DbSet<LessonVocabularyWord> LessonVocabularyWords => Set<LessonVocabularyWord>();
+    public DbSet<Lexeme> Lexemes => Set<Lexeme>();
+    public DbSet<Sense> Senses => Set<Sense>();
+    public DbSet<SenseTranslation> SenseTranslations => Set<SenseTranslation>();
+    public DbSet<LearnerWord> LearnerWords => Set<LearnerWord>();
+    public DbSet<LessonSense> LessonSenses => Set<LessonSense>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

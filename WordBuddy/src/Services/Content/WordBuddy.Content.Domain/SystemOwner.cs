@@ -2,7 +2,7 @@ namespace WordBuddy.Content.Domain;
 
 /// <summary>The well-known owner of every <see cref="VocabularySource.System"/> word. A plain
 /// value defined only in Content — not a row in Identity and never a foreign key. Identity issues
-/// <c>Guid.NewGuid()</c> user ids, so no JWT can carry this id; <see cref="VocabularyWord.CreateLearner"/>
+/// <c>Guid.NewGuid()</c> user ids, so no JWT can carry this id; <see cref="Sense.CreateLearner"/>
 /// still rejects it as a guard.</summary>
 public static class SystemOwner
 {

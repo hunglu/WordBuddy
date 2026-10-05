@@ -11,9 +11,9 @@ using WordBuddy.Content.Domain;
 namespace WordBuddy.Content.IntegrationTests;
 
 /// <summary>
-/// Behaviour of the unified <c>VocabularyWords</c> storage through the unchanged HTTP API, for
+/// Behaviour of the <c>Senses</c> storage (formerly <c>VocabularyWords</c>) through the unchanged HTTP API, for
 /// Child and Adult callers: dedupe-on-add, adopt-as-link, unlink-on-delete, author-only sharing,
-/// and lesson words served through <c>LessonVocabularyWords</c>. Real SQL Server, never mocked EF.
+/// and lesson words served through <c>LessonSenses</c>. Real SQL Server, never mocked EF.
 /// Every test uses its own word text — the class fixture shares one database.
 /// </summary>
 [Collection(ContentApiCollection.Name)]
@@ -93,6 +93,25 @@ public sealed class VocabularyStorageEndpointsTests
         items.Should().OnlyContain(i =>
             i.EnumerateObject().Select(p => p.Name).SequenceEqual(new[] { "id", "word", "definition", "example", "audio" }) &&
             !string.IsNullOrEmpty(i.GetProperty("example").GetString()));
+    }
+
+    /// <summary>The Lexeme/Sense split must not change lesson JSON: same property names in the same
+    /// order, items ordered by <c>SortOrder</c> (the seed order).</summary>
+    [Fact]
+    public async Task LessonDetail_Get_JsonShapeUnchanged()
+    {
+        HttpClient client = CreateClient(Guid.NewGuid(), "Adult");
+
+        JsonElement lesson = await GetSeededVocabularyLessonAsync(client);
+
+        JsonElement[] items = lesson.GetProperty("vocabularyItems").EnumerateArray().ToArray();
+        items.Should().HaveCount(4);
+        foreach (JsonElement item in items)
+        {
+            item.EnumerateObject().Select(p => p.Name).Should().Equal("id", "word", "definition", "example", "audio");
+        }
+
+        items.Select(i => i.GetProperty("word").GetString()).Should().Equal("Dog", "Cat", "Bird", "Fish");
     }
 
     [Fact]

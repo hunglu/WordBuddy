@@ -4,9 +4,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Content.Api.Models;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Domain;
+using WordBuddy.Content.Infrastructure.Persistence;
 
 namespace WordBuddy.Content.IntegrationTests;
 
@@ -246,5 +249,107 @@ public sealed class PersonalVocabularyEndpointsTests
         ownerPool.Should().ContainSingle(w => w.Id == id).Which.IsMine.Should().BeTrue();
         ownerPool.Where(w => w.IsMine).Should().OnlyContain(w => w.OwnerUserId == ownerId);
         otherPool.Should().ContainSingle(w => w.Id == id).Which.IsMine.Should().BeFalse();
+    }
+    private static readonly string[] WordJsonProperties =
+        ["id", "ownerUserId", "word", "definition", "example", "shareStatus", "visibleToChildren", "createdAtUtc", "isAuthor", "isMine"];
+
+    private static async Task<JsonElement[]> GetJsonArrayAsync(HttpClient client, string url)
+    {
+        HttpResponseMessage response = await client.GetAsync(url);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.EnumerateArray().Select(e => e.Clone()).ToArray();
+    }
+
+    private async Task<(int Lexemes, int Senses)> CountLexemesAndSensesAsync(string word)
+    {
+        string normalized = Sense.NormalizeWord(word);
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        int lexemes = await dbContext.Lexemes.CountAsync(l => l.NormalizedLemma == normalized && l.PartOfSpeech == null);
+        int senses = await dbContext.Senses.CountAsync(s => s.Word.Trim() == word.Trim());
+        return (lexemes, senses);
+    }
+
+    [Fact]
+    public async Task PersonalVocabularyEndpoints_GetMine_JsonShapeUnchanged()
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid id = await AddAsync(owner, UniqueWord("shape-mine"));
+
+        JsonElement[] items = await GetJsonArrayAsync(owner, "/api/vocabulary/mine");
+
+        JsonElement item = items.Should().ContainSingle(i => i.GetProperty("id").GetGuid() == id).Subject;
+        item.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo(WordJsonProperties);
+        item.GetProperty("isAuthor").GetBoolean().Should().BeTrue();
+        item.GetProperty("isMine").GetBoolean().Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("Adult")]
+    [InlineData("Child")]
+    public async Task PersonalVocabularyEndpoints_GetShared_JsonShapeUnchangedAndChildSeesOnlyChildVisible(string ageGroup)
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient caller = CreateClient(Guid.NewGuid(), ageGroup, isAdmin: false);
+        Guid childSafe = await AddAndShareAsync(owner, UniqueWord("shape-safe"), approve: true, visibleToChildren: true);
+        Guid adultOnly = await AddAndShareAsync(owner, UniqueWord("shape-adult"), approve: true, visibleToChildren: false);
+
+        JsonElement[] items = await GetJsonArrayAsync(caller, "/api/vocabulary/shared");
+
+        items.Should().NotBeEmpty();
+        items.Should().OnlyContain(i => i.EnumerateObject().Select(p => p.Name).ToHashSet().SetEquals(WordJsonProperties));
+        items.Should().Contain(i => i.GetProperty("id").GetGuid() == childSafe);
+        if (ageGroup == "Child")
+        {
+            items.Should().OnlyContain(i => i.GetProperty("visibleToChildren").GetBoolean());
+            items.Should().NotContain(i => i.GetProperty("id").GetGuid() == adultOnly);
+        }
+        else
+        {
+            items.Should().Contain(i => i.GetProperty("id").GetGuid() == adultOnly);
+        }
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWord_Post_ReusesNullPosLexemeForSameNormalizedWord()
+    {
+        string suffix = Guid.NewGuid().ToString("N");
+        HttpClient first = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient second = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+
+        HttpResponseMessage a = await first.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest($"Pear{suffix}", "a fruit", null));
+        HttpResponseMessage b = await second.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest($" pear{suffix}", "a soft fruit", null));
+
+        a.StatusCode.Should().Be(HttpStatusCode.Created);
+        b.StatusCode.Should().Be(HttpStatusCode.Created);
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        string normalized = Sense.NormalizeWord($"pear{suffix}");
+        List<Guid> lexemeIds = await dbContext.Lexemes
+            .Where(l => l.NormalizedLemma == normalized)
+            .Select(l => l.Id)
+            .ToListAsync();
+        lexemeIds.Should().ContainSingle();
+        (await dbContext.Lexemes.SingleAsync(l => l.Id == lexemeIds[0])).PartOfSpeech.Should().BeNull();
+        (await dbContext.Senses.CountAsync(s => s.LexemeId == lexemeIds[0])).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task DeletePersonalVocabularyWord_Delete_RemovesOrphanLexemeOnly()
+    {
+        string word = UniqueWord("orphan");
+        HttpClient first = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient second = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid firstId = await AddAsync(first, word);
+        HttpResponseMessage secondAdd = await second.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest(word, "another meaning", null));
+        Guid secondId = await secondAdd.Content.ReadFromJsonAsync<Guid>();
+        (await CountLexemesAndSensesAsync(word)).Should().Be((1, 2));
+
+        (await first.DeleteAsync($"/api/vocabulary/{firstId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await CountLexemesAndSensesAsync(word)).Should().Be((1, 1), "the lexeme is still used by the other sense");
+
+        (await second.DeleteAsync($"/api/vocabulary/{secondId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await CountLexemesAndSensesAsync(word)).Should().Be((0, 0), "the last sense's lexeme is removed with it");
     }
 }

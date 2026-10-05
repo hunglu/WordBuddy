@@ -3,54 +3,61 @@ using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Interfaces;
 
-/// <summary>Persistence for <see cref="VocabularyWord"/> and its per-learner
-/// <see cref="UserVocabularyWord"/> links.</summary>
+/// <summary>Persistence for <see cref="Sense"/>s, their <see cref="Lexeme"/>s, and the per-learner
+/// <see cref="LearnerWord"/> links.</summary>
 public interface IVocabularyWordRepository
 {
-    /// <summary>Returns every word with the given <see cref="VocabularyWord.ContentHash"/>, ordered by
-    /// id (SQL Server order) — may hold system words, shared words and other learners' private words;
+    /// <summary>Returns every sense with the given <see cref="Sense.ContentHash"/>, ordered by
+    /// id (SQL Server order) — may hold system senses, shared senses and other learners' private senses;
     /// the caller decides which, if any, it may link to.</summary>
-    Task<Result<IReadOnlyList<VocabularyWord>>> FindByContentHashAsync(string contentHash, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<Sense>>> FindByContentHashAsync(string contentHash, CancellationToken ct = default);
 
-    /// <summary>Returns a change-tracked word by id, or <see cref="Error.NotFound"/>.</summary>
-    Task<Result<VocabularyWord>> GetByIdAsync(Guid id, CancellationToken ct = default);
+    /// <summary>Returns a change-tracked sense by id, or <see cref="Error.NotFound"/>.</summary>
+    Task<Result<Sense>> GetByIdAsync(Guid id, CancellationToken ct = default);
 
-    /// <summary>Returns the caller's link to a word (word loaded), or <see cref="Error.NotFound"/> —
-    /// the same error whether the word doesn't exist or just isn't in the caller's list, so a caller
+    /// <summary>Returns the caller's link to a sense (sense loaded), or <see cref="Error.NotFound"/> —
+    /// the same error whether the sense doesn't exist or just isn't in the caller's list, so a caller
     /// can never probe for other users' word ids.</summary>
-    Task<Result<UserVocabularyWord>> GetLinkAsync(Guid userId, Guid vocabularyWordId, CancellationToken ct = default);
+    Task<Result<LearnerWord>> GetLinkAsync(Guid userId, Guid senseId, CancellationToken ct = default);
 
-    /// <summary>Returns all of a learner's links with their words loaded, newest first.</summary>
-    Task<Result<IReadOnlyList<UserVocabularyWord>>> GetLinkedToUserAsync(Guid userId, CancellationToken ct = default);
+    /// <summary>Returns all of a learner's links with their senses loaded, newest first.</summary>
+    Task<Result<IReadOnlyList<LearnerWord>>> GetLinkedToUserAsync(Guid userId, CancellationToken ct = default);
 
-    /// <summary>Returns a random subset (at most <paramref name="count"/>) of a learner's links, words loaded.</summary>
-    Task<Result<IReadOnlyList<UserVocabularyWord>>> GetRandomLinkedToUserAsync(Guid userId, int count, CancellationToken ct = default);
+    /// <summary>Returns a random subset (at most <paramref name="count"/>) of a learner's links, senses loaded.</summary>
+    Task<Result<IReadOnlyList<LearnerWord>>> GetRandomLinkedToUserAsync(Guid userId, int count, CancellationToken ct = default);
 
-    /// <summary>Returns <see cref="VocabularyShareStatus.Shared"/> words, additionally filtered to
-    /// <see cref="VocabularyWord.VisibleToChildren"/> when <paramref name="childSafeOnly"/> is <see langword="true"/>.</summary>
-    Task<Result<IReadOnlyList<VocabularyWord>>> GetSharedAsync(bool childSafeOnly, CancellationToken ct = default);
+    /// <summary>Returns <see cref="VocabularyShareStatus.Shared"/> senses, additionally filtered to
+    /// <see cref="Sense.VisibleToChildren"/> when <paramref name="childSafeOnly"/> is <see langword="true"/>.</summary>
+    Task<Result<IReadOnlyList<Sense>>> GetSharedAsync(bool childSafeOnly, CancellationToken ct = default);
 
-    /// <summary>Returns words awaiting moderation, oldest first.</summary>
-    Task<Result<IReadOnlyList<VocabularyWord>>> GetPendingModerationAsync(CancellationToken ct = default);
+    /// <summary>Returns senses awaiting moderation, oldest first.</summary>
+    Task<Result<IReadOnlyList<Sense>>> GetPendingModerationAsync(CancellationToken ct = default);
 
-    /// <summary>Adds a new word together with its author's link, in one save, and returns its id. If a
-    /// concurrent request by the same owner already stored a word with the same content hash, nothing
-    /// new is stored and the existing word's id is returned (the owner linked to it) — the same outcome
-    /// as the non-racing dedupe path.</summary>
-    Task<Result<Guid>> AddAsync(VocabularyWord word, UserVocabularyWord authorLink, CancellationToken ct = default);
+    /// <summary>Returns the <see cref="Lexeme"/> for <paramref name="word"/> with an unknown
+    /// (<see langword="null"/>) part of speech, creating it when missing. Safe under concurrency:
+    /// parallel calls for the same normalized word return the same lexeme id.</summary>
+    Task<Result<Lexeme>> GetOrCreateLexemeAsync(string word, CancellationToken ct = default);
 
-    /// <summary>Persists changes made to a word previously returned by <see cref="GetByIdAsync"/>.</summary>
-    Task<Result> UpdateAsync(VocabularyWord word, CancellationToken ct = default);
+    /// <summary>Adds a new sense together with its author's link, in one save, and returns its id. If a
+    /// concurrent request by the same owner already stored a sense with the same content hash, nothing
+    /// new is stored and the existing sense's id is returned (the owner linked to it) — the same outcome
+    /// as the non-racing dedupe path. If the sense's lexeme was deleted in between, the lexeme is
+    /// re-created once and the add retried.</summary>
+    Task<Result<Guid>> AddAsync(Sense word, LearnerWord authorLink, CancellationToken ct = default);
 
-    /// <summary>Adds a link from a learner to an existing word. Idempotent under concurrency: if the
+    /// <summary>Persists changes made to a sense previously returned by <see cref="GetByIdAsync"/>.</summary>
+    Task<Result> UpdateAsync(Sense word, CancellationToken ct = default);
+
+    /// <summary>Adds a link from a learner to an existing sense. Idempotent under concurrency: if the
     /// same link was created concurrently, succeeds without adding a second one.</summary>
-    Task<Result> LinkAsync(UserVocabularyWord link, CancellationToken ct = default);
+    Task<Result> LinkAsync(LearnerWord link, CancellationToken ct = default);
 
     /// <summary>Removes a link previously returned by <see cref="GetLinkAsync"/>.</summary>
-    Task<Result> UnlinkAsync(UserVocabularyWord link, CancellationToken ct = default);
+    Task<Result> UnlinkAsync(LearnerWord link, CancellationToken ct = default);
 
-    /// <summary>Deletes the word when it is <see cref="VocabularySource.Learner"/>-sourced, not
-    /// <see cref="VocabularyShareStatus.Shared"/>, and no learner or lesson links to it any more.
-    /// Returns whether it was deleted.</summary>
-    Task<Result<bool>> DeleteIfOrphanedAsync(Guid vocabularyWordId, CancellationToken ct = default);
+    /// <summary>Deletes the sense when it is <see cref="VocabularySource.Learner"/>-sourced, not
+    /// <see cref="VocabularyShareStatus.Shared"/>, and no learner or lesson links to it any more. Its
+    /// <see cref="Lexeme"/> is deleted too when no other sense references it. Returns whether the
+    /// sense was deleted.</summary>
+    Task<Result<bool>> DeleteIfOrphanedAsync(Guid senseId, CancellationToken ct = default);
 }

@@ -163,7 +163,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         system.Select(r => (Guid)r[0]!).Should().BeEquivalentTo([System1, System2]);
         system.Should().OnlyContain(r => (Guid)r[2]! == SystemOwner.UserId && (string)r[3]! == "Private");
         system.Single(r => (Guid)r[0]! == System1)[4].Should().Be(AudioId);
-        system.Should().OnlyContain(r => (string)r[5]! == VocabularyWord.ComputeContentHash("Dog", "An animal.", "The dog barked."));
+        system.Should().OnlyContain(r => (string)r[5]! == Sense.ComputeContentHash("Dog", "An animal.", "The dog barked."));
 
         List<object?[]> lessonLinks = await QueryAsync($"SELECT VocabularyWordId FROM LessonVocabularyWords WHERE LessonId = '{LessonId}'");
         lessonLinks.Select(r => (Guid)r[0]!).Should().BeEquivalentTo([System1, System2]);
@@ -175,7 +175,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         List<object?[]> rows = await QueryAsync($"SELECT ContentHash, NormalizedWord FROM VocabularyWords WHERE Id = '{A1}'");
 
         rows.Should().ContainSingle();
-        ((string)rows[0][0]!).Should().Be(VocabularyWord.ComputeContentHash("apple", "a fruit", null));
+        ((string)rows[0][0]!).Should().Be(Sense.ComputeContentHash("apple", "a fruit", null));
         ((string)rows[0][1]!).Should().Be("APPLE");
     }
 
