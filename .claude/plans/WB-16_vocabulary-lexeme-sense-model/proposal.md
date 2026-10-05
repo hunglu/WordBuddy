@@ -1,14 +1,14 @@
 ---
 title: WB-16_Vocabulary lexeme sense model
-status: reviewed
+status: done
 type: change
 issue: 16
 pr: 17
 affects: docs/features/vocabulary.md
 supersedes: refactor-database-scheme-to-store-vocabulary-item
-version: 3.2
+version: 3.3
 created: 2026-10-04T23:49:41+07:00
-updated: 2026-10-05T09:53:12+07:00
+updated: 2026-10-05T10:07:45+07:00
 ---
 
 ## Problem
@@ -49,3 +49,4 @@ Both. Child vs. adult behaviour stays exactly as it is today.
   lexemes deleted; wipe-and-reseed fallback only with Sam's approval; sense enrichment fields out
   of scope (ADR 0004, idea.md D14–D18).
 - **v3.2 — 2026-10-05T09:53:12+07:00** — Review round 1: approved (3 nits); `pr: 17` recorded.
+- **v3.3 — 2026-10-05T10:07:45+07:00** — Tested: all suites green; merged into main via PR #17.

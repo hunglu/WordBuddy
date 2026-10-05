@@ -3,43 +3,66 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-12_defect-on-sharing-word
+last-updated-by: WB-16_vocabulary-lexeme-sense-model
 ---
 
 # Vocabulary storage
 
-Every vocabulary word — system or learner — is stored once, in Content's `VocabularyWords` table.
+Every vocabulary meaning — system or learner — is one `Senses` row in Content. Senses of the same word share one `Lexemes` row (ADR 0004).
 
 ## What it does
 
 ```mermaid
 erDiagram
-    VocabularyWords ||--o{ UserVocabularyWords : "linked to learners"
-    VocabularyWords ||--o{ LessonVocabularyWords : "linked to lessons"
-    VocabularyWords {
+    Lexemes ||--o{ Senses : "meanings of one word"
+    Senses ||--o{ LearnerWords : "linked to learners"
+    Senses ||--o{ LessonSenses : "linked to lessons"
+    Senses ||--o{ SenseTranslations : "one per locale"
+    Lexemes {
         guid Id
+        string Lemma
+        string NormalizedLemma "unique with PartOfSpeech"
+        string PartOfSpeech "NULL until auto-fill"
+        string CefrLevel "optional"
+        string IpaUk "optional"
+        string IpaUs "optional"
+        json WordForms "optional"
+    }
+    Senses {
+        guid Id "same id as the former VocabularyWords.Id; Progress refers to it"
+        guid LexemeId
         string Word
         string Definition
         string Example "optional"
         string Source "System | Learner"
-        guid OwnerUserId "SystemOwner.UserId for system words"
+        guid OwnerUserId "SystemOwner.UserId for system senses"
         string ShareStatus
         bool VisibleToChildren
         string ContentHash "word + definition + example"
     }
-    UserVocabularyWords {
+    LearnerWords {
         guid UserId
-        guid VocabularyWordId
+        guid SenseId
         datetime AddedAtUtc
         bool IsAuthor "true only for the creator"
+        string AddedBy "Learner | Supporter | List"
+        string PersonalContext "optional, max 500"
     }
-    LessonVocabularyWords {
+    LessonSenses {
         guid LessonId
-        guid VocabularyWordId
+        guid SenseId
         int SortOrder
+    }
+    SenseTranslations {
+        guid Id
+        guid SenseId
+        string Locale "BCP-47, unique per sense"
+        string Text "max 500"
     }
 ```
 
+- Adding a new learner word reuses the lexeme with the same normalized lemma and `PartOfSpeech = NULL`, or creates one.
+- Deleting the last sense of a lexeme also deletes the lexeme. A lexeme shared with another sense stays.
 - `GET /api/lessons/{id}` JSON is unchanged.
 - Personal vocabulary DTOs carry `isAuthor` (always `false` on shared and moderation lists).
 - Shared-pool DTOs carry `isMine` (`true` only when the caller owns the word).
@@ -63,6 +86,7 @@ erDiagram
 - **Child vs adult:**
   - A Child cannot request sharing (`CanShareVocabulary`, 403).
   - A Child sees and adopts only shared words with `VisibleToChildren = true`; adults see all.
+  - The child filter (`VisibleToChildren`) applies per `Sense`, not per `Lexeme`: two meanings of one word can differ.
   - A `Shared` word always applies the child filter, also after hand-over to System.
   - Dedupe (and the migration) never links a Child to a word the Child cannot see, including System words.
   - Admins moderate (`AdminOnly`) regardless of their own age group.
@@ -95,9 +119,10 @@ erDiagram
 
 ## Pending changes
 
-- WB-16_vocabulary-lexeme-sense-model — split `VocabularyWords` into `Lexeme` + `Sense` (same ids), add `LearnerWord` fields and `SenseTranslation`; no behaviour change (#16)
+None.
 
 ## Change history
 
 - `refactor-database-scheme-to-store-vocabulary-item` (#6) — one `VocabularyWords` table plus user and lesson link tables; adopt creates a link; Progress pulls id remaps
 - `WB-12_defect-on-sharing-word` (#12, PR #13) — delete of a shared word needs confirmation and hands the word over to System; `isMine` on the pool; child filter for System-owned shared words; `VocabularyWordIdRemaps` table, `/internal/vocabulary-remaps` routes and Progress sync removed
+- `WB-16_vocabulary-lexeme-sense-model` (#16, PR #17) — `VocabularyWords` split into `Lexemes` + `Senses` (same ids); `LearnerWords` (`AddedBy`, `PersonalContext`), `LessonSenses`, `SenseTranslations`; API JSON unchanged
