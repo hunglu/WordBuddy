@@ -37,6 +37,7 @@ public sealed class ContentApiFactory : WebApplicationFactory<Program>, IAsyncLi
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);
+        Environment.SetEnvironmentVariable("Messaging__Transport", "InMemory");
         Environment.SetEnvironmentVariable("FileStorage__BasePath", Path.Combine(Path.GetTempPath(), "wordbuddy-content-tests"));
     }
 

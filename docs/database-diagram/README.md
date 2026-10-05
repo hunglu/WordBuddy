@@ -7,9 +7,9 @@ these diagrams must match it.
 | Service | Database | Tables | Diagram |
 | --- | --- | --- | --- |
 | Identity | `WordBuddyIdentity` | 1 | [identity.md](identity.md) |
-| Content | `WordBuddyContent` | 7 | [content.md](content.md) |
+| Content | `WordBuddyContent` | 12 | [content.md](content.md) |
 | Quiz | `WordBuddyQuiz` | 2 | [quiz.md](quiz.md) |
-| Progress | `WordBuddyProgress` | 3 | [progress.md](progress.md) |
+| Progress | `WordBuddyProgress` | 7 | [progress.md](progress.md) |
 | Notification | — | 0 | no database |
 
 ## Cross-service ids

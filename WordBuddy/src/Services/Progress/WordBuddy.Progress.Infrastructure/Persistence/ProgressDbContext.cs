@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WordBuddy.Progress.Domain;
+using WordBuddy.Shared.Infrastructure.Messaging;
 
 namespace WordBuddy.Progress.Infrastructure.Persistence;
 
@@ -13,9 +14,11 @@ public sealed class ProgressDbContext : DbContext
     public DbSet<LearnerProgress> LearnerProgressEntries => Set<LearnerProgress>();
     public DbSet<VocabularyRecallStat> VocabularyRecallStats => Set<VocabularyRecallStat>();
     public DbSet<VocabularyRecallSession> VocabularyRecallSessions => Set<VocabularyRecallSession>();
+    public DbSet<LearnerWordMembership> LearnerWordMemberships => Set<LearnerWordMembership>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ProgressDbContext).Assembly);
+        modelBuilder.AddWordBuddyMessagingEntities();
     }
 }

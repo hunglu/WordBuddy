@@ -6,6 +6,7 @@ using WordBuddy.Content.Infrastructure.Persistence;
 using WordBuddy.Content.Infrastructure.Repositories;
 using WordBuddy.Content.Infrastructure.Services;
 using WordBuddy.Content.Infrastructure.Settings;
+using WordBuddy.Shared.Infrastructure.Messaging;
 
 namespace WordBuddy.Content.Infrastructure.Extensions;
 
@@ -17,6 +18,9 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<ContentDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+
+        // Publisher only: LearnerWord changes go out through the EF Core outbox (ContentDbContext).
+        services.AddWordBuddyMessaging<ContentDbContext>(configuration);
 
         services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
 

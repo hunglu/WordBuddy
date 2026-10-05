@@ -39,6 +39,25 @@ services:
       done'
     restart: "no"
 
+  # Message broker (WB-21). Ports bound to 127.0.0.1 only; the management UI
+  # (http://localhost:15672) is for local admins. Credentials come from .env.
+  rabbitmq:
+    image: rabbitmq:management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
   identity-api:
     build:
       context: src/Services/Identity
@@ -66,12 +85,17 @@ services:
     depends_on:
       sqlserver-init:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: ${CONTENT_CONNECTION_STRING}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER}
       FileStorage__BasePath: /app/media
+      Messaging__RabbitMq__Host: rabbitmq
+      Messaging__RabbitMq__Username: ${RABBITMQ_USER}
+      Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
     ports:
       - "5081:8080"
     volumes:
@@ -103,11 +127,16 @@ services:
     depends_on:
       sqlserver-init:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: ${PROGRESS_CONNECTION_STRING}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER}
+      Messaging__RabbitMq__Host: rabbitmq
+      Messaging__RabbitMq__Username: ${RABBITMQ_USER}
+      Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
     ports:
       - "5083:8080"
 
@@ -140,3 +169,4 @@ services:
 volumes:
   sqlserver-data:
   media-data:
+  rabbitmq-data:

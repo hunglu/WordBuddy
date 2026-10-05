@@ -13,7 +13,8 @@ flowchart LR
     UI -->|/api/quiz| QZ[Quiz :5082]
     UI -->|/api/progress| PR[Progress :5083]
     NT[Notification :5084<br/>scaffold, no public routes]
-    PR -.->|"GET /internal/vocabulary-remaps<br/>(service token, cluster-only)"| CT
+    CT -.->|"LearnerWordAdded / LearnerWordRemoved<br/>(EF outbox)"| MQ[(RabbitMQ<br/>AMQP 5672)]
+    MQ -.->|"consumers + EF inbox"| PR
     ID --> DB1[(Identity DB)]
     CT --> DB2[(Content DB)]
     CT --> FS[(media volume)]
@@ -22,8 +23,9 @@ flowchart LR
 ```
 
 - **Routing by path prefix.** Vite proxy (dev), the UI's nginx (Docker) and the k8s ingress apply the same prefixes; the frontend code never changes.
-- **No cross-database joins or FKs.** Services exchange ids only; the dashed arrow is the sole service-to-service HTTP call today.
-- **Auth.** Identity issues JWTs; every service validates them. `/internal/*` routes accept only service tokens (`wb_service` claim) and are not exposed through nginx or the ingress.
+- **No cross-database joins or FKs.** Services exchange ids only. There are no service-to-service HTTP calls today.
+- **Messaging (WB-21).** Async events via MassTransit on RabbitMQ (`AddWordBuddyMessaging` in `WordBuddy.Shared.Infrastructure`). Publishers write to an EF Core outbox in the same transaction; consumers dedupe with an EF Core inbox. Payloads carry ids and timestamps only. The RabbitMQ management UI is internal: `127.0.0.1` in compose, `kubectl port-forward` in kind, never on the ingress.
+- **Auth.** Identity issues JWTs; every service validates them.
 - **One SQL Server instance** hosts all databases locally (`sqlserver` in compose); each service owns its schema and migrations.
 
 ## 2. Inside one service — Clean Architecture + CQRS
@@ -32,7 +34,7 @@ flowchart LR
 flowchart TB
     API["Api<br/>controllers, Program.cs (composition root)"] --> APP["Application<br/>command / query handlers, validators, interfaces"]
     APP --> DOM["Domain<br/>entities, Result&lt;T&gt;, Error"]
-    INF["Infrastructure<br/>EF Core, HTTP clients, storage"] --> APP
+    INF["Infrastructure<br/>EF Core, HTTP clients, storage, MassTransit"] --> APP
     API -->|AddInfrastructure| INF
 ```
 

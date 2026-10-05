@@ -5,7 +5,7 @@ using OpenTelemetry.Trace;
 
 namespace WordBuddy.Shared.Infrastructure.Observability;
 
-/// <summary>Wires OpenTelemetry distributed tracing (ASP.NET Core, outbound HTTP, EF Core) exported to Jaeger via OTLP.</summary>
+/// <summary>Wires OpenTelemetry distributed tracing (ASP.NET Core, outbound HTTP, EF Core, MassTransit) exported to Jaeger via OTLP.</summary>
 public static class OpenTelemetryExtensions
 {
     /// <summary>
@@ -25,6 +25,7 @@ public static class OpenTelemetryExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddEntityFrameworkCoreInstrumentation()
+                    .AddSource("MassTransit")
                     .AddOtlpExporter(options =>
                     {
                         string? endpoint = configuration["OpenTelemetry:OtlpEndpoint"];

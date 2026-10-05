@@ -1,7 +1,7 @@
 # Content — database diagram
 
 Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
-last migration: `20261005023005_SplitVocabularyIntoLexemesAndSenses`
+last migration: `20261005095815_AddMessagingOutbox`
 
 ```mermaid
 erDiagram
@@ -116,3 +116,67 @@ erDiagram
 - `Senses.Id` = the former `VocabularyWords.Id` (kept by the rename). Progress references it (`VocabularyRecallStats.VocabularyWordId`); sense audio is `vocab-{id}-{locale}.mp3`, so sense ids must stay stable.
 - Lexeme audio is `lexeme-{lexemeId}-{locale}.mp3` (`en-GB` / `en-US`); not written yet.
 - Feature rules for these tables: `docs/features/vocabulary.md`.
+- `LearnerWords` inserts/deletes write `OutboxMessage` rows in the same transaction (events `LearnerWordAdded` / `LearnerWordRemoved`, ids and timestamps only). Content only publishes; `InboxState` stays empty.
+
+## MassTransit messaging tables (WB-21)
+
+Schema owned by MassTransit (`AddWordBuddyMessagingEntities`). Do not change by hand.
+
+```mermaid
+erDiagram
+    OutboxState ||--o{ OutboxMessage : "OutboxId (no action)"
+    InboxState ||--o{ OutboxMessage : "InboxMessageId, InboxConsumerId (no action)"
+    InboxState {
+        long Id PK "identity"
+        guid MessageId UK "AK with ConsumerId"
+        guid ConsumerId UK
+        guid LockId
+        bytes RowVersion "rowversion"
+        datetime Received
+        int ReceiveCount
+        datetime ExpirationTime "nullable"
+        datetime Consumed "nullable"
+        datetime Delivered "nullable"
+        long LastSequenceNumber "nullable"
+    }
+    OutboxState {
+        guid OutboxId PK
+        guid LockId
+        bytes RowVersion "rowversion"
+        datetime Created
+        datetime Delivered "nullable"
+        long LastSequenceNumber "nullable"
+    }
+    OutboxMessage {
+        long SequenceNumber PK "identity"
+        datetime EnqueueTime "nullable"
+        datetime SentTime
+        string Headers "nullable"
+        string Properties "nullable"
+        guid InboxMessageId FK "nullable"
+        guid InboxConsumerId FK "nullable"
+        guid OutboxId FK "nullable"
+        guid MessageId
+        string ContentType "max 256"
+        string MessageType
+        string Body
+        guid ConversationId "nullable"
+        guid CorrelationId "nullable"
+        guid InitiatorId "nullable"
+        guid RequestId "nullable"
+        string SourceAddress "nullable, max 256"
+        string DestinationAddress "nullable, max 256"
+        string ResponseAddress "nullable, max 256"
+        string FaultAddress "nullable, max 256"
+        datetime ExpirationTime "nullable"
+    }
+```
+
+| Index | Columns | Unique |
+| --- | --- | --- |
+| `AK_InboxState_MessageId_ConsumerId` | `MessageId`, `ConsumerId` | yes (inbox dedupe) |
+| `IX_InboxState_Delivered` | `Delivered` | — |
+| `IX_OutboxState_Created` | `Created` | — |
+| `IX_OutboxMessage_EnqueueTime`, `IX_OutboxMessage_ExpirationTime` | one column each | — |
+| `IX_OutboxMessage_OutboxId_SequenceNumber` | `OutboxId`, `SequenceNumber` | yes, `OutboxId IS NOT NULL` |
+| `IX_OutboxMessage_InboxMessageId_InboxConsumerId_SequenceNumber` | 3 columns | yes, both inbox ids not null |

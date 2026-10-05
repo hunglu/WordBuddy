@@ -33,6 +33,16 @@ spec:
                 secretKeyRef:
                   name: wordbuddy-secrets
                   key: Jwt__Secret
+            - name: Messaging__RabbitMq__Username
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Messaging__RabbitMq__Username
+            - name: Messaging__RabbitMq__Password
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Messaging__RabbitMq__Password
           resources:
             requests:
               cpu: 100m

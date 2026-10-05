@@ -4,8 +4,19 @@ Learner progress tracking, streaks, and completion history across lessons and qu
 
 Owns the `LearnerProgress` domain entity. Has zero project references to any other WordBuddy
 service or shared project — see the root [`CLAUDE.md`](../../../CLAUDE.md) for the independence
-model this follows. Consumes `QuizCompletedEvent`/`LessonCompletedEvent` (from
-`WordBuddy.Shared.Contracts`) via MassTransit once messaging is wired up in a later phase.
+model this follows.
+
+## Messaging (consumer)
+
+| Event (from Content) | Consumer | Effect on `LearnerWordMemberships` |
+| --- | --- | --- |
+| `LearnerWordAdded` | `LearnerWordAddedConsumer` | Insert or re-activate the (user, sense) row |
+| `LearnerWordRemoved` | `LearnerWordRemovedConsumer` | `IsActive = false`; row kept |
+
+- EF Core inbox dedupes on `MessageId`; the unique (`UserId`, `SenseId`) index dedupes on the
+  natural key.
+- Events older than the row's `LastEventAtUtc` are ignored (out-of-order safe).
+- A failed command throws so the retry policy runs. Logs carry ids only.
 
 ## Endpoints
 
@@ -23,9 +34,22 @@ frontend/a caller that needs titles looks them up from Content separately).
 
 ## Running standalone
 
+Needs RabbitMQ on `localhost:5672` (e.g. the `rabbitmq` service from `docker-compose.yml`).
+
 ```bash
+dotnet user-secrets set "Messaging:RabbitMq:Password" "<password>" --project WordBuddy.Progress.Api
 dotnet run --project WordBuddy.Progress.Api --urls http://localhost:5083
 ```
+
+Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=progress` or
+`dotnet ef database update`):
+
+```bash
+dotnet ef migrations add <Name> --project WordBuddy.Progress.Infrastructure --startup-project WordBuddy.Progress.Infrastructure --output-dir Persistence/Migrations
+```
+
+Latest migration: `AddLearnerWordMembership` (`LearnerWordMemberships`, `InboxState`,
+`OutboxMessage`, `OutboxState`).
 
 ## Running in Docker / Kubernetes
 
@@ -41,6 +65,9 @@ Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyProgress`)
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Progress validates
   tokens Identity issued
+- `Messaging:RabbitMq:{Host,VirtualHost,Username}` — broker (defaults in `appsettings.json`);
+  `Messaging:RabbitMq:Password` only via user-secrets or env `Messaging__RabbitMq__Password`.
+  `Messaging:Transport = InMemory` is for tests only.
 - `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
   Tracing section
 
@@ -50,7 +77,7 @@ Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 |---|---|
 | `WordBuddy.Progress.Api` | Controllers, `Program.cs`, composition root |
 | `WordBuddy.Progress.Application` | Commands/queries, DTOs, validators |
-| `WordBuddy.Progress.Domain` | `LearnerProgress` entity |
-| `WordBuddy.Progress.Infrastructure` | EF Core `ProgressDbContext`, repositories |
+| `WordBuddy.Progress.Domain` | `LearnerProgress`, `LearnerWordMembership` entities |
+| `WordBuddy.Progress.Infrastructure` | EF Core `ProgressDbContext`, repositories, MassTransit consumers |
 | `WordBuddy.Progress.UnitTests` | Handler/domain unit tests (Moq) |
 | `WordBuddy.Progress.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |
