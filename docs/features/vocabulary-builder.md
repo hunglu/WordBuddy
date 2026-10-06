@@ -89,6 +89,12 @@ Delete confirm dialog:
 
 A plain delete that returns 409 opens the dialog. Escape or a backdrop click closes it (not while pending).
 
+## Pending changes
+
+- `WB-22_vocabulary-srs-engine` — FSRS scheduling and append-only ReviewLog in Progress (#22)
+- `WB-23_vocabulary-review-exercises` — exercise-based daily session replaces the self-rated recall check (#23)
+- `WB-28_vocabulary-answer-checking` — server-side answer checking (#28)
+
 ## Change history
 
 - `vocabulary-builder-and-checkup` (PR #10) — personal list, moderated shared pool, recall check with progress

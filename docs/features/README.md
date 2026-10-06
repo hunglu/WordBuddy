@@ -14,6 +14,11 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | UI theme tokens | `ui-theme.md` | shipped |
 | App navigation (sidebar) | `app-navigation.md` | shipped |
 | Messaging | `messaging.md` | shipped |
+| Learner support links | `learner-support-links.md` | proposed |
+| Vocabulary autofill | `vocabulary-autofill.md` | proposed |
+| Supporter dashboard | `supporter-dashboard.md` | proposed |
+| Learning groups | `learning-groups.md` | proposed |
+| Vocabulary challenges | `vocabulary-challenges.md` | proposed |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.

@@ -119,7 +119,7 @@ erDiagram
 
 ## Pending changes
 
-None.
+- `WB-25_vocabulary-autofill` — auto-fill part of speech, IPA, audio, translations and sense enrichment fields (#25)
 
 ## Change history
 
