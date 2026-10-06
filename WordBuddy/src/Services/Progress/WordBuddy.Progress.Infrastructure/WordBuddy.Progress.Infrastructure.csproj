@@ -12,6 +12,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <PackageReference Include="WordBuddy.Shared.Kernel" Version="1.0.1" />
+    <PackageReference Include="WordBuddy.Shared.Contracts" Version="1.1.0" />
+    <PackageReference Include="WordBuddy.Shared.Infrastructure" Version="1.1.0" />
   </ItemGroup>
 
   <PropertyGroup>

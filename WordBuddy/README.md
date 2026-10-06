@@ -72,7 +72,8 @@ make up                       # docker-compose: sqlserver + all 5 APIs + ui
 make cluster-up               # kind cluster + ingress-nginx
 make k8s-build-load           # build & load all images
 cp k8s/secret.yaml.example k8s/secret.yaml   # fill in real values, never commit
-make k8s-apply                # namespace, config, secrets, sqlserver, all services, ingress
+make k8s-apply                # namespace, config, secrets, sqlserver, rabbitmq, all services, ingress
+make k8s-rabbitmq-ui          # RabbitMQ management UI on http://localhost:15672 (port-forward only, never on the Ingress)
 ```
 
 See [`CLAUDE.md`](./CLAUDE.md)'s "Running in Docker / local Kubernetes" section for the full

@@ -42,11 +42,37 @@ Swagger UI: `http://localhost:5081/swagger` (Development only). Bearer tokens co
 Identity — this service only validates them (same `Jwt:Secret`/`Jwt:Issuer` config), it never
 issues its own.
 
+## Messaging (publisher)
+
+Every `LearnerWord` insert/delete publishes an event through the EF Core outbox, in the same
+transaction (`ContentDbContext.SaveChangesAsync` → `LearnerWordEventCollector`).
+
+| Change | Event (`WordBuddy.Shared.Contracts.Vocabulary`) |
+| --- | --- |
+| Add own word, adopt shared word | `LearnerWordAdded` |
+| Delete, confirmed hand-over, cancelled share, orphan delete | `LearnerWordRemoved` |
+| System-owner link | none |
+
+Payload: ids and timestamps only (no word text, no personal context, no age group). Child and
+adult events are identical. Consumer: Progress.
+
 ## Running standalone
 
+Needs RabbitMQ on `localhost:5672` (e.g. the `rabbitmq` service from `docker-compose.yml`).
+
 ```bash
+dotnet user-secrets set "Messaging:RabbitMq:Password" "<password>" --project WordBuddy.Content.Api
 dotnet run --project WordBuddy.Content.Api --urls http://localhost:5081
 ```
+
+Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=content` or
+`dotnet ef database update`):
+
+```bash
+dotnet ef migrations add <Name> --project WordBuddy.Content.Infrastructure --startup-project WordBuddy.Content.Infrastructure --output-dir Persistence/Migrations
+```
+
+Latest messaging migration: `AddMessagingOutbox` (`InboxState`, `OutboxMessage`, `OutboxState`).
 
 ## Running in Docker / Kubernetes
 
@@ -65,6 +91,9 @@ Copy `WordBuddy.Content.Api/appsettings.Development.json.example` to
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Content validates
   tokens Identity issued
 - `FileStorage:BasePath` — local media storage root (`C:\WordBuddyMedia` in dev)
+- `Messaging:RabbitMq:{Host,VirtualHost,Username}` — broker (defaults in `appsettings.json`);
+  `Messaging:RabbitMq:Password` only via user-secrets or env `Messaging__RabbitMq__Password`.
+  `Messaging:Transport = InMemory` is for tests only.
 - `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
   Tracing section
 

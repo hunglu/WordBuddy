@@ -33,6 +33,7 @@ public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncL
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);
+        Environment.SetEnvironmentVariable("Messaging__Transport", "InMemory");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

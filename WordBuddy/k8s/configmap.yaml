@@ -8,3 +8,4 @@ data:
   Jwt__Issuer: "WordBuddy"
   Jwt__ExpiryMinutes: "60"
   FileStorage__BasePath: "/app/media"
+  Messaging__RabbitMq__Host: "rabbitmq"

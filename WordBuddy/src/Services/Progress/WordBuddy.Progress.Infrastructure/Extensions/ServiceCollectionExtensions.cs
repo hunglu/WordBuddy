@@ -1,9 +1,12 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Application.Interfaces;
+using WordBuddy.Progress.Infrastructure.Messaging;
 using WordBuddy.Progress.Infrastructure.Persistence;
 using WordBuddy.Progress.Infrastructure.Repositories;
+using WordBuddy.Shared.Infrastructure.Messaging;
 
 namespace WordBuddy.Progress.Infrastructure.Extensions;
 
@@ -18,6 +21,14 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ILearnerProgressRepository, LearnerProgressRepository>();
         services.AddScoped<IVocabularyRecallRepository, VocabularyRecallRepository>();
+        services.AddScoped<ILearnerWordMembershipRepository, LearnerWordMembershipRepository>();
+
+        // Consumer side: Content's LearnerWord events, deduped by the EF Core inbox.
+        services.AddWordBuddyMessaging<ProgressDbContext>(configuration, bus =>
+        {
+            bus.AddConsumer<LearnerWordAddedConsumer>();
+            bus.AddConsumer<LearnerWordRemovedConsumer>();
+        });
 
         return services;
     }

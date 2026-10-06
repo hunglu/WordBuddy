@@ -3,7 +3,7 @@ CLUSTER_NAME := wordbuddy
 SERVICE ?=
 
 .PHONY: up down logs migrate clean pack-shared publish-shared \
-        cluster-up cluster-down k8s-build-load k8s-apply k8s-logs k8s-migrate
+        cluster-up cluster-down k8s-build-load k8s-apply k8s-logs k8s-migrate k8s-rabbitmq-ui
 
 ## --- docker-compose (local dev inner loop) ---
 
@@ -67,6 +67,7 @@ k8s-apply:
 	kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
 	kubectl apply -f k8s/sqlserver-statefulset.yaml -f k8s/sqlserver-service.yaml
 	kubectl apply -f k8s/sqlserver-init-job.yaml
+	kubectl apply -f k8s/rabbitmq-deployment.yaml -f k8s/rabbitmq-service.yaml
 	kubectl apply -f k8s/identity-deployment.yaml -f k8s/identity-service.yaml
 	kubectl apply -f k8s/content-deployment.yaml -f k8s/content-service.yaml
 	kubectl apply -f k8s/quiz-deployment.yaml -f k8s/quiz-service.yaml
@@ -74,6 +75,9 @@ k8s-apply:
 	kubectl apply -f k8s/notification-deployment.yaml -f k8s/notification-service.yaml
 	kubectl apply -f k8s/ui-deployment.yaml -f k8s/ui-service.yaml
 	kubectl apply -f k8s/ingress.yaml
+
+k8s-rabbitmq-ui:
+	kubectl -n wordbuddy port-forward svc/rabbitmq 15672:15672
 
 k8s-logs:
 	kubectl -n wordbuddy logs -f deploy/$(SERVICE)-api
