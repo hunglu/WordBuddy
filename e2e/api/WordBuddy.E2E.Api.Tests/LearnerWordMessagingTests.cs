@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
@@ -7,17 +8,113 @@ using Microsoft.Playwright;
 namespace WordBuddy.E2E.Api.Tests;
 
 /// <summary>
-/// Runs only when <c>E2E_PROGRESS_DB</c> holds a connection string to the Progress database.
+/// Runs only when the Progress database is reachable: through <c>E2E_PROGRESS_DB</c> (kind/CI),
+/// or else through <c>sqlcmd</c> inside the docker compose <c>sqlserver</c> container.
 /// Progress has no public reader for memberships yet, so the test reads the table directly.
 /// </summary>
 public sealed class ProgressDbFactAttribute : FactAttribute
 {
     public ProgressDbFactAttribute()
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(LearnerWordMessagingTests.ProgressDbVariable)))
+        if (!ProgressDb.IsAvailable)
         {
-            Skip = $"Set {LearnerWordMessagingTests.ProgressDbVariable} to the Progress DB connection string to run.";
+            Skip = $"Set {ProgressDb.ConnectionVariable} or run the docker compose stack (sqlserver) to run.";
         }
+    }
+}
+
+/// <summary>
+/// Scalar queries against the Progress database.
+/// Compose path: the SA password expands inside the container, never on the host or in logs.
+/// </summary>
+internal static class ProgressDb
+{
+    public const string ConnectionVariable = "E2E_PROGRESS_DB";
+    private const string DatabaseName = "WordBuddyProgress";
+
+    private static readonly Lazy<bool> ComposeAvailable = new(ProbeCompose);
+
+    private static string? ConnectionString => Environment.GetEnvironmentVariable(ConnectionVariable);
+
+    public static bool IsAvailable => !string.IsNullOrWhiteSpace(ConnectionString) || ComposeAvailable.Value;
+
+    /// <summary>Runs a query that returns one integer. Callers must only embed trusted values (Guids, bits).</summary>
+    public static async Task<int> ScalarIntAsync(string sql)
+    {
+        if (!string.IsNullOrWhiteSpace(ConnectionString))
+        {
+            await using SqlConnection connection = new(ConnectionString);
+            await connection.OpenAsync();
+            await using SqlCommand command = new(sql, connection);
+            return (int)(await command.ExecuteScalarAsync())!;
+        }
+
+        (int exitCode, string output) = await RunSqlcmdAsync($"SET NOCOUNT ON; {sql}");
+        if (exitCode != 0)
+        {
+            throw new InvalidOperationException($"sqlcmd in the sqlserver container failed ({exitCode}).");
+        }
+
+        return int.Parse(output.Trim());
+    }
+
+    private static bool ProbeCompose()
+    {
+        try
+        {
+            (int exitCode, string output) = RunSqlcmdAsync("SET NOCOUNT ON; SELECT 1").GetAwaiter().GetResult();
+            return exitCode == 0 && output.Trim() == "1";
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunSqlcmdAsync(string sql)
+    {
+        string? composeDir = FindComposeDirectory();
+        if (composeDir is null)
+        {
+            return (-1, string.Empty);
+        }
+
+        string script = "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$SA_PASSWORD\" -C -d "
+            + DatabaseName + " -h -1 -W -Q \"" + sql + "\"";
+        ProcessStartInfo info = new("docker")
+        {
+            WorkingDirectory = composeDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (string arg in new[] { "compose", "exec", "-T", "sqlserver", "sh", "-c", script })
+        {
+            info.ArgumentList.Add(arg);
+        }
+
+        using Process process = Process.Start(info)!;
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(30));
+        await process.WaitForExitAsync(cts.Token);
+        await stderr;
+        return (process.ExitCode, await stdout);
+    }
+
+    /// <summary>Walks up from the test output folder to <c>WordBuddy/docker-compose.yml</c>.</summary>
+    private static string? FindComposeDirectory()
+    {
+        for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            string candidate = Path.Combine(dir.FullName, "WordBuddy");
+            if (File.Exists(Path.Combine(candidate, "docker-compose.yml")))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }
 
@@ -29,8 +126,6 @@ public sealed class ProgressDbFactAttribute : FactAttribute
 [Collection(ApiRequestContextCollection.Name)]
 public sealed class LearnerWordMessagingTests
 {
-    public const string ProgressDbVariable = "E2E_PROGRESS_DB";
-
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
     private readonly ApiRequestContextFixture _fixture;
@@ -101,15 +196,10 @@ public sealed class LearnerWordMessagingTests
     private static async Task<bool> WaitForMembershipAsync(Guid userId, bool expectActive)
     {
         DateTime deadline = DateTime.UtcNow + Timeout;
+        string sql = $"SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = '{userId}' AND IsActive = {(expectActive ? 1 : 0)}";
         while (DateTime.UtcNow < deadline)
         {
-            await using SqlConnection connection = new(Environment.GetEnvironmentVariable(ProgressDbVariable));
-            await connection.OpenAsync();
-            await using SqlCommand command = new(
-                "SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = @u AND IsActive = @a", connection);
-            command.Parameters.AddWithValue("@u", userId);
-            command.Parameters.AddWithValue("@a", expectActive);
-            if ((int)(await command.ExecuteScalarAsync())! == 1)
+            if (await ProgressDb.ScalarIntAsync(sql) == 1)
             {
                 return true;
             }
@@ -120,14 +210,8 @@ public sealed class LearnerWordMessagingTests
         return false;
     }
 
-    private static async Task<int> CountRowsAsync(Guid userId)
-    {
-        await using SqlConnection connection = new(Environment.GetEnvironmentVariable(ProgressDbVariable));
-        await connection.OpenAsync();
-        await using SqlCommand command = new("SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = @u", connection);
-        command.Parameters.AddWithValue("@u", userId);
-        return (int)(await command.ExecuteScalarAsync())!;
-    }
+    private static Task<int> CountRowsAsync(Guid userId) =>
+        ProgressDb.ScalarIntAsync($"SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = '{userId}'");
 
     private static async Task<Guid> AddWordAsync(IAPIRequestContext content, string token)
     {

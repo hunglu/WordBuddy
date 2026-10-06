@@ -13,6 +13,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Vocabulary storage | `vocabulary.md` | shipped |
 | UI theme tokens | `ui-theme.md` | shipped |
 | App navigation (sidebar) | `app-navigation.md` | shipped |
+| Messaging | `messaging.md` | shipped |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.
