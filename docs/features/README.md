@@ -19,6 +19,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Supporter dashboard | `supporter-dashboard.md` | proposed |
 | Learning groups | `learning-groups.md` | proposed |
 | Vocabulary challenges | `vocabulary-challenges.md` | proposed |
+| User profile | `user-profile.md` | proposed |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.

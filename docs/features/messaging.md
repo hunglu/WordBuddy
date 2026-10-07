@@ -55,7 +55,7 @@ None.
 
 ## Pending changes
 
-None.
+- `WB-31_configurable-messaging-bus-settings` — all bus time settings read from appsettings; fail fast on missing broker credentials (#31)
 
 ## Change history
 

@@ -30,6 +30,7 @@ _To be defined in `/plan`._
 ## Pending changes
 
 - `WB-24_learner-support-links` — Guardian, Teacher and Peer links with fixed permissions; guardian owns a child profile. (#24)
+  - ADDED: two-sided consent for unlink; supporter sets new-word cap per child (WB-22 D-4)
 
 ## Change history
 
