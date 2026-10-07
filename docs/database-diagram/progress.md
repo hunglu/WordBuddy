@@ -1,7 +1,7 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261007032854_AddVocabularySrs`
+last migration: `20261007050150_AddReviewConcurrencyGuards`
 
 The seven domain tables have no foreign keys between them; every id column points to another service.
 
@@ -56,6 +56,7 @@ erDiagram
         datetime LastReviewedAtUtc "nullable"
         datetime FirstReviewedAtUtc "nullable"
         bool IsActive "follows membership"
+        rowversion RowVersion "concurrency token"
     }
     ReviewLogs {
         guid Id PK
@@ -88,11 +89,13 @@ erDiagram
 | `IX_LearnerWordStates_UserId_IsActive_DueAtUtc` | `UserId`, `IsActive`, `DueAtUtc` | — |
 | `IX_ReviewLogs_UserId_OccurredAtUtc` | `UserId`, `OccurredAtUtc` | — |
 | `IX_ReviewLogs_UserId_SenseId` | `UserId`, `SenseId` | — |
+| `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` | `UserId`, `SessionId`, `SenseId`, `AttemptNo` | yes |
 
 - `Word` is copied from Content at submit time, so recall history survives a deleted word.
 - `LearnerWordMemberships` is filled only by Content events (WB-21). No public endpoint reads it yet.
 - `LearnerWordStates` (WB-22) is created and (de)activated in the same save as its membership.
 - `ReviewLogs` (WB-22) is insert-only: no update or delete path exists.
+- Concurrent duplicate answers fail on the unique attempt index or `RowVersion` → `409`; FSRS is applied once.
 
 ## MassTransit messaging tables (WB-21)
 

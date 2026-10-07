@@ -176,4 +176,20 @@ public class RecordVocabularyReviewCommandHandlerTests
 
         result.Error.Code.Should().Be("RecordVocabularyReview.Validation");
     }
+
+    [Fact]
+    public async Task RecordVocabularyReviewCommandHandler_HandleAsync_ConcurrentDuplicateReturnsConflict()
+    {
+        GivenState(Now.AddDays(-1));
+        GivenPriorAttempts(0);
+        _states
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Conflict("LearnerWordState.ConcurrentUpdate", "changed")));
+
+        Result<VocabularyReviewResultDto> result = await CreateHandler().HandleAsync(Command());
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("LearnerWordState.ConcurrentUpdate");
+    }
 }

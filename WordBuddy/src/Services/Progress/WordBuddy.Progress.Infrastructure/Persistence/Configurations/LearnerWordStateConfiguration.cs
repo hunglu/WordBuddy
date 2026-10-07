@@ -26,6 +26,9 @@ public sealed class LearnerWordStateConfiguration : IEntityTypeConfiguration<Lea
         builder.Property(s => s.FirstReviewedAtUtc);
         builder.Property(s => s.IsActive).IsRequired();
 
+        // Optimistic concurrency: two reviews that both read the same card cannot both save.
+        builder.Property<byte[]>("RowVersion").IsRowVersion();
+
         // One state per (user, sense) — the learner-word handlers upsert against this.
         builder.HasIndex(s => new { s.UserId, s.SenseId }).IsUnique();
 

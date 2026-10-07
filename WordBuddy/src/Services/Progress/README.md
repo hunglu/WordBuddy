@@ -42,6 +42,10 @@ answer → AnswerGrader (rating) → first attempt of a new/due word? → FSRS-6
   `responseMs`, `hintUsed`. Rating, `IsDue` and `AttemptNo` are server-derived.
 - Unknown or removed word → `404 Review.WordNotInList`. Bad input → `400`. Over the limit
   (60 answers/minute/user) → `429` + `Retry-After`.
+- Same answer sent twice at once (double tap, retry) → one `200`, the other `409
+  LearnerWordState.ConcurrentUpdate`. Guards: unique `(UserId, SessionId, SenseId, AttemptNo)`
+  on `ReviewLogs` and a `RowVersion` on `LearnerWordStates`. FSRS is applied once.
+- The 60/minute limit is a code constant (`RateLimitingConfiguration`), not an option.
 - Header `X-Client-CurrentDateTime` (ISO 8601 with offset, e.g. `2026-10-07T09:30:00+07:00`):
   only the offset sets the client's "today". Missing → UTC. Bad format, offset outside
   −12:00…+14:00, or more than 24 h from server time → `400`. Due checks use server UTC.
@@ -54,6 +58,8 @@ answer → AnswerGrader (rating) → first attempt of a new/due word? → FSRS-6
 | FSRS, ReviewLog | Same | Same |
 
 `age_group` comes from the JWT; missing or unknown → treated as Child (more lenient grading).
+This differs from Content, which fails on a missing `age_group` claim. The lenient default is
+safe here: the claim only sets grading thresholds, never content access.
 
 ### Vocabulary options
 

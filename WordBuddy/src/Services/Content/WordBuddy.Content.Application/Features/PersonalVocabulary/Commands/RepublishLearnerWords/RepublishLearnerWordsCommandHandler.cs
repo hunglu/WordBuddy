@@ -44,11 +44,11 @@ public sealed class RepublishLearnerWordsCommandHandler : ICommandHandler<Republ
         }
 
         int published = 0;
-        int skip = 0;
+        Guid? lastLinkId = null;
 
         while (true)
         {
-            Result<IReadOnlyList<LearnerWordLink>> page = await _repository.GetLearnerLinksPageAsync(skip, command.BatchSize, ct);
+            Result<IReadOnlyList<LearnerWordLink>> page = await _repository.GetLearnerLinksPageAsync(lastLinkId, command.BatchSize, ct);
             if (page.IsFailure)
             {
                 return Result.Failure<RepublishLearnerWordsResult>(page.Error);
@@ -73,7 +73,7 @@ public sealed class RepublishLearnerWordsCommandHandler : ICommandHandler<Republ
             }
 
             published += batch.Value;
-            skip += page.Value.Count;
+            lastLinkId = page.Value[^1].LinkId;
 
             if (page.Value.Count < command.BatchSize)
             {

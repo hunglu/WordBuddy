@@ -29,13 +29,14 @@ public class RepublishLearnerWordsCommandHandlerTests
             Mock.Of<ILogger<RepublishLearnerWordsCommandHandler>>());
 
     private static List<LearnerWordLink> Links(int count) =>
-        Enumerable.Range(0, count).Select(_ => new LearnerWordLink(Guid.NewGuid(), Guid.NewGuid(), AddedAt)).ToList();
+        Enumerable.Range(0, count).Select(_ => new LearnerWordLink(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), AddedAt)).ToList();
 
     private void GivenLinks(List<LearnerWordLink> all) =>
         _repository
-            .Setup(r => r.GetLearnerLinksPageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((int skip, int take, CancellationToken _) =>
-                Result.Success<IReadOnlyList<LearnerWordLink>>(all.Skip(skip).Take(take).ToList()));
+            .Setup(r => r.GetLearnerLinksPageAsync(It.IsAny<Guid?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid? afterLinkId, int take, CancellationToken _) =>
+                Result.Success<IReadOnlyList<LearnerWordLink>>(
+                    all.SkipWhile(l => afterLinkId is not null && l.LinkId != afterLinkId).Skip(afterLinkId is null ? 0 : 1).Take(take).ToList()));
 
     [Fact]
     public async Task RepublishLearnerWordsCommandHandler_HandleAsync_PublishesInBatchesAndReturnsCount()
@@ -65,7 +66,7 @@ public class RepublishLearnerWordsCommandHandlerTests
     public async Task RepublishLearnerWordsCommandHandler_HandleAsync_SkipsSystemOwner()
     {
         List<LearnerWordLink> all = Links(2);
-        all.Add(new LearnerWordLink(SystemOwner.UserId, Guid.NewGuid(), AddedAt));
+        all.Add(new LearnerWordLink(Guid.NewGuid(), SystemOwner.UserId, Guid.NewGuid(), AddedAt));
         GivenLinks(all);
 
         Result<RepublishLearnerWordsResult> result = await CreateHandler().HandleAsync(new RepublishLearnerWordsCommand());

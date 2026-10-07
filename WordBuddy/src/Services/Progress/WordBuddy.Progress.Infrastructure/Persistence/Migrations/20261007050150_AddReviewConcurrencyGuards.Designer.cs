@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WordBuddy.Progress.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using WordBuddy.Progress.Infrastructure.Persistence;
 namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ProgressDbContext))]
-    partial class ProgressDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261007050150_AddReviewConcurrencyGuards")]
+    partial class AddReviewConcurrencyGuards
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

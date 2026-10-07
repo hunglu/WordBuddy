@@ -27,5 +27,9 @@ public sealed class ReviewLogConfiguration : IEntityTypeConfiguration<ReviewLog>
 
         builder.HasIndex(l => new { l.UserId, l.OccurredAtUtc });
         builder.HasIndex(l => new { l.UserId, l.SenseId });
+
+        // One row per attempt: a concurrent duplicate answer (double tap, client retry) gets the
+        // same AttemptNo and fails here, so FSRS is never applied twice.
+        builder.HasIndex(l => new { l.UserId, l.SessionId, l.SenseId, l.AttemptNo }).IsUnique();
     }
 }

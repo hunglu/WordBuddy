@@ -58,3 +58,10 @@
 - [x] Integration Progress `GET words` and `settings` — child `PUT` → 403, adult `PUT` → 200 — IntegrationTests/`VocabularySrsEndpointsTests.cs`; per D-4 child `PUT` → 200, not 403
 - [x] Integration Progress consumer — `LearnerWordAdded` creates a state row; replay creates none — IntegrationTests/Messaging/`LearnerWordConsumerTests.cs`
 - [x] Integration Content republish — admin 200 + outbox messages per link; non-admin 403 — Content IntegrationTests/Messaging/`LearnerWordEventPublishingTests.cs`
+
+## Fix round 1 (review round 1)
+
+- [x] #1 major — duplicate concurrent answers: unique index `ReviewLogs (UserId, SessionId, SenseId, AttemptNo)` + `RowVersion` on `LearnerWordStates`; duplicate key / concurrency → `409 LearnerWordState.ConcurrentUpdate` — `ReviewLogConfiguration.cs`, `LearnerWordStateConfiguration.cs`, `LearnerWordStateRepository.cs`, migration `20261007050150_AddReviewConcurrencyGuards*.cs` + snapshot, `docs/database-diagram/progress.md`; tests `RecordVocabularyReviewCommandHandlerTests.cs`, `VocabularySrsEndpointsTests.cs` (parallel POSTs + deterministic stale save)
+- [x] #2 nit — backfill keyset paging (`Id > lastLinkId`) — `IVocabularyWordRepository.cs`, `VocabularyWordRepository.cs`, `ILearnerWordEventPublisher.cs` (`LearnerWordLink.LinkId`), `RepublishLearnerWordsCommandHandler.cs`, `RepublishLearnerWordsCommandHandlerTests.cs`
+- [x] #3 nit — `age_group` difference (Progress → Child, Content fails) documented — Progress `README.md`
+- [x] #4 nit — rate limit kept as code constant; noted — Progress `README.md`

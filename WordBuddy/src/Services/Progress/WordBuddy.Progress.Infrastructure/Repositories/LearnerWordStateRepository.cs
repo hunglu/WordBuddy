@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
@@ -87,9 +88,26 @@ internal sealed class LearnerWordStateRepository : ILearnerWordStateRepository
 
     public async Task<Result> SaveChangesAsync(CancellationToken ct = default)
     {
-        await _dbContext.SaveChangesAsync(ct);
-        return Result.Success();
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Another request changed the same LearnerWordState (RowVersion) since it was read.
+            return Result.Failure(ConcurrentUpdate);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            // Duplicate (UserId, SessionId, SenseId, AttemptNo) on ReviewLogs, or another unique key.
+            return Result.Failure(ConcurrentUpdate);
+        }
     }
+
+    private static readonly Error ConcurrentUpdate = Error.Conflict(
+        "LearnerWordState.ConcurrentUpdate",
+        "The word was changed by another request. Reload the session and try again.");
 
     private IQueryable<LearnerWordState> DueQuery(Guid userId, DateTime nowUtc) =>
         _dbContext.LearnerWordStates

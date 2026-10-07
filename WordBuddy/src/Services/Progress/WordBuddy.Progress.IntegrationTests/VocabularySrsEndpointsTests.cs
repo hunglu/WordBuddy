@@ -7,8 +7,10 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Application.DTOs;
+using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Progress.IntegrationTests;
 
@@ -112,6 +114,67 @@ public sealed class VocabularySrsEndpointsTests
         afterSecond[0].IsDue.Should().BeTrue();
         afterSecond[1].AttemptNo.Should().Be(2);
         afterSecond[1].Rating.Should().Be(FsrsRating.Again);
+    }
+
+    [Fact]
+    public async Task PostReviews_ParallelDuplicates_ApplyFsrsOnceAndNeverFail500()
+    {
+        Guid userId = Guid.NewGuid();
+        Guid senseId = await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1));
+        Guid sessionId = Guid.NewGuid();
+        HttpClient client = CreateClient(userId);
+
+        // Same answer sent in parallel (double tap / retry). The race is real, so the loser either
+        // fails the unique attempt index / RowVersion (409) or runs after the winner (200, attempt 2).
+        Task<HttpResponseMessage>[] calls = Enumerable.Range(0, 5)
+            .Select(_ => client.PostAsJsonAsync("/api/progress/vocabulary/reviews", Review(sessionId, senseId)))
+            .ToArray();
+        HttpResponseMessage[] responses = await Task.WhenAll(calls);
+
+        responses.Select(r => r.StatusCode).Should().OnlyContain(c => c == HttpStatusCode.OK || c == HttpStatusCode.Conflict);
+        int okCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
+        okCount.Should().BeGreaterThan(0);
+
+        List<ReviewLog> logs = await GetLogsAsync(userId);
+        logs.Should().HaveCount(okCount);
+        logs.Select(l => l.AttemptNo).Should().OnlyHaveUniqueItems();
+        logs.Count(l => l.AttemptNo == 1).Should().Be(1);
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext dbContext = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        LearnerWordState state = await dbContext.LearnerWordStates.AsNoTracking()
+            .SingleAsync(s => s.UserId == userId && s.SenseId == senseId);
+        state.Reps.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task LearnerWordStateRepository_SaveChangesAsync_StaleDuplicateReturnsConflict()
+    {
+        Guid userId = Guid.NewGuid();
+        Guid senseId = await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1));
+        Guid sessionId = Guid.NewGuid();
+
+        // Deterministic loser: this scope reads the card and counts 0 attempts, then a winner
+        // request commits attempt 1 before this scope saves.
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ILearnerWordStateRepository states = scope.ServiceProvider.GetRequiredService<ILearnerWordStateRepository>();
+        IReviewLogRepository reviewLogs = scope.ServiceProvider.GetRequiredService<IReviewLogRepository>();
+        LearnerWordState staleState = (await states.GetTrackedAsync(userId, senseId)).Value;
+
+        HttpResponseMessage winner = await CreateClient(userId)
+            .PostAsJsonAsync("/api/progress/vocabulary/reviews", Review(sessionId, senseId));
+        winner.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        VocabularySchedulingOptions options = new();
+        staleState.ApplyReview(FsrsRating.Good, DateTime.UtcNow, new FsrsScheduler(options), options);
+        await reviewLogs.AddAsync(ReviewLog.Create(
+            Guid.NewGuid(), userId, senseId, sessionId, DateTime.UtcNow, ExerciseType.PictureChoice,
+            VocabularySkill.Meaning, true, 5000, false, true, 1, FsrsRating.Good));
+        Result save = await states.SaveChangesAsync();
+
+        save.IsFailure.Should().BeTrue();
+        save.Error.Type.Should().Be(ErrorType.Conflict);
+        (await GetLogsAsync(userId)).Should().ContainSingle();
     }
 
     [Fact]

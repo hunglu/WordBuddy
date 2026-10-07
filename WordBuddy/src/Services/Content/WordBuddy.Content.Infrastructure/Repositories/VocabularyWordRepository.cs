@@ -33,17 +33,23 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         return Result.Success<IReadOnlyList<Sense>>(words);
     }
 
-    public async Task<Result<IReadOnlyList<LearnerWordLink>>> GetLearnerLinksPageAsync(int skip, int take, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<LearnerWordLink>>> GetLearnerLinksPageAsync(Guid? afterLinkId, int take, CancellationToken ct = default)
     {
-        _logger.LogDebug("Querying LearnerWord links page: Skip={Skip}, Take={Take}", skip, take);
+        _logger.LogDebug("Querying LearnerWord links page: AfterLinkId={AfterLinkId}, Take={Take}", afterLinkId, take);
 
-        List<LearnerWordLink> links = await _dbContext.LearnerWords
+        // Keyset paging: a link removed during the run cannot shift later rows out of a page.
+        IQueryable<LearnerWord> query = _dbContext.LearnerWords
             .AsNoTracking()
-            .Where(l => l.UserId != SystemOwner.UserId)
+            .Where(l => l.UserId != SystemOwner.UserId);
+        if (afterLinkId is { } lastId)
+        {
+            query = query.Where(l => l.Id > lastId);
+        }
+
+        List<LearnerWordLink> links = await query
             .OrderBy(l => l.Id)
-            .Skip(skip)
             .Take(take)
-            .Select(l => new LearnerWordLink(l.UserId, l.SenseId, l.AddedAtUtc))
+            .Select(l => new LearnerWordLink(l.Id, l.UserId, l.SenseId, l.AddedAtUtc))
             .ToListAsync(ct);
 
         return Result.Success<IReadOnlyList<LearnerWordLink>>(links);
