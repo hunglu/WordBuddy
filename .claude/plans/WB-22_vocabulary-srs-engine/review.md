@@ -1,5 +1,37 @@
 # Review: WB-22_Vocabulary SRS engine
 
+PR: #33 · Round 2 · Reviewed commit: a8c3eaf · 2026-10-07T12:27:33+07:00
+
+## Verdict
+
+Approve — round-1 major is fixed; no new blockers or majors.
+
+## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `Progress.Infrastructure/Repositories/LearnerWordMembershipRepository.cs:127` | `RowVersion` now also guards the consumer path. A review saved between the consumer's read and save throws `DbUpdateConcurrencyException` (uncaught). It falls back to the shared `UseMessageRetry` (`MessagingExtensions.cs:102`), which wraps the inbox and rolls back. Acceptable: rare, self-healing, logged as a retry. | Keep. Optionally log at Information before rethrow, or map to `Result` like `LearnerWordStateRepository`. |
+| 2 | nit | `Progress.Infrastructure/Repositories/LearnerWordStateRepository.cs:101` | Unique-violation catch maps *any* unique key to `LearnerWordState.ConcurrentUpdate`. Today only the attempt index can fire on this path, so it is correct. | Keep; narrow by index name if more unique keys are added. |
+
+Round-1 findings:
+
+| R1 # | Status | Evidence |
+|---|---|---|
+| 1 major (duplicate attempts) | Fixed | Unique `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` + `RowVersion` on `LearnerWordStates`. `DbUpdateConcurrencyException` and SQL 2601/2627 → `Error.Conflict` → 409 (`ResultExtensions.cs:14`). One `SaveChangesAsync` = one transaction, so state + log roll back together. No exception text leaks. Unit + 2 integration tests (deterministic stale-save test asserts Conflict and one log). |
+| 2 nit (Skip/Take backfill) | Fixed | Keyset on `Id > lastId`, ordered by `Id`. |
+| 3 nit (age_group default) | Documented | Progress README. |
+| 4 nit (rate-limit constant) | Documented | Progress README. |
+
+Migration `AddReviewConcurrencyGuards`: Up adds column + index; Down drops both in reverse. Snapshot and `docs/database-diagram/progress.md` match.
+
+## Plan conformance
+
+- All tasks reflected; fix-round tasks added to `tasks.md`.
+- Out of scope: none.
+
+## Previous rounds
+
+### Round 1
 PR: #33 · Round 1 · Reviewed commit: 1ef0efe · 2026-10-07T11:18:35+07:00
 
 ## Verdict
