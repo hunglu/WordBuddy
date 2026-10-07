@@ -31,7 +31,7 @@
 - [x] Unit: handler — child gets no non-child-visible shared sense; adult gets it; unknown id omitted; other learner's private sense omitted; `personalContext` only from own link — UnitTests/Features/PersonalVocabulary/GetSensesByIdsQueryHandlerTests.cs
 - [x] Integration (`WebApplicationFactory` + SQL Server): `senses?ids=` child vs adult with a hidden shared sense, a private foreign sense, an unknown id — hidden ones never in body; same 200 — IntegrationTests/PersonalVocabularyEndpointsTests.cs (LocalDB, passed)
 - [x] Integration: migration `AddSenseImage` applies on seeded DB — IntegrationTests/AddSenseImageMigrationTests.cs (LocalDB, passed)
-- [ ] E2E API (`e2e/api`): adult full session — session → senses → one review per item → states change; repeat for child
-- [ ] E2E UI (`e2e/ui`, Gherkin): adult completes a session with all 3 exercise types, no self-rating shown
-- [ ] E2E UI: child session shows only child-visible words and stops at the time cap
-- [ ] E2E UI: `/vocabulary/check` redirects to `/vocabulary/review`
+- [x] E2E API (`e2e/api`): adult full session — session → senses → one review per item → states change; repeat for child — e2e/api/WordBuddy.E2E.Api.Tests/VocabularyReviewSessionTests.cs (builds; not run, stack down)
+- [x] E2E UI (`e2e/ui`, Gherkin): adult completes a session with all 3 exercise types, no self-rating shown — e2e/ui/features/vocabulary-review.feature, steps/vocabulary-review.steps.ts (bddgen OK; not run)
+- [x] E2E UI: child session shows only child-visible words and stops at the time cap — same files, `page.clock` (bddgen OK; not run)
+- [x] E2E UI: `/vocabulary/check` redirects to `/vocabulary/review` — e2e/ui/features/vocabulary.feature, steps/vocabulary.steps.ts (old recall-check steps removed; bddgen OK; not run)

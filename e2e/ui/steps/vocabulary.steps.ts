@@ -36,26 +36,14 @@ Then('the word appears in their vocabulary list', async ({ page }) => {
   await expect(page.getByText(addedWord)).toBeVisible()
 })
 
-When('they start a recall check', async ({ page }) => {
-  await page.getByRole('link', { name: /start recall check/i }).click()
-  await expect(page).toHaveURL(/\/vocabulary\/check$/)
-
-  await page.getByRole('button', { name: '5 words', exact: true }).click()
-  await page.getByRole('button', { name: /start check/i }).click()
+// WB-23: the self-rated recall check is replaced by the review page; its old route redirects.
+When('they open the old recall check address', async ({ page }) => {
+  await page.goto('/vocabulary/check')
 })
 
-Then('they can complete the check and see their result', async ({ page }) => {
-  const completeHeading = page.getByText('Check complete!')
-  const knowButton = page.getByRole('button', { name: 'I Know This' })
-
-  // The random check returns anywhere from 1 up to the requested word count — click through
-  // however many flashcards appear until the completion screen shows.
-  // Retry-until-settled: each pass clicks once, then gives the next card (or the result screen)
-  // time to render, so fast clicks aren't swallowed by the card transition.
-  await expect(async () => {
-    if (!(await completeHeading.isVisible())) {
-      await knowButton.click({ timeout: 1000 })
-    }
-    await expect(completeHeading).toBeVisible({ timeout: 750 })
-  }).toPass({ timeout: 20000 })
+Then('they land on the review page', async ({ page }) => {
+  await expect(page).toHaveURL(/\/vocabulary\/review$/)
+  await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Review' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /recall check/i })).toHaveCount(0)
 })
