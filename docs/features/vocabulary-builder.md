@@ -3,7 +3,7 @@ feature: Vocabulary builder & check-up
 services: Content | Progress | UI
 audience: Both
 state: shipped
-last-updated-by: WB-22_vocabulary-srs-engine
+last-updated-by: WB-23_vocabulary-review-exercises
 ---
 
 # Vocabulary builder & check-up
@@ -42,7 +42,7 @@ sequenceDiagram
 
 The Progress page shows Known vs Learning counts and recent sessions. Storage details: `vocabulary.md`.
 
-**SRS engine (Progress, API only — UI comes with WB-23)** — FSRS-6 scheduling per word, append-only `ReviewLog`:
+**SRS engine (Progress)** — FSRS-6 scheduling per word, append-only `ReviewLog`:
 
 ```mermaid
 sequenceDiagram
@@ -55,6 +55,22 @@ sequenceDiagram
     P->>P: grade → rating; first due attempt → FSRS schedule; insert ReviewLog
     P-->>L: status, dueAtUtc, rating
 ```
+
+**Daily review (UI)** — `/vocabulary/review` runs the SRS session as exercises:
+
+```text
+session (Progress) → senses?ids= (Content, visible only) → exercise per item → POST reviews
+```
+
+| Word state | Exercise |
+| --- | --- |
+| New / early Learning | PictureChoice (image) → else ListeningChoice (audio) → else Typing |
+| After 1 correct recognition, or Learning | ListeningChoice → else Typing |
+| Review / Mastered / Leech | Typing |
+
+- Wrong answer → re-queued at the end (attempt logged, not scheduled). Fewer than 4 senses → Typing.
+- Typing check: trim + case-insensitive match, client-side (moves server-side in WB-28).
+- Senses missing from `senses?ids=` are skipped. The recall check is no longer linked; its endpoints stay for old data.
 
 Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWordRemoved` deactivates them. Re-adding keeps FSRS history.
 
@@ -76,6 +92,8 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
 - **Day boundary.** `X-Client-CurrentDateTime` (ISO 8601 + offset): only the offset sets "today"; due checks use server UTC. Missing → UTC. Bad format, offset outside −12…+14, or > 24 h from server time → 400.
 - **New-word cap.** Backlog ≤ 20 → 10, ≤ 40 → 8, ≤ 60 → 6, else 5. A learner may set their own cap 0–50 (`null` = rule). Due list limited to 50.
 - **SRS child vs adult:** same cap rule, same settings, same FSRS. Grading thresholds × 1.25 for Child (PictureChoice 3.75 s / 12.5 s), × 1.0 for Adult. `age_group` comes from the JWT.
+- **Review child vs adult:** a Child sees only child-visible senses (server filter); session stops at 15 min (soft notice at 10 min), unanswered items stay due. An Adult runs until the queue is empty.
+- **`senses?ids=`.** 1–100 distinct ids, else 400. Hidden and unknown ids are omitted the same way. `personalContext` only from the caller's own link. Not cached.
 
 ## API
 
@@ -92,6 +110,7 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
 | POST | `/api/vocabulary/moderation/{id}` | Content | `AdminOnly` |
 | POST | `/api/progress/vocabulary-recall` | Progress | authenticated |
 | GET | `/api/progress/vocabulary-recall` | Progress | authenticated |
+| GET | `/api/vocabulary/senses?ids=` (1–100) | Content | authenticated (child filter via `Sense.IsVisibleTo`) |
 | GET | `/api/progress/vocabulary/session` | Progress | authenticated |
 | POST | `/api/progress/vocabulary/reviews` | Progress | authenticated (rate limit `vocabulary-review`) |
 | GET | `/api/progress/vocabulary/words` | Progress | authenticated (own data) |
@@ -103,7 +122,8 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
 | Route | Page |
 | --- | --- |
 | `/vocabulary` | My Vocabulary — add, list, share, delete (confirm dialog for own `Shared` / `PendingReview` words) |
-| `/vocabulary/check` | Recall check |
+| `/vocabulary/review` | Daily review — PictureChoice / ListeningChoice / Typing on the SRS session; summary at end; no self-rating |
+| `/vocabulary/check` | Redirects to `/vocabulary/review` |
 | `/vocabulary/shared` | Shared Pool — **Add to My List**; own words show a "Your word" badge instead |
 | `/vocabulary/moderation` | Admin moderation queue (render-guarded on `isAdmin`) |
 | `/progress` | Vocabulary Recall section — counts, recent sessions |
@@ -119,7 +139,6 @@ A plain delete that returns 409 opens the dialog. Escape or a backdrop click clo
 
 ## Pending changes
 
-- `WB-23_vocabulary-review-exercises` — exercise-based daily session replaces the self-rated recall check (#23)
 - `WB-28_vocabulary-answer-checking` — server-side answer checking (#28)
 
 ## Change history
@@ -127,3 +146,4 @@ A plain delete that returns 409 opens the dialog. Escape or a backdrop click clo
 - `vocabulary-builder-and-checkup` (PR #10) — personal list, moderated shared pool, recall check with progress
 - `WB-12_defect-on-sharing-word` (#12, PR #13) — confirm dialog on shared-word delete with hand-over to System; "Your word" badge via `isMine`; pool cache cleared on hand-over
 - `WB-22_vocabulary-srs-engine` (#22, PR #33) — FSRS scheduling, append-only ReviewLog, daily session, server-side grading with child multiplier, own new-word cap
+- `WB-23_vocabulary-review-exercises` (#23, PR #34) — daily review page with 3 exercises on the SRS session; `GET /api/vocabulary/senses?ids=`; optional sense image; child 15-minute cap; `/vocabulary/check` redirects to review

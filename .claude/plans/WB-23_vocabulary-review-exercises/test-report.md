@@ -1,36 +1,37 @@
 # Test report: WB-23_Vocabulary review exercises
 
+Run 2 (after needs-fixes). Stack up via docker compose; Content `AddSenseImage` already applied (`/health/ready` 200, `senses?ids=` E2E passes).
+
 ## Backend unit/integration
 
 | Suite | Result |
 | --- | --- |
 | Content UnitTests | 123 passed, 0 failed |
-| Content IntegrationTests | 77 passed, 0 failed (1 new) |
+| Content IntegrationTests | 77 passed, 0 failed |
 | Progress UnitTests | 103 passed, 0 failed |
 | Progress IntegrationTests | 26 passed, 0 failed |
 
-New: `GetSensesByIds_SenseWithAudioAndImage_ReturnsBothUrls` (review nit 2). `audioUrl` and `imageUrl` both come back from `senses?ids=`.
-
 ## E2E API
 
-Skipped — services not running. Starting the stack (`make up`) was denied by the permission gate.
+`WordBuddy.E2E.Api.Tests` — 32 passed, 0 failed (includes `VocabularyReviewSessionTests`).
 
 ## E2E UI
 
-Skipped — services not running (same reason).
+21 passed, 0 failed (includes `vocabulary-review.feature` child + adult, `vocabulary.feature`). Child time-cap scenario passed with no token-expiry logout.
+
+First run: 20 passed, 1 failed — `navigation.feature`, `/vocabulary/check` expected "My Vocabulary" selected. The plan redirects `/vocabulary/check` → `/vocabulary/review` and adds a "Review" sidebar item, so the test was stale. Fixed in the test: `/vocabulary/check` → "Review", plus a new `/vocabulary/review` → "Review" row. No app code changed.
 
 ## Failures
 
-- No test failures.
-- Not run: `e2e/api` `VocabularyReviewSessionTests`, `e2e/ui` `vocabulary-review.feature` (child + adult). They need `make up` and the Content migration `AddSenseImage`. Watch the child time-cap scenario for token-expiry logout.
+None.
 
 ## Merge guard
 
 | Guard | Result |
 | --- | --- |
 | 1. Review Approve, `0c3ca1f` ancestor of HEAD | Pass |
-| 2. Changes since review on allowlist | Pass — `proposal.md`, `review.md` (plus this run's test file and report) |
-| 3. All suites ran, zero failures | Fail — E2E API and E2E UI skipped |
+| 2. Changes since review on allowlist | Pass — `proposal.md`, `review.md`, `test-report.md`, `Content.IntegrationTests/PersonalVocabularyEndpointsTests.cs`; this run adds `e2e/ui/features/navigation.feature`, `docs/features/vocabulary-builder.md` |
+| 3. All suites ran, zero failures | Pass |
 
 ## Follow-up (app code, not fixed here)
 
@@ -39,4 +40,4 @@ Skipped — services not running (same reason).
 
 ## Verdict
 
-Not merged — E2E API and E2E UI skipped (services not running). Run `make up` + `AddSenseImage` migration, then re-run `/test`.
+Approved — merged into main
