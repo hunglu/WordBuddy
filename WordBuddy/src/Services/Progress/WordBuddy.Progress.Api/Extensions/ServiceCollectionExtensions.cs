@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WordBuddy.Progress.Application.Extensions;
+using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Infrastructure.Extensions;
 
 namespace WordBuddy.Progress.Api.Extensions;
@@ -46,6 +47,29 @@ internal static class ServiceCollectionExtensions
     public static IServiceCollection AddWordBuddyDatabase(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddInfrastructure(configuration);
+        return services;
+    }
+
+    /// <summary>
+    /// Binds the vocabulary SRS options (<c>Vocabulary:Scheduling</c>, <c>Vocabulary:Grading</c>,
+    /// <c>Vocabulary:NewWordCap</c>) and registers the pure domain services built from them.
+    /// </summary>
+    public static IServiceCollection AddVocabularySrs(this IServiceCollection services, IConfiguration configuration)
+    {
+        VocabularySchedulingOptions scheduling =
+            configuration.GetSection(VocabularySchedulingOptions.SectionName).Get<VocabularySchedulingOptions>() ?? new();
+        VocabularyGradingOptions grading =
+            configuration.GetSection(VocabularyGradingOptions.SectionName).Get<VocabularyGradingOptions>() ?? new();
+        NewWordCapOptions newWordCap =
+            configuration.GetSection(NewWordCapOptions.SectionName).Get<NewWordCapOptions>() ?? new();
+
+        services.AddSingleton(scheduling);
+        services.AddSingleton(grading);
+        services.AddSingleton(newWordCap);
+        services.AddSingleton<IFsrsScheduler>(new FsrsScheduler(scheduling));
+        services.AddSingleton(new AnswerGrader(grading));
+        services.AddSingleton(new NewWordCapPolicy(newWordCap));
+
         return services;
     }
 

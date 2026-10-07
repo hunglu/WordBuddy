@@ -6,18 +6,23 @@ using Microsoft.IdentityModel.Tokens;
 namespace WordBuddy.Progress.IntegrationTests;
 
 /// <summary>Issues JWTs shaped exactly like Identity's own <c>JwtTokenGenerator</c> (same claim
-/// names, including <c>sub</c> — the only claim Progress's <c>ClaimsPrincipalExtensions.GetUserId</c>
-/// reads), signed with the same secret/issuer <see cref="ProgressApiFactory"/> configures the API
+/// names: <c>sub</c> and the optional <c>age_group</c>, the claims Progress's
+/// <c>ClaimsPrincipalExtensions</c> read), signed with the same secret/issuer <see cref="ProgressApiFactory"/> configures the API
 /// host to validate against.</summary>
 public static class TestJwtTokenFactory
 {
-    public static string CreateToken(Guid userId)
+    public static string CreateToken(Guid userId, string? ageGroup = null)
     {
-        Claim[] claims =
+        List<Claim> claims =
         [
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         ];
+
+        if (ageGroup is not null)
+        {
+            claims.Add(new Claim("age_group", ageGroup));
+        }
 
         SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(ProgressApiFactory.JwtSecret));
         SigningCredentials credentials = new(signingKey, SecurityAlgorithms.HmacSha256);

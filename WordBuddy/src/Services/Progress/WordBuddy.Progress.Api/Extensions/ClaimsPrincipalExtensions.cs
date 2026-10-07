@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using WordBuddy.Progress.Domain;
 
 namespace WordBuddy.Progress.Api.Extensions;
 
@@ -21,5 +22,19 @@ internal static class ClaimsPrincipalExtensions
         }
 
         return userId;
+    }
+
+    /// <summary>
+    /// Extracts the age group from the JWT's <c>age_group</c> claim (same claim Content reads).
+    /// Missing or unknown → <see cref="AgeGroup.Child"/>, the safer side: it only makes grading
+    /// thresholds more lenient (D-7).
+    /// </summary>
+    public static AgeGroup GetAgeGroup(this ClaimsPrincipal user)
+    {
+        string? ageGroup = user.FindFirstValue("age_group");
+
+        return ageGroup is not null && Enum.TryParse(ageGroup, ignoreCase: true, out AgeGroup value) && Enum.IsDefined(value)
+            ? value
+            : AgeGroup.Child;
     }
 }

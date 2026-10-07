@@ -22,6 +22,8 @@ public sealed class Program
             .AddWordBuddyAuthentication(builder.Configuration)
             .AddWordBuddyDatabase(builder.Configuration)
             .AddWordBuddyServices()
+            .AddVocabularySrs(builder.Configuration)
+            .AddWordBuddyRateLimiting()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
 
         builder.Services.AddWordBuddyHealthChecks()

@@ -1,7 +1,7 @@
 # 0005 — Learning state: FSRS scheduling, append-only ReviewLog, events
 
-- Status: proposed
-- Date: 2026-10-04
+- Status: accepted
+- Date: 2026-10-04 (accepted 2026-10-07 with WB-22)
 
 ## Context
 
@@ -118,13 +118,22 @@ flowchart LR
 | Challenge boards | Never show `ReviewLog` data. Alias and fixed avatar only. | Never show `ReviewLog` data |
 | Personal data | Minimal. No free text in events or logs. | Same rules |
 
+### Decisions at acceptance (WB-22)
+
+| Point | Decision |
+| --- | --- |
+| FSRS implementation | Own port of FSRS-6 (py-fsrs 6.x, MIT) behind `IFsrsScheduler`, default parameters. Deterministic: no fuzz, no optimiser. Unit tests match py-fsrs reference vectors. No new NuGet dependency. Revisit if an optimiser is needed. |
+| Grading thresholds | Per exercise type (PictureChoice 3/10 s, ListeningChoice 4/12 s, Typing 6/20 s), multiplied per `AgeGroup` (Child ×1.25, Adult ×1.0). Options `Vocabulary:Grading`. Past ratings stay as logged. |
+| Day boundary | The UI sends `X-Client-CurrentDateTime` (ISO 8601 with offset). Only the offset sets "today". Stored times and due checks use server UTC. Missing → UTC; invalid, offset outside −12:00…+14:00, or > 24 h skew → `400`. |
+| New-word cap | One rule for all users: 10 / 8 / 6 / 5 by due backlog (≤ 20 / ≤ 40 / ≤ 60 / more). Any user, child included, may set an own cap 0–50. Supporter-set caps come with account linking. This replaces the child/adult cap row above. |
+| Backfill | Admin endpoint `POST /api/vocabulary/admin/learner-words/republish` republishes `LearnerWordAdded` with the original `AddedAtUtc`, batches of 500, through the outbox. Safe to run twice. |
+| Recall-check transition | `/api/progress/vocabulary-recall` stays unchanged until WB-23 ships, then a change proposal removes it. |
+| Mastery per skill | Deferred. `Skill` is logged in `ReviewLog`; the answer text is not stored. |
+
 ### Open points
 
 | Point | Options | Decide in |
 | --- | --- | --- |
-| FSRS implementation | A maintained .NET package (check licence, current FSRS version, tests), or an own port of the core checked against reference test vectors | This ADR, before acceptance |
-| Recall-check transition | Replace it fully, or keep it read-only during a transition. Self-ratings cannot become honest FSRS ratings. | Proposal #2 |
-| Backfill | Content republishes `LearnerWordAdded` for every existing link | Proposal #2 |
 | Answer verification | The UI reports correctness and `ResponseMs` in the MVP. Challenges need server-side checking, for example a signed exercise token from Content. | Before `vocabulary-challenges` |
 | Day boundary | A time zone for caps, streaks and "daily". Identity stores none today. | Proposal #2 |
 | Erasure | No `UserDeleted` event exists to delete a user's `ReviewLog` | Proposal #3 or later |

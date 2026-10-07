@@ -21,6 +21,7 @@ independence model this follows.
 | GET | `/api/media/{id}` | Anonymous | Streams a previously uploaded media file |
 | DELETE | `/api/vocabulary/{id}?confirm=true` | Bearer | Removes a word from the caller's list (see delete rule below) |
 | GET | `/api/vocabulary/shared` | Bearer | Community word pool; `isMine` is `true` only on the caller's own words |
+| POST | `/api/vocabulary/admin/learner-words/republish` | Bearer, `AdminOnly` | Backfill: republishes `LearnerWordAdded` for every learner link; returns `{ published }` |
 
 There are no internal (service-to-service) endpoints. The vocabulary id remap table and the
 `/internal/vocabulary-remaps` routes were removed (migration `DropVocabularyWordIdRemaps`).
@@ -55,6 +56,21 @@ transaction (`ContentDbContext.SaveChangesAsync` → `LearnerWordEventCollector`
 
 Payload: ids and timestamps only (no word text, no personal context, no age group). Child and
 adult events are identical. Consumer: Progress.
+
+### One-time backfill (WB-22)
+
+Progress creates a learning state per learner word from `LearnerWordAdded`. Words added before
+WB-22 have no state until Content republishes them. Run once per environment, after Progress has
+the `AddVocabularySrs` migration and is running:
+
+```bash
+curl -X POST -H "Authorization: Bearer <admin token>"   http://<host>/api/vocabulary/admin/learner-words/republish
+```
+
+- Batches of 500 links, one outbox save per batch. System-owner links are skipped.
+- Each event keeps the link's original `AddedAtUtc`. Progress applies it, creates missing states
+  and leaves existing ones unchanged, so a second run is harmless.
+- Non-admin callers get `403`.
 
 ## Running standalone
 

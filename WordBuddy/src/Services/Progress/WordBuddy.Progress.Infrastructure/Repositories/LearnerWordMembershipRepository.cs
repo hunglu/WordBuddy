@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
@@ -19,7 +20,13 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
         _logger = logger;
     }
 
-    public Task<Result<bool>> UpsertAddedAsync(Guid userId, Guid senseId, Guid addedBy, DateTime addedAtUtc, CancellationToken ct = default)
+    public Task<Result<bool>> UpsertAddedAsync(
+        Guid userId,
+        Guid senseId,
+        Guid addedBy,
+        DateTime addedAtUtc,
+        Func<LearnerWordMembership, CancellationToken, Task<Result>>? beforeSave,
+        CancellationToken ct = default)
     {
         _logger.LogDebug("Upserting added LearnerWordMembership: UserId={UserId}, SenseId={SenseId}", userId, senseId);
 
@@ -28,10 +35,16 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
             senseId,
             () => LearnerWordMembership.CreateAdded(Guid.NewGuid(), userId, senseId, addedBy, addedAtUtc),
             existing => existing.RecordAdded(addedBy, addedAtUtc),
+            beforeSave,
             ct);
     }
 
-    public Task<Result<bool>> MarkRemovedAsync(Guid userId, Guid senseId, DateTime removedAtUtc, CancellationToken ct = default)
+    public Task<Result<bool>> MarkRemovedAsync(
+        Guid userId,
+        Guid senseId,
+        DateTime removedAtUtc,
+        Func<LearnerWordMembership, CancellationToken, Task<Result>>? beforeSave,
+        CancellationToken ct = default)
     {
         _logger.LogDebug("Marking LearnerWordMembership removed: UserId={UserId}, SenseId={SenseId}", userId, senseId);
 
@@ -40,6 +53,7 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
             senseId,
             () => LearnerWordMembership.CreateRemoved(Guid.NewGuid(), userId, senseId, removedAtUtc),
             existing => existing.RecordRemoved(removedAtUtc),
+            beforeSave,
             ct);
     }
 
@@ -48,16 +62,24 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
         Guid senseId,
         Func<LearnerWordMembership> create,
         Func<LearnerWordMembership, Result<bool>> apply,
+        Func<LearnerWordMembership, CancellationToken, Task<Result>>? beforeSave,
         CancellationToken ct)
     {
         LearnerWordMembership? existing = await FindTrackedAsync(userId, senseId, ct);
         if (existing is not null)
         {
-            return await ApplyAndSaveAsync(existing, apply, ct);
+            return await ApplyAndSaveAsync(existing, apply, beforeSave, ct);
         }
 
         LearnerWordMembership created = create();
         await _dbContext.LearnerWordMemberships.AddAsync(created, ct);
+
+        Result hookResult = await RunHookAsync(created, beforeSave, ct);
+        if (hookResult.IsFailure)
+        {
+            DetachPendingInserts();
+            return Result.Failure<bool>(hookResult.Error);
+        }
 
         try
         {
@@ -67,8 +89,9 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
             // A concurrent event for the same (UserId, SenseId) inserted first
-            // (IX_LearnerWordMemberships_UserId_SenseId) — apply to that row instead.
-            _dbContext.Entry(created).State = EntityState.Detached;
+            // (IX_LearnerWordMemberships_UserId_SenseId) — apply to that row instead. The states
+            // staged by the hook go too; the hook runs again against the winner.
+            DetachPendingInserts();
             _logger.LogInformation(
                 "Concurrent membership insert resolved to existing row: UserId={UserId}, SenseId={SenseId}", userId, senseId);
         }
@@ -80,12 +103,13 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
                 "LearnerWordMembership.ConcurrentUpdate", "The membership was changed concurrently."));
         }
 
-        return await ApplyAndSaveAsync(winner, apply, ct);
+        return await ApplyAndSaveAsync(winner, apply, beforeSave, ct);
     }
 
     private async Task<Result<bool>> ApplyAndSaveAsync(
         LearnerWordMembership membership,
         Func<LearnerWordMembership, Result<bool>> apply,
+        Func<LearnerWordMembership, CancellationToken, Task<Result>>? beforeSave,
         CancellationToken ct)
     {
         Result<bool> applied = apply(membership);
@@ -94,8 +118,30 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
             return applied;
         }
 
+        Result hookResult = await RunHookAsync(membership, beforeSave, ct);
+        if (hookResult.IsFailure)
+        {
+            return Result.Failure<bool>(hookResult.Error);
+        }
+
         await _dbContext.SaveChangesAsync(ct);
         return applied;
+    }
+
+    private static Task<Result> RunHookAsync(
+        LearnerWordMembership membership,
+        Func<LearnerWordMembership, CancellationToken, Task<Result>>? beforeSave,
+        CancellationToken ct) =>
+        beforeSave is null ? Task.FromResult(Result.Success()) : beforeSave(membership, ct);
+
+    private void DetachPendingInserts()
+    {
+        foreach (EntityEntry entry in _dbContext.ChangeTracker.Entries()
+                     .Where(e => e.State == EntityState.Added && e.Entity is LearnerWordMembership or LearnerWordState)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 
     private Task<LearnerWordMembership?> FindTrackedAsync(Guid userId, Guid senseId, CancellationToken ct) =>

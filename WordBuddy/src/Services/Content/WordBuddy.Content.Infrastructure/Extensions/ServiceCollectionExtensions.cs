@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Content.Application.Interfaces;
+using WordBuddy.Content.Infrastructure.Messaging;
 using WordBuddy.Content.Infrastructure.Persistence;
 using WordBuddy.Content.Infrastructure.Repositories;
 using WordBuddy.Content.Infrastructure.Services;
@@ -28,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
         services.AddScoped<IVocabularyWordRepository, VocabularyWordRepository>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<ILearnerWordEventPublisher, OutboxLearnerWordEventPublisher>();
 
         // No Redis instance exists anywhere in this repo yet (docker-compose has no `redis`
         // service, no service configures `IDistributedCache`) — registering the in-memory
