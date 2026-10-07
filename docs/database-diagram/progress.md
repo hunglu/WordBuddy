@@ -1,9 +1,9 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261005100809_AddLearnerWordMembership`
+last migration: `20261007050150_AddReviewConcurrencyGuards`
 
-The four domain tables have no foreign keys between them; every id column points to another service.
+The seven domain tables have no foreign keys between them; every id column points to another service.
 
 ```mermaid
 erDiagram
@@ -41,6 +41,42 @@ erDiagram
         int WordsChecked
         int WordsKnown
     }
+    LearnerWordStates {
+        guid Id PK
+        guid UserId "Identity user"
+        guid SenseId "Content sense"
+        string Status "New | Learning | Review | Mastered | Leech, max 20"
+        float Stability "FSRS, days"
+        float Difficulty "FSRS, 1-10"
+        datetime DueAtUtc
+        int Reps
+        int Lapses
+        string FsrsPhase "Learning | Review | Relearning, max 20"
+        int FsrsStep "nullable; null in Review"
+        datetime LastReviewedAtUtc "nullable"
+        datetime FirstReviewedAtUtc "nullable"
+        bool IsActive "follows membership"
+        rowversion RowVersion "concurrency token"
+    }
+    ReviewLogs {
+        guid Id PK
+        guid UserId "Identity user"
+        guid SenseId "Content sense"
+        guid SessionId
+        datetime OccurredAtUtc "server UTC"
+        string ExerciseType "max 30"
+        string Skill "max 30"
+        bool IsCorrect
+        int ResponseMs
+        bool HintUsed
+        bool IsDue "server-derived"
+        int AttemptNo "server-derived"
+        string Rating "Again | Hard | Good | Easy, max 10"
+    }
+    VocabularyLearnerSettings {
+        guid UserId PK "Identity user"
+        int NewWordsPerDay "nullable, 0-50; null = backlog rule"
+    }
 ```
 
 | Index | Columns | Unique |
@@ -49,9 +85,17 @@ erDiagram
 | `IX_VocabularyRecallStats_UserId_VocabularyWordId` | `UserId`, `VocabularyWordId` | yes |
 | `IX_VocabularyRecallSessions_UserId_CheckedAtUtc` | `UserId`, `CheckedAtUtc` | — |
 | `IX_LearnerWordMemberships_UserId_SenseId` | `UserId`, `SenseId` | yes (natural-key dedupe) |
+| `IX_LearnerWordStates_UserId_SenseId` | `UserId`, `SenseId` | yes |
+| `IX_LearnerWordStates_UserId_IsActive_DueAtUtc` | `UserId`, `IsActive`, `DueAtUtc` | — |
+| `IX_ReviewLogs_UserId_OccurredAtUtc` | `UserId`, `OccurredAtUtc` | — |
+| `IX_ReviewLogs_UserId_SenseId` | `UserId`, `SenseId` | — |
+| `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` | `UserId`, `SessionId`, `SenseId`, `AttemptNo` | yes |
 
 - `Word` is copied from Content at submit time, so recall history survives a deleted word.
 - `LearnerWordMemberships` is filled only by Content events (WB-21). No public endpoint reads it yet.
+- `LearnerWordStates` (WB-22) is created and (de)activated in the same save as its membership.
+- `ReviewLogs` (WB-22) is insert-only: no update or delete path exists.
+- Concurrent duplicate answers fail on the unique attempt index or `RowVersion` → `409`; FSRS is applied once.
 
 ## MassTransit messaging tables (WB-21)
 

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Content.Api.Models;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RepublishLearnerWords;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
 using WordBuddy.Shared.Contracts.Vocabulary;
@@ -196,5 +197,50 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
         }
 
         (await AddedPublishedAsync(otherUserId, senseId, timeoutSeconds: 3)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RepublishLearnerWords_Admin_PublishesAddedPerLinkWithOriginalTime()
+    {
+        Guid userId = Guid.NewGuid();
+        HttpClient learner = CreateClient(userId, "Child");
+        Guid firstSenseId = await AddWordAsync(learner, $"event-backfill-a-{userId:N}");
+        Guid secondSenseId = await AddWordAsync(learner, $"event-backfill-b-{userId:N}");
+        (await AddedPublishedAsync(userId, firstSenseId)).Should().BeTrue();
+        (await AddedPublishedAsync(userId, secondSenseId)).Should().BeTrue();
+
+        Dictionary<Guid, DateTime> addedAt;
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+            addedAt = await dbContext.LearnerWords.AsNoTracking()
+                .Where(l => l.UserId == userId)
+                .ToDictionaryAsync(l => l.SenseId, l => l.AddedAtUtc);
+        }
+
+        HttpResponseMessage response = await CreateClient(Guid.NewGuid(), "Adult", isAdmin: true)
+            .PostAsync("/api/vocabulary/admin/learner-words/republish", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        RepublishLearnerWordsResult? result = await response.Content.ReadFromJsonAsync<RepublishLearnerWordsResult>();
+        result!.Published.Should().BeGreaterThanOrEqualTo(2);
+
+        (await EventuallyAsync(
+            () => _added.Count(m => m.UserId == userId) >= 4,
+            TimeSpan.FromSeconds(15))).Should().BeTrue("each link is published once by the add and once by the backfill");
+
+        _added.Where(m => m.UserId == userId).Should().OnlyContain(m => m.AddedAtUtc == addedAt[m.SenseId] && m.AddedBy == userId);
+        _added.Should().NotContain(m => m.UserId == SystemOwner.UserId);
+    }
+
+    [Theory]
+    [InlineData("Adult")]
+    [InlineData("Child")]
+    public async Task RepublishLearnerWords_NonAdmin_ReturnsForbidden(string ageGroup)
+    {
+        HttpResponseMessage response = await CreateClient(Guid.NewGuid(), ageGroup)
+            .PostAsync("/api/vocabulary/admin/learner-words/republish", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

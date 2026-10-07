@@ -22,6 +22,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILearnerProgressRepository, LearnerProgressRepository>();
         services.AddScoped<IVocabularyRecallRepository, VocabularyRecallRepository>();
         services.AddScoped<ILearnerWordMembershipRepository, LearnerWordMembershipRepository>();
+        services.AddScoped<ILearnerWordStateRepository, LearnerWordStateRepository>();
+        services.AddScoped<IReviewLogRepository, ReviewLogRepository>();
+        services.AddScoped<IVocabularyLearnerSettingsRepository, VocabularyLearnerSettingsRepository>();
 
         // Consumer side: Content's LearnerWord events, deduped by the EF Core inbox.
         services.AddWordBuddyMessaging<ProgressDbContext>(configuration, bus =>

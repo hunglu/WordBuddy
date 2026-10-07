@@ -253,6 +253,143 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.ToTable("LearnerWordMemberships", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Progress.Domain.LearnerWordState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Difficulty")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("DueAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FirstReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FsrsPhase")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("FsrsStep")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Lapses")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Reps")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SenseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Stability")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SenseId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "IsActive", "DueAtUtc");
+
+                    b.ToTable("LearnerWordStates", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.ReviewLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptNo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExerciseType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<bool>("HintUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDue")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Rating")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("ResponseMs")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SenseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Skill")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "OccurredAtUtc");
+
+                    b.HasIndex("UserId", "SenseId");
+
+                    b.HasIndex("UserId", "SessionId", "SenseId", "AttemptNo")
+                        .IsUnique();
+
+                    b.ToTable("ReviewLogs", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyLearnerSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("NewWordsPerDay")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("VocabularyLearnerSettings", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyRecallSession", b =>
                 {
                     b.Property<Guid>("Id")

@@ -3,7 +3,7 @@ feature: Messaging
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-21_messaging-rabbitmq-foundation
+last-updated-by: WB-22_vocabulary-srs-engine
 ---
 
 # Messaging
@@ -22,7 +22,8 @@ flowchart LR
 
 - Every `LearnerWord` insert in Content publishes `LearnerWordAdded`; every delete publishes `LearnerWordRemoved`.
 - Publishing uses the MassTransit EF Core outbox: the event is saved in the same transaction as the change.
-- Progress consumes both events into `LearnerWordMemberships` (one row per user + sense).
+- Progress consumes both events into `LearnerWordMemberships` (one row per user + sense) and, in the same save, `LearnerWordStates`: Added → create New state or re-activate; Removed → deactivate.
+- Backfill: `POST /api/vocabulary/admin/learner-words/republish` (`AdminOnly`) republishes `LearnerWordAdded` for every non-system link (batches of 500, original `AddedAtUtc`, via the outbox). Safe to run twice. Returns `{ published }`. Run once per environment after deploy.
 - Transport: RabbitMQ (`rabbitmq:management`) in docker compose and kind. In-memory transport for tests only.
 
 ## Rules
@@ -44,10 +45,9 @@ Same behaviour for both. Events carry no `AgeGroup` and no child data.
 
 ## API
 
-No public endpoints.
-
 | Method | Route | Service | Auth policy |
 |---|---|---|---|
+| POST | `/api/vocabulary/admin/learner-words/republish` | Content | `AdminOnly` |
 
 ## UI
 
@@ -60,3 +60,4 @@ None.
 ## Change history
 
 - `WB-21_messaging-rabbitmq-foundation` — RabbitMQ + MassTransit; Content publishes LearnerWordAdded/Removed, Progress consumes them. (#21)
+- `WB-22_vocabulary-srs-engine` — consumers also maintain `LearnerWordStates`; admin backfill republishes `LearnerWordAdded`. (#22)

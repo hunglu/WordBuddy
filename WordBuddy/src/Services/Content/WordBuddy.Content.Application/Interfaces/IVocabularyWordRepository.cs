@@ -23,6 +23,11 @@ public interface IVocabularyWordRepository
     /// <summary>Returns all of a learner's links with their senses loaded, newest first.</summary>
     Task<Result<IReadOnlyList<LearnerWord>>> GetLinkedToUserAsync(Guid userId, CancellationToken ct = default);
 
+    /// <summary>Returns one page of learner links (ids and add time only), ordered by link id, skipping
+    /// <see cref="SystemOwner"/> links. Keyset paging: only links with an id after
+    /// <paramref name="afterLinkId"/> (<c>null</c> = from the start). Used by the backfill.</summary>
+    Task<Result<IReadOnlyList<LearnerWordLink>>> GetLearnerLinksPageAsync(Guid? afterLinkId, int take, CancellationToken ct = default);
+
     /// <summary>Returns a random subset (at most <paramref name="count"/>) of a learner's links, senses loaded.</summary>
     Task<Result<IReadOnlyList<LearnerWord>>> GetRandomLinkedToUserAsync(Guid userId, int count, CancellationToken ct = default);
 

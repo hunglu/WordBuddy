@@ -11,6 +11,7 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddPers
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddSharedVocabularyWordToMyList;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.DeletePersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.ModerateSharedVocabularyWord;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RepublishLearnerWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RequestShareVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetMyVocabularyWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
@@ -57,6 +58,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<GetRandomVocabularyWordsForCheckQuery>, GetRandomVocabularyWordsForCheckQueryValidator>();
 
         services.AddScoped<IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetPendingVocabularyModerationQueryHandler>();
+
+        services.AddScoped<ICommandHandler<RepublishLearnerWordsCommand, RepublishLearnerWordsResult>, RepublishLearnerWordsCommandHandler>();
+        services.AddScoped<IValidator<RepublishLearnerWordsCommand>, RepublishLearnerWordsCommandValidator>();
 
         return services;
     }

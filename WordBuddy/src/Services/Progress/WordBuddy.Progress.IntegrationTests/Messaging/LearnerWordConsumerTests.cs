@@ -121,6 +121,60 @@ public sealed class LearnerWordConsumerTests
         (await CountAsync(userId)).Should().Be(1);
     }
 
+    private async Task<List<LearnerWordState>> GetStatesAsync(Guid userId)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext dbContext = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        return await dbContext.LearnerWordStates.AsNoTracking().Where(s => s.UserId == userId).ToListAsync();
+    }
+
+    [Fact]
+    public async Task LearnerWordAddedConsumer_Consume_CreatesNewStateRow()
+    {
+        Guid userId = Guid.NewGuid();
+        Guid senseId = Guid.NewGuid();
+
+        await PublishAsync(new LearnerWordAdded(userId, senseId, userId, T0), Guid.NewGuid());
+        (await WaitForAsync(userId, senseId, m => m.IsActive)).Should().NotBeNull();
+
+        LearnerWordState state = (await GetStatesAsync(userId)).Should().ContainSingle().Subject;
+        state.SenseId.Should().Be(senseId);
+        state.Status.Should().Be(WordStatus.New);
+        state.IsActive.Should().BeTrue();
+        state.DueAtUtc.Should().Be(T0);
+    }
+
+    [Fact]
+    public async Task LearnerWordAddedConsumer_Replay_CreatesNoExtraState()
+    {
+        Guid userId = Guid.NewGuid();
+        Guid senseId = Guid.NewGuid();
+
+        await PublishAsync(new LearnerWordAdded(userId, senseId, userId, T0), Guid.NewGuid());
+        (await WaitForAsync(userId, senseId, m => m.IsActive)).Should().NotBeNull();
+
+        // Backfill-style replay: new message id, same original timestamp.
+        await PublishAsync(new LearnerWordAdded(userId, senseId, userId, T0), Guid.NewGuid());
+        await Task.Delay(TimeSpan.FromSeconds(3));
+
+        (await GetStatesAsync(userId)).Should().ContainSingle();
+        (await CountAsync(userId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task LearnerWordRemovedConsumer_Consume_DeactivatesState()
+    {
+        Guid userId = Guid.NewGuid();
+        Guid senseId = Guid.NewGuid();
+
+        await PublishAsync(new LearnerWordAdded(userId, senseId, userId, T0), Guid.NewGuid());
+        (await WaitForAsync(userId, senseId, m => m.IsActive)).Should().NotBeNull();
+        await PublishAsync(new LearnerWordRemoved(userId, senseId, T0.AddMinutes(1)), Guid.NewGuid());
+        (await WaitForAsync(userId, senseId, m => !m.IsActive)).Should().NotBeNull();
+
+        (await GetStatesAsync(userId)).Should().ContainSingle().Which.IsActive.Should().BeFalse();
+    }
+
     [Fact]
     public void HealthChecks_Registration_IncludesBrokerCheckTaggedReady()
     {

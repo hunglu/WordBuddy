@@ -8,6 +8,11 @@ using WordBuddy.Progress.Application.Features.Progress.Commands.RecordProgress;
 using WordBuddy.Progress.Application.Features.Progress.Queries.GetUserProgress;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.SubmitVocabularyRecallCheck;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Queries.GetVocabularyRecallProgress;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.RecordVocabularyReview;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateVocabularySettings;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerWordStates;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetVocabularySession;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetVocabularySettings;
 
 namespace WordBuddy.Progress.Application.Extensions;
 
@@ -31,6 +36,19 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<RecordLearnerWordRemovedCommand>, RecordLearnerWordRemovedCommandHandler>();
         services.AddScoped<IValidator<RecordLearnerWordRemovedCommand>, RecordLearnerWordRemovedCommandValidator>();
+
+        // Vocabulary SRS (WB-22). Options and domain services are registered by the host.
+        services.AddSingleton(TimeProvider.System);
+
+        services.AddScoped<ICommandHandler<RecordVocabularyReviewCommand, VocabularyReviewResultDto>, RecordVocabularyReviewCommandHandler>();
+        services.AddScoped<IValidator<RecordVocabularyReviewCommand>, RecordVocabularyReviewCommandValidator>();
+
+        services.AddScoped<IQueryHandler<GetVocabularySessionQuery, VocabularySessionDto>, GetVocabularySessionQueryHandler>();
+        services.AddScoped<IQueryHandler<GetLearnerWordStatesQuery, IReadOnlyList<LearnerWordStateDto>>, GetLearnerWordStatesQueryHandler>();
+        services.AddScoped<IQueryHandler<GetVocabularySettingsQuery, VocabularySettingsDto>, GetVocabularySettingsQueryHandler>();
+
+        services.AddScoped<ICommandHandler<UpdateVocabularySettingsCommand, VocabularySettingsDto>, UpdateVocabularySettingsCommandHandler>();
+        services.AddScoped<IValidator<UpdateVocabularySettingsCommand>, UpdateVocabularySettingsCommandValidator>();
 
         return services;
     }
