@@ -1,4 +1,6 @@
 {
+  "attribution": { "commit": "", "pr": "" },
+  "includeCoAuthoredBy": false,
   "permissions": {
     "deny": [
       "Bash(rm -rf:*)",
