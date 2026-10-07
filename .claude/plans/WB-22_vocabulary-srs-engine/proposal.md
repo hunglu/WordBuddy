@@ -1,14 +1,14 @@
 ---
 title: WB-22_Vocabulary SRS engine
-status: idea
+status: planned
 type: change
 issue: 22
 pr: none
 affects: docs/features/vocabulary-builder.md
 supersedes: none
-version: 1.0
+version: 1.2
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-05T15:38:12+07:00
+updated: 2026-10-07T10:07:23+07:00
 ---
 
 ## Problem

@@ -6,9 +6,9 @@ issue: 24
 pr: none
 affects: docs/features/learner-support-links.md
 supersedes: none
-version: 1.0
+version: 1.1
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-05T15:38:12+07:00
+updated: 2026-10-07T09:47:51+07:00
 ---
 
 ## Problem
@@ -26,6 +26,14 @@ owner who gives consent.
   local copy for a `CanSupportLearner(permission)` policy. Link ids are not put in the JWT.
 - `Alias` and `AvatarId` on the profile (adults too), for later challenge boards.
 - UI: invite, accept, list and revoke links.
+- Added 2026-10-07 (from WB-22 decision D-4):
+  - Link and unlink need consent from both sides, the same for all accounts (child and adult),
+    so no user is surprised.
+  - Admin override (operations, not a learner feature): when the other side (parent or teacher)
+    takes no action on an unlink request, an admin can complete the unlink. The action is audited.
+    _Wait time before override and how the learner asks for it: to define in `/plan`._
+  - A linked Guardian or Teacher sets the vocabulary new-word cap per child
+    (overrides the child's own `VocabularyLearnerSettings` from WB-22).
 
 ## Target users
 
@@ -33,7 +41,7 @@ Both.
 
 - Child: exactly one active Guardian, who owns the profile. A Teacher link needs guardian
   approval. No Peer links (D5).
-- Adult: no guardian; accepts and revokes Teacher and Peer links alone. Peer links are adult ↔
+- Adult: no guardian; accepts Teacher and Peer links alone; unlink follows the same two-sided consent as every account (Sam, 2026-10-07). Peer links are adult ↔
   adult only.
 
 ## Success criteria
