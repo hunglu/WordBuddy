@@ -84,10 +84,10 @@ export function VocabularyBuilderPage(): ReactElement {
         <h1 className="text-3xl font-extrabold text-wb-ink">My Vocabulary</h1>
         <div className="flex gap-2">
           <Link
-            to="/vocabulary/check"
+            to="/vocabulary/review"
             className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
           >
-            Start Recall Check
+            Start Review
           </Link>
           <Link
             to="/vocabulary/shared"

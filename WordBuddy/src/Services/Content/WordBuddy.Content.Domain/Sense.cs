@@ -30,6 +30,12 @@ public sealed class Sense : Entity
     public Guid? AudioAssetId { get; private set; }
     public MediaAsset? Audio { get; private set; }
 
+    /// <summary>Optional picture for the sense, used by the picture-choice review exercise.</summary>
+    public Guid? ImageAssetId { get; private set; }
+
+    /// <summary>Navigation to the picture asset, when loaded.</summary>
+    public MediaAsset? Image { get; private set; }
+
     public VocabularySource Source { get; private set; }
 
     /// <summary>The author — a learner's user id, or <see cref="SystemOwner.UserId"/> for system
@@ -248,6 +254,13 @@ public sealed class Sense : Entity
 
         ShareStatus = VocabularyShareStatus.Private;
         return Result.Success();
+    }
+
+    /// <summary>Attaches a picture (a <see cref="MediaAsset"/> id) to this sense, replacing any
+    /// previous one.</summary>
+    public void AttachImage(Guid imageAssetId)
+    {
+        ImageAssetId = imageAssetId;
     }
 
     /// <summary>Whether a caller may see (and therefore be linked to) this word: they wrote it, it

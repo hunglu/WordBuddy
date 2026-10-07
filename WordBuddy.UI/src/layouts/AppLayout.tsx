@@ -23,8 +23,8 @@ const NAV_ITEMS: NavItem[] = [
     label: 'My Vocabulary',
     icon: '📝',
     end: true,
-    activePaths: ['/vocabulary', '/vocabulary/check'],
   },
+  { to: '/vocabulary/review', label: 'Review', icon: '🧠', end: true },
   { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
 ]

@@ -56,5 +56,11 @@ public sealed class SenseConfiguration : IEntityTypeConfiguration<Sense>
             .WithMany()
             .HasForeignKey(w => w.AudioAssetId)
             .OnDelete(DeleteBehavior.NoAction);
+
+        // NoAction for the same reason as Audio.
+        builder.HasOne(w => w.Image)
+            .WithMany()
+            .HasForeignKey(w => w.ImageAssetId)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }

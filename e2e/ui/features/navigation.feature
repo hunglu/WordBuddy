@@ -19,7 +19,8 @@ Feature: Sidebar navigation selected state
       | /                  | Home          |
       | /lessons           | Lessons       |
       | /vocabulary        | My Vocabulary |
-      | /vocabulary/check  | My Vocabulary |
+      | /vocabulary/review | Review        |
+      | /vocabulary/check  | Review        |
       | /vocabulary/shared | Shared Pool   |
       | /progress          | My Progress   |
 

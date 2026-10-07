@@ -1,11 +1,14 @@
 Feature: Personal Vocabulary Builder
   As a WordBuddy learner
-  I want to add words to my own vocabulary list and check my recall of them
+  I want to add words to my own vocabulary list and review them
   So that I can build and track my personal vocabulary practice
 
-  Scenario: Learner adds a word, sees it in their list, and completes a recall check
+  Scenario: Learner adds a word and sees it in their list
     Given the learner is logged in
     When they add a new vocabulary word
     Then the word appears in their vocabulary list
-    When they start a recall check
-    Then they can complete the check and see their result
+
+  Scenario: The old recall check address opens the review page
+    Given the learner is logged in
+    When they open the old recall check address
+    Then they land on the review page
