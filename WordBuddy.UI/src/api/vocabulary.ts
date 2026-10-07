@@ -1,4 +1,4 @@
-import type { PersonalVocabularyWord, VocabularyRecallCheckWord } from '../types'
+import type { PersonalVocabularyWord, SenseReview, VocabularyRecallCheckWord } from '../types'
 import { apiClient } from './client'
 
 export interface AddVocabularyWordPayload {
@@ -58,4 +58,28 @@ export interface ModerateVocabularyWordPayload {
 
 export async function moderateVocabularyWord(id: string, payload: ModerateVocabularyWordPayload): Promise<void> {
   await apiClient.post(`/vocabulary/moderation/${id}`, payload)
+}
+
+/** Max ids per `GET /vocabulary/senses` call (server rule). */
+const SENSES_CHUNK_SIZE = 100
+
+/**
+ * Loads senses by id, in chunks of 100, and merges the replies. Hidden and unknown ids are
+ * simply missing from the result.
+ */
+export async function getSensesByIds(ids: string[]): Promise<SenseReview[]> {
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += SENSES_CHUNK_SIZE) {
+    chunks.push(ids.slice(i, i + SENSES_CHUNK_SIZE))
+  }
+
+  const replies: SenseReview[][] = await Promise.all(
+    chunks.map(async (chunk) => {
+      const params = new URLSearchParams()
+      chunk.forEach((id) => params.append('ids', id))
+      const { data } = await apiClient.get<SenseReview[]>('/vocabulary/senses', { params })
+      return data
+    }),
+  )
+  return replies.flat()
 }

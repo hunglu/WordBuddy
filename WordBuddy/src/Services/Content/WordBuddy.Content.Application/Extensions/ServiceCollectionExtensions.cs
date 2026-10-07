@@ -16,6 +16,7 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.Request
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetMyVocabularyWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetRandomVocabularyWordsForCheck;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSensesByIds;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSharedVocabularyWords;
 
 namespace WordBuddy.Content.Application.Extensions;
@@ -56,6 +57,9 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetRandomVocabularyWordsForCheckQueryHandler>();
         services.AddScoped<IValidator<GetRandomVocabularyWordsForCheckQuery>, GetRandomVocabularyWordsForCheckQueryValidator>();
+
+        services.AddScoped<IQueryHandler<GetSensesByIdsQuery, IReadOnlyList<SenseReviewDto>>, GetSensesByIdsQueryHandler>();
+        services.AddScoped<IValidator<GetSensesByIdsQuery>, GetSensesByIdsQueryValidator>();
 
         services.AddScoped<IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetPendingVocabularyModerationQueryHandler>();
 

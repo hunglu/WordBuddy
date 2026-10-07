@@ -1,14 +1,14 @@
 ---
 title: WB-23_Vocabulary review exercises
-status: idea
+status: in-progress
 type: change
 issue: 23
 pr: none
 affects: docs/features/vocabulary-builder.md
 supersedes: vocabulary-builder-and-checkup
-version: 1.0
+version: 1.2
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-05T15:38:12+07:00
+updated: 2026-10-07T00:00:00+07:00
 ---
 
 ## Problem

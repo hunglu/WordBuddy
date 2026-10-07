@@ -82,7 +82,7 @@ export function ProgressPage(): ReactElement {
         </div>
       )}
 
-      <h2 className="mt-10 text-2xl font-extrabold text-wb-ink">Vocabulary Recall</h2>
+      <h2 className="mt-10 text-2xl font-extrabold text-wb-ink">Past recall checks</h2>
 
       {isRecallLoading && <p className="mt-4 text-lg text-wb-ink-muted">Loading your recall progress…</p>}
       {isRecallError && (
@@ -116,12 +116,12 @@ export function ProgressPage(): ReactElement {
             <div className="mt-6 flex flex-col items-center gap-3 rounded-wb-card bg-wb-surface-card p-10 text-center shadow-wb-card">
               <span className="text-5xl">🧠</span>
               <p className="text-lg font-semibold text-wb-ink">No recall checks yet</p>
-              <p className="text-wb-ink-muted">Run your first check to see your history here!</p>
+              <p className="text-wb-ink-muted">Recall checks are now part of Review.</p>
               <Link
-                to="/vocabulary/check"
+                to="/vocabulary/review"
                 className="mt-2 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
               >
-                Start a Check
+                Start a Review
               </Link>
             </div>
           ) : (

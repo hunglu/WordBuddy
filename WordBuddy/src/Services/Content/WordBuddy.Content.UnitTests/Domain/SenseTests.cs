@@ -7,6 +7,17 @@ namespace WordBuddy.Content.UnitTests.Domain;
 public class SenseTests
 {
     [Fact]
+    public void Sense_AttachImage_SetsImageAssetId()
+    {
+        Sense sense = TestWords.System();
+        Guid imageId = Guid.NewGuid();
+
+        sense.AttachImage(imageId);
+
+        sense.ImageAssetId.Should().Be(imageId);
+    }
+
+    [Fact]
     public void Sense_ComputeContentHash_IgnoresCaseAndSurroundingSpaces()
     {
         string a = Sense.ComputeContentHash("Apple", "A fruit", "I ate an apple.");

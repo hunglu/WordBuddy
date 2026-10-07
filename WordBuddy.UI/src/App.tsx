@@ -13,7 +13,7 @@ import { LoginPage } from './pages/LoginPage'
 import { ProgressPage } from './pages/ProgressPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { VocabularyBuilderPage } from './pages/VocabularyBuilderPage'
-import { VocabularyCheckPage } from './pages/VocabularyCheckPage'
+import { VocabularyReviewPage } from './pages/VocabularyReviewPage'
 import { VocabularyModerationPage } from './pages/VocabularyModerationPage'
 import { VocabularySharedPoolPage } from './pages/VocabularySharedPoolPage'
 
@@ -42,7 +42,8 @@ function AnimatedRoutes(): ReactElement {
           <Route path="/lessons/:id" element={<LessonDetailPage />} />
           <Route path="/progress" element={<ProgressPage />} />
           <Route path="/vocabulary" element={<VocabularyBuilderPage />} />
-          <Route path="/vocabulary/check" element={<VocabularyCheckPage />} />
+          <Route path="/vocabulary/review" element={<VocabularyReviewPage />} />
+          <Route path="/vocabulary/check" element={<Navigate to="/vocabulary/review" replace />} />
           <Route path="/vocabulary/shared" element={<VocabularySharedPoolPage />} />
           <Route path="/vocabulary/moderation" element={<VocabularyModerationPage />} />
         </Route>

@@ -35,6 +35,11 @@ public interface IVocabularyWordRepository
     /// <see cref="Sense.VisibleToChildren"/> when <paramref name="childSafeOnly"/> is <see langword="true"/>.</summary>
     Task<Result<IReadOnlyList<Sense>>> GetSharedAsync(bool childSafeOnly, CancellationToken ct = default);
 
+    /// <summary>Returns the senses with the given ids (audio and image loaded), each with
+    /// <paramref name="userId"/>'s link to it or <see langword="null"/>, in one round trip. Unknown ids
+    /// are omitted. No visibility filter: the caller applies <see cref="Sense.IsVisibleTo"/>.</summary>
+    Task<Result<IReadOnlyList<SenseReviewCandidate>>> GetForReviewAsync(Guid userId, IReadOnlyCollection<Guid> senseIds, CancellationToken ct = default);
+
     /// <summary>Returns senses awaiting moderation, oldest first.</summary>
     Task<Result<IReadOnlyList<Sense>>> GetPendingModerationAsync(CancellationToken ct = default);
 

@@ -129,3 +129,58 @@ export interface VocabularyRecallProgress {
   learningCount: number
   recentSessions: VocabularyRecallSession[]
 }
+
+// ── Vocabulary review (SRS) ─────────────────────────────────────────────────
+
+export type WordStatus = 'New' | 'Learning' | 'Review' | 'Mastered' | 'Leech'
+
+export type ExerciseType = 'PictureChoice' | 'ListeningChoice' | 'Typing'
+
+export type VocabularySkill = 'Meaning' | 'Listening' | 'Spelling' | 'Pronunciation' | 'Usage'
+
+export type FsrsRating = 'Again' | 'Hard' | 'Good' | 'Easy'
+
+/** One word in today's session (Progress). Word text comes from Content. */
+export interface SessionItem {
+  senseId: string
+  status: WordStatus
+  dueAtUtc: string
+}
+
+/** Today's session from `GET /api/progress/vocabulary/session`. */
+export interface VocabularySession {
+  sessionId: string
+  dueItems: SessionItem[]
+  newItems: SessionItem[]
+  newWordCap: number
+  newWordsIntroducedToday: number
+}
+
+/** A sense as needed by a review exercise, from `GET /api/vocabulary/senses?ids=`. */
+export interface SenseReview {
+  senseId: string
+  word: string
+  definition: string
+  example: string | null
+  audioUrl: string | null
+  imageUrl: string | null
+  personalContext: string | null
+}
+
+/** Body of `POST /api/progress/vocabulary/reviews`. */
+export interface ReviewPayload {
+  sessionId: string
+  senseId: string
+  exerciseType: ExerciseType
+  skill: VocabularySkill
+  isCorrect: boolean
+  responseMs: number
+  hintUsed: boolean
+}
+
+/** Outcome of one recorded answer. */
+export interface ReviewResult {
+  status: WordStatus
+  dueAtUtc: string
+  rating: FsrsRating
+}

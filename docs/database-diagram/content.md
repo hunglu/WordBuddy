@@ -1,7 +1,7 @@
 # Content — database diagram
 
 Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
-last migration: `20261005095815_AddMessagingOutbox`
+last migration: `20261007150225_AddSenseImage`
 
 ```mermaid
 erDiagram
@@ -12,7 +12,7 @@ erDiagram
     Senses ||--o{ LessonSenses : "SenseId (no action)"
     Senses ||--o{ LearnerWords : "SenseId (cascade)"
     Senses ||--o{ SenseTranslations : "SenseId (cascade)"
-    MediaAssets |o--o{ Senses : "AudioAssetId (no action)"
+    MediaAssets |o--o{ Senses : "AudioAssetId / ImageAssetId (no action)"
     MediaAssets |o--o{ Lexemes : "UkAudioAssetId / UsAudioAssetId (no action)"
     MediaAssets |o--o{ DailyPhrases : "AudioAssetId / VideoAssetId (no action)"
 
@@ -68,6 +68,7 @@ erDiagram
         string Example "nullable, max 500"
         string ContentHash "word + definition + example, max 64"
         guid AudioAssetId FK "nullable"
+        guid ImageAssetId FK "nullable"
         string Source "System | Learner, max 20"
         guid OwnerUserId "Identity user or SystemOwner"
         string OwnerAgeGroup "nullable, max 20"
@@ -104,7 +105,7 @@ erDiagram
 | `UX_Lexemes_NormalizedLemma_PartOfSpeech` | `NormalizedLemma`, `PartOfSpeech` | unique, **no filter** (one `NULL` POS per lemma) |
 | `IX_Lexemes_UkAudioAssetId`, `IX_Lexemes_UsAudioAssetId` | asset ids | — |
 | `UX_Senses_ContentHash_OwnerUserId_Learner` | `ContentHash`, `OwnerUserId` | unique, `[Source] = 'Learner'` |
-| `IX_Senses_*` | `ContentHash`; `LexemeId`; `OwnerUserId`; `ShareStatus`; `AudioAssetId` | — |
+| `IX_Senses_*` | `ContentHash`; `LexemeId`; `OwnerUserId`; `ShareStatus`; `AudioAssetId`; `ImageAssetId` | — |
 | `UX_SenseTranslations_SenseId_Locale` | `SenseId`, `Locale` | unique |
 | `IX_LearnerWords_UserId_SenseId` | `UserId`, `SenseId` | unique |
 | `IX_LearnerWords_SenseId` | `SenseId` | — |

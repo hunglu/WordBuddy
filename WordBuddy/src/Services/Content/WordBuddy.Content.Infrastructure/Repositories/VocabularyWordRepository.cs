@@ -122,6 +122,24 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         return Result.Success<IReadOnlyList<LearnerWord>>(links);
     }
 
+    public async Task<Result<IReadOnlyList<SenseReviewCandidate>>> GetForReviewAsync(Guid userId, IReadOnlyCollection<Guid> senseIds, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Querying Senses for review: UserId={UserId}, Count={Count}", userId, senseIds.Count);
+
+        // One query: senses with media, plus the caller's link as a correlated subquery (no N+1).
+        List<SenseReviewCandidate> candidates = await _dbContext.Senses
+            .AsNoTracking()
+            .Include(s => s.Audio)
+            .Include(s => s.Image)
+            .Where(s => senseIds.Contains(s.Id))
+            .Select(s => new SenseReviewCandidate(
+                s,
+                _dbContext.LearnerWords.FirstOrDefault(l => l.UserId == userId && l.SenseId == s.Id)))
+            .ToListAsync(ct);
+
+        return Result.Success<IReadOnlyList<SenseReviewCandidate>>(candidates);
+    }
+
     public async Task<Result<IReadOnlyList<Sense>>> GetSharedAsync(bool childSafeOnly, CancellationToken ct = default)
     {
         _logger.LogDebug("Querying shared Senses: ChildSafeOnly={ChildSafeOnly}", childSafeOnly);

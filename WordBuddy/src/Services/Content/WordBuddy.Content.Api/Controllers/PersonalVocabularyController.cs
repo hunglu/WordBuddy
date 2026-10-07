@@ -12,6 +12,7 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.Request
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetMyVocabularyWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetRandomVocabularyWordsForCheck;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSensesByIds;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSharedVocabularyWords;
 using WordBuddy.Content.Domain;
 using WordBuddy.Shared.Kernel;
@@ -34,6 +35,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     private readonly IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getSharedWords;
     private readonly IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getRandomForCheck;
     private readonly IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getPendingModeration;
+    private readonly IQueryHandler<GetSensesByIdsQuery, IReadOnlyList<SenseReviewDto>> _getSensesByIds;
     private readonly ILogger<PersonalVocabularyController> _logger;
 
     public PersonalVocabularyController(
@@ -46,6 +48,7 @@ public sealed class PersonalVocabularyController : ControllerBase
         IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getSharedWords,
         IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> getRandomForCheck,
         IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>> getPendingModeration,
+        IQueryHandler<GetSensesByIdsQuery, IReadOnlyList<SenseReviewDto>> getSensesByIds,
         ILogger<PersonalVocabularyController> logger)
     {
         _addWord = addWord;
@@ -57,6 +60,7 @@ public sealed class PersonalVocabularyController : ControllerBase
         _getSharedWords = getSharedWords;
         _getRandomForCheck = getRandomForCheck;
         _getPendingModeration = getPendingModeration;
+        _getSensesByIds = getSensesByIds;
         _logger = logger;
     }
 
@@ -147,6 +151,17 @@ public sealed class PersonalVocabularyController : ControllerBase
     {
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getRandomForCheck.HandleAsync(
             new GetRandomVocabularyWordsForCheckQuery(User.GetUserId(), count), ct);
+
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Batch read of senses for a review session (<c>?ids=a&amp;ids=b</c>, 1–100 ids). Hidden
+    /// and unknown ids are both omitted with the same 200; Child callers only get child-visible senses.</summary>
+    [HttpGet("senses")]
+    public async Task<IActionResult> GetSensesByIds([FromQuery] Guid[] ids, CancellationToken ct)
+    {
+        Result<IReadOnlyList<SenseReviewDto>> result = await _getSensesByIds.HandleAsync(
+            new GetSensesByIdsQuery(ids, User.GetUserId(), User.GetAgeGroup()), ct);
 
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }

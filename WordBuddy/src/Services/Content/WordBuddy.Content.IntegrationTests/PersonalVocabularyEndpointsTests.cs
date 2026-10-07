@@ -352,4 +352,50 @@ public sealed class PersonalVocabularyEndpointsTests
         (await second.DeleteAsync($"/api/vocabulary/{secondId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await CountLexemesAndSensesAsync(word)).Should().Be((0, 0), "the last sense's lexeme is removed with it");
     }
+
+    [Fact]
+    public async Task GetSensesByIds_ChildAndAdult_HiddenForeignAndUnknownIdsOmittedWithSame200()
+    {
+        HttpClient author = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient stranger = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient adult = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient child = CreateClient(Guid.NewGuid(), "Child", isAdmin: false);
+
+        Guid hiddenSharedId = await (await author.PostAsJsonAsync(
+            "/api/vocabulary", new AddPersonalVocabularyWordRequest($"grownup-{Guid.NewGuid():N}", "adult only", null)))
+            .Content.ReadFromJsonAsync<Guid>();
+        await author.PostAsync($"/api/vocabulary/{hiddenSharedId}/share", content: null);
+        await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{hiddenSharedId}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: false));
+
+        Guid foreignPrivateId = await (await stranger.PostAsJsonAsync(
+            "/api/vocabulary", new AddPersonalVocabularyWordRequest($"secret-{Guid.NewGuid():N}", "private", null)))
+            .Content.ReadFromJsonAsync<Guid>();
+
+        Guid unknownId = Guid.NewGuid();
+        string url = $"/api/vocabulary/senses?ids={hiddenSharedId}&ids={foreignPrivateId}&ids={unknownId}";
+
+        HttpResponseMessage adultResponse = await adult.GetAsync(url);
+        HttpResponseMessage childResponse = await child.GetAsync(url);
+
+        adultResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        childResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        List<SenseReviewDto>? adultSenses = await adultResponse.Content.ReadFromJsonAsync<List<SenseReviewDto>>(JsonOptions);
+        List<SenseReviewDto>? childSenses = await childResponse.Content.ReadFromJsonAsync<List<SenseReviewDto>>(JsonOptions);
+
+        adultSenses.Should().ContainSingle().Which.SenseId.Should().Be(hiddenSharedId);
+        childSenses.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetSensesByIds_MoreThan100Ids_ReturnsBadRequest()
+    {
+        HttpClient adult = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        string query = string.Join("&", Enumerable.Range(0, 101).Select(_ => $"ids={Guid.NewGuid()}"));
+
+        HttpResponseMessage response = await adult.GetAsync($"/api/vocabulary/senses?{query}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }
