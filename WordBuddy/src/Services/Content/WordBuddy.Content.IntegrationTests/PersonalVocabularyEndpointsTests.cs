@@ -389,6 +389,42 @@ public sealed class PersonalVocabularyEndpointsTests
     }
 
     [Fact]
+    public async Task GetSensesByIds_SenseWithAudioAndImage_ReturnsBothUrls()
+    {
+        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid senseId = await AddAsync(owner, UniqueWord("media"));
+        string audioUrl = $"https://media.test/audio-{Guid.NewGuid():N}.mp3";
+        string imageUrl = $"https://media.test/image-{Guid.NewGuid():N}.png";
+
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+            MediaAsset audio = new(Guid.NewGuid(), MediaAssetType.Audio, audioUrl);
+            MediaAsset image = new(Guid.NewGuid(), MediaAssetType.Image, imageUrl);
+            dbContext.MediaAssets.AddRange(audio, image);
+            await dbContext.SaveChangesAsync();
+            await dbContext.Senses.Where(s => s.Id == senseId).ExecuteUpdateAsync(u => u
+                .SetProperty(s => s.AudioAssetId, audio.Id)
+                .SetProperty(s => s.ImageAssetId, image.Id));
+        }
+
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+            Sense stored = await dbContext.Senses.AsNoTracking().SingleAsync(s => s.Id == senseId);
+            stored.AudioAssetId.Should().NotBeNull("the arrange step must persist the audio link");
+            stored.ImageAssetId.Should().NotBeNull("the arrange step must persist the image link");
+        }
+
+        HttpResponseMessage response = await owner.GetAsync($"/api/vocabulary/senses?ids={senseId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        List<SenseReviewDto>? senses = await response.Content.ReadFromJsonAsync<List<SenseReviewDto>>(JsonOptions);
+        SenseReviewDto dto = senses.Should().ContainSingle().Subject;
+        new[] { dto.AudioUrl, dto.ImageUrl }.Should().Equal(audioUrl, imageUrl);
+    }
+
+    [Fact]
     public async Task GetSensesByIds_MoreThan100Ids_ReturnsBadRequest()
     {
         HttpClient adult = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
