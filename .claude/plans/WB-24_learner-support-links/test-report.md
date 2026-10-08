@@ -49,10 +49,13 @@ New: `e2e/ui/features/support-links.feature` + `e2e/ui/steps/support-links.steps
 
 None in suites that ran.
 
-Risk for the next run: existing E2E tests that register a `Child` and call learning endpoints
-(`VocabularyReviewSessionTests`, `VocabularySrsTests`, `PersonalVocabularyTests`,
-`LearnerWordMessagingTests`, `vocabulary-review.feature` child scenario) will likely get
-403 `Learner.SupporterRequired` now. They need a supporter link in their setup.
+Child-gate fix in existing E2E tests (run 2, builds, not run):
+
+| File | Change |
+| --- | --- |
+| `e2e/api/.../ChildSupport.cs` (new) | Links a fresh adult supporter to a child, waits until Content and Progress allow learning |
+| `VocabularySrsTests`, `VocabularyReviewSessionTests`, `LearnerWordMessagingTests`, `PersonalVocabularyTests` | Register helper calls `ChildSupport.LinkSupporterAsync` for `Child` |
+| `e2e/ui/steps/vocabulary-review.steps.ts` | `register` links a supporter for `Child` |
 
 ## Verdict
 
