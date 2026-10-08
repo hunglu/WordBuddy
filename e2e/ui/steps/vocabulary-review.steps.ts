@@ -62,7 +62,7 @@ async function linkSupporter(request: APIRequestContext, childToken: string): Pr
   expect(accept.ok(), await accept.text()).toBeTruthy()
   // Content and Progress read a projection fed by RabbitMQ. Empty review body: 403 while gated, 400 once allowed.
   await expect(async () => {
-    const words = await request.get('/api/vocabulary', { headers: { Authorization: `Bearer ${childToken}` } })
+    const words = await request.get('/api/lessons', { headers: { Authorization: `Bearer ${childToken}` } })
     expect(words.status()).toBe(200)
     const review = await request.post('/api/progress/vocabulary/reviews', {
       headers: { Authorization: `Bearer ${childToken}` },

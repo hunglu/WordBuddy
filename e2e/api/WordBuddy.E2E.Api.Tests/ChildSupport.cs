@@ -55,7 +55,7 @@ internal static class ChildSupport
             DateTime deadline = DateTime.UtcNow + Timeout;
             while (DateTime.UtcNow < deadline)
             {
-                IAPIResponse words = await content.GetAsync("/api/vocabulary", new() { Headers = Auth(childToken) });
+                IAPIResponse words = await content.GetAsync("/api/lessons", new() { Headers = Auth(childToken) });
                 // POST reviews with an empty body: 403 while gated, 400 (validation) once allowed.
                 // A GET session is avoided here, it could cache an empty session for the day.
                 IAPIResponse review = await progress.PostAsync("/api/progress/vocabulary/reviews", new()

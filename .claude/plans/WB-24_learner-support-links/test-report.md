@@ -1,6 +1,8 @@
 # Test report: WB-24_Learner support links
 
-Run: 2026-10-08 · Branch `feature/WB-24_learner-support-links` (HEAD 89dd5e1 + origin/main, up to date) · PR #35
+Run 3: 2026-10-08 · Branch `feature/WB-24_learner-support-links` (HEAD 661374f + origin/main, up to date) · PR #35 · stack started by Sam
+
+**Not merged.** Application bug: Content and Progress share one RabbitMQ queue per link event, so each event reaches only one service.
 
 ## Backend unit/integration
 
@@ -15,48 +17,56 @@ Run: 2026-10-08 · Branch `feature/WB-24_learner-support-links` (HEAD 89dd5e1 + 
 
 ## E2E API
 
-Skipped — services not running; starting `docker compose` was denied by the permission check.
+36 total: 29 passed, 7 failed.
 
-New: `e2e/api/WordBuddy.E2E.Api.Tests/SupportLinkTests.cs` (builds, not run).
-
-| Test | Covers |
+| Failed test | Cause |
 | --- | --- |
-| `SupportLink_ChildLifecycle_SecondSupporterLosesAccessAfterUnlink` | child 403 → invite → adult accepts (Primary) → child learns → cap set → second pending → Primary approves → child cannot unlink → unlink + confirm → access lost |
-| `SupportLink_PrimaryUnlinkRequest_IsRejected` | Primary link cannot be unlinked |
-| `SupportLink_AdultLearner_AcceptedLinkIsActiveWithoutPrimary` | adult path: no gate, no Primary |
-| `SupportLink_ChildAcceptsInvitation_IsRejected` | supporter must be Adult |
+| `SupportLinkTests.SupportLink_ChildLifecycle_SecondSupporterLosesAccessAfterUnlink` | Bug 1 |
+| `VocabularySrsTests` × 3 (Child cases) | Bug 1, in the `ChildSupport` setup |
+| `VocabularyReviewSessionTests` (Child) | Bug 1, in the setup |
+| `PersonalVocabularyTests.RequestShare_ChildCaller_ReturnsForbidden` | Bug 1, in the setup |
+| `LearnerWordMessagingTests.AddWord_ChildLearner_CreatesActiveMembershipInProgress` | Bug 1, in the setup |
+
+Passed: the other 3 `SupportLinkTests` (Primary cannot be unlinked, adult path, child cannot accept) and all adult cases.
 
 ## E2E UI
 
-Skipped — services not running (same reason).
+24 total: 22 passed, 2 failed.
 
-New: `e2e/ui/features/support-links.feature` + `e2e/ui/steps/support-links.steps.ts` (`bddgen` OK, not run).
+| Failed scenario | Cause |
+| --- | --- |
+| support-links: Admin completes an escalated unlink request | Environment: Identity runs without `SupportLinks__UnlinkOverrideWaitDays=0`; escalate returns 400 `SupportLink.EscalationTooEarly` |
+| vocabulary-review: Child session (setup) | Bug 1 |
 
-- Child sees the "Add a supporter" gate and reaches `/support`.
-- Adult accepts a child's invitation link; the gate opens.
-- Admin completes an escalated unlink. Needs Identity with `SupportLinks__UnlinkOverrideWaitDays=0`:
-  `docker compose -f docker-compose.yml -f ../e2e/docker-compose.e2e.yml up -d` (override in `e2e/docker-compose.e2e.yml`).
+Passed: the child "Add a supporter" gate, and an adult accepting an invitation link.
 
 ## Merge guard
 
 | Guard | Result |
 | --- | --- |
 | 1. Review Approve, reviewed commit 3858435 ancestor of HEAD | pass |
-| 2. Changes since review (vs `merge-tree 3858435 origin/main`) | pass — only `.claude/plans/WB-24_learner-support-links/proposal.md`, `review.md` |
-| 3. Every suite ran with zero failures | fail — E2E API and E2E UI skipped |
+| 2. Changes since review (vs `merge-tree 3858435 origin/main`) | pass — only allowlisted paths (`e2e/**`, plan folder files, `docs/ai/learnings.md`) |
+| 3. Every suite ran with zero failures | fail — E2E API 7 failed, E2E UI 2 failed |
 
 ## Failures
 
-None in suites that ran.
+**Bug 1 (application, blocker): each link event reaches only one service.**
 
-Child-gate fix in existing E2E tests (run 2, builds, not run):
+```text
+Identity --SupportLinkActivated--> queue "support-link-activated" (2 consumers)
+                                     |-> Content   (round robin: events A, C, ...)
+                                     '-> Progress  (events B, D, ...)
+```
 
-| File | Change |
-| --- | --- |
-| `e2e/api/.../ChildSupport.cs` (new) | Links a fresh adult supporter to a child, waits until Content and Progress allow learning |
-| `VocabularySrsTests`, `VocabularyReviewSessionTests`, `LearnerWordMessagingTests`, `PersonalVocabularyTests` | Register helper calls `ChildSupport.LinkSupporterAsync` for `Child` |
-| `e2e/ui/steps/vocabulary-review.steps.ts` | `register` links a supporter for `Child` |
+- Evidence: `rabbitmqctl list_queues` shows `support-link-activated 2` and `support-link-revoked 2`. Content and Progress both register `SupportLinkActivatedConsumer` / `SupportLinkRevokedConsumer` with default endpoint names.
+- Effect: after a link is accepted, one service opens and the other stays 403 `Learner.SupporterRequired` for over 70 s. Which service opens alternates per link. A revoke can also miss one service, so a revoked supporter can keep access there.
+- Fix (`/code`): per-service endpoint names (for example a `content-` / `progress-` prefix in `ConfigureEndpoints`). Delete the old shared queues afterwards.
+- Files: `WordBuddy/src/Services/{Content,Progress}/*.Infrastructure/Extensions/ServiceCollectionExtensions.cs`.
+
+**Environment: the E2E override is not applied.** Start the stack with `e2e/docker-compose.e2e.yml`, otherwise the admin scenario cannot escalate.
+
+**Test fix in run 3:** the `ChildSupport` / `linkSupporter` probe used `GET /api/vocabulary` (405). It now uses `GET /api/lessons`.
 
 ## Verdict
 
-Not merged — E2E API and E2E UI skipped (services not running)
+Not merged — application bug: Content and Progress share the support-link event queues; E2E API 7 and E2E UI 2 failures
