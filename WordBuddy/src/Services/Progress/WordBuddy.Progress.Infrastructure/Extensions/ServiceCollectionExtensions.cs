@@ -32,8 +32,8 @@ public static class ServiceCollectionExtensions
         {
             bus.AddConsumer<LearnerWordAddedConsumer>();
             bus.AddConsumer<LearnerWordRemovedConsumer>();
-            bus.AddConsumer<SupportLinkActivatedConsumer>();
-            bus.AddConsumer<SupportLinkRevokedConsumer>();
+            bus.AddConsumer<SupportLinkActivatedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Activated);
+            bus.AddConsumer<SupportLinkRevokedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Revoked);
         });
 
         return services;
