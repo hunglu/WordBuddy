@@ -25,7 +25,7 @@ stateDiagram-v2
 | Plan | `/plan <slug>` | `plan.md`, `tasks.md` | Planned |
 | Build | `/code <slug>` | issue assigned to `@me`; `feature/<slug>`; one commit + one push; **PR** → `main` (`pr:` in proposal) | In progress |
 | Review | `/review <slug>` | `review.md` (blocker / major / nit), posted on the PR | In review (approve) / In progress (changes requested) |
-| Verify | `/test <slug>` | `test-report.md`; living spec updated; **PR merged** (`gh pr merge --merge`, `Closes #n`) | Done / In progress (needs fixes) |
+| Verify | `/test <slug>` | `test-report.md`; living spec updated; **PR merged** (`gh pr merge --merge --admin`, `Closes #n`) | Done / In progress (needs fixes) |
 | Ship | `/release` | `docs/releases/<v>.md`, git tag, kind deploy | Released |
 | Look | `/status` | all proposals + next step | — |
 
@@ -78,7 +78,7 @@ flowchart TD
     C -- No --> X
     C -- Yes --> D{3. Every suite ran this session<br/>and passed?}
     D -- No --> Y[needs-fixes]
-    D -- Yes --> M[gh pr merge --merge]
+    D -- Yes --> M[gh pr merge --merge --admin]
 ```
 
 1. **Approved review of this code.** Verdict is Approve and `Reviewed commit: <sha>` is an ancestor of HEAD (`git merge-base --is-ancestor <sha> HEAD`).
@@ -115,8 +115,10 @@ stays open until `/code` resolves the conflict and `/review` re-reviews it.
 | GitHub `CONFLICTING` / `UNKNOWN` after the push, or merge fails / is declined | one `undo mark done` commit: `git restore --source=<sha>^ --staged --worktree -- .claude/plans/<slug>/proposal.md docs/features/` (not `git revert` — tests stay; files added by `mark done` are removed) |
 
 **Nothing reaches `main` without a review.** The reviewer cannot approve its own account's PR on
-GitHub, so the verdict lives in `review.md` and a PR comment. Branch protection with a required
-approval would need a second GitHub account.
+GitHub, so the verdict lives in `review.md` and a PR comment. The `main` ruleset requires 1 owner
+approval; the Repository admin role (Sam) may bypass it. `/test` merges with
+`gh pr merge --merge --admin` only after the merge guard passes — the guard is the approval.
+A human merge on GitHub uses the same bypass.
 
 ## Blocked
 

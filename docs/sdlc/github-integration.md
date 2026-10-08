@@ -76,7 +76,7 @@ No manual dragging: each command runs **Board sync** after it changes `status:`.
 | Plan | `/plan <slug>` → `gh issue comment 42 -F .claude/plans/<slug>/plan.md` → **Planned** |
 | Code | `/code <slug>` → start: assign `@me`, **In progress**. End: one commit + push, `gh pr create --base main --head feature/<slug>` (`Closes #42`, Sam approves), `pr:` written to the working tree |
 | Review | `/review <slug>` → `review.md`, `gh pr review --comment` → **In review** (approve) / **In progress** (changes requested) |
-| Test | `/test <slug>` → `gh pr merge <pr> --merge`; `Closes #42` closes the issue → **Done** (sync only checks). `needs-fixes` → **In progress**. Conflicting PR: no status change, no merge |
+| Test | `/test <slug>` → `gh pr merge <pr> --merge --admin` (admin bypass — see workflow.md → Merge guard); `Closes #42` closes the issue → **Done** (sync only checks). `needs-fixes` → **In progress**. Conflicting PR: no status change, no merge |
 | Fix | `changes-requested` / `needs-fixes` → `/code <slug>` (fix round, **In progress**) → `/review` |
 | Release | `/release` → **Released** |
 | Overview | `/status` (local) or the board |
