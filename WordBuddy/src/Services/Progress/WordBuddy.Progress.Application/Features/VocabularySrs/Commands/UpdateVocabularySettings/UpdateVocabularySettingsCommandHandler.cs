@@ -46,6 +46,6 @@ public sealed class UpdateVocabularySettingsCommandHandler : ICommandHandler<Upd
         _logger.LogInformation(
             "UpdateVocabularySettingsCommand succeeded: UserId={UserId}, NewWordsPerDay={NewWordsPerDay}",
             command.UserId, saved.Value.NewWordsPerDay);
-        return Result.Success(new VocabularySettingsDto(saved.Value.NewWordsPerDay));
+        return Result.Success(new VocabularySettingsDto(saved.Value.NewWordsPerDay, saved.Value.SupporterNewWordCap));
     }
 }

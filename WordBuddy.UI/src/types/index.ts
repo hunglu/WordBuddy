@@ -19,6 +19,99 @@ export interface User {
   displayName: string
   ageGroup: AgeGroup
   isAdmin: boolean
+  /** Public alias (3-20 chars). Older persisted sessions may not have it. */
+  alias?: string | null
+  /** Avatar id from the fixed catalog. */
+  avatarId?: string | null
+  /** Whether the user has at least one active supporter (child learning gate). */
+  hasActiveSupporter?: boolean
+}
+
+// ── Identity: support links (WB-24) ─────────────────────────────────────────
+
+export type SupportLinkStatus = 'Invited' | 'PendingPrimaryApproval' | 'Active' | 'Revoked'
+
+/** Display label only — no effect on permissions. */
+export type SupportRelationship = 'Parent' | 'Teacher' | 'Partner' | 'Other'
+
+export type InvitationSide = 'Learner' | 'Supporter'
+
+export type LinkSide = 'Learner' | 'Supporter'
+
+export type UnlinkRequestStatus =
+  | 'Pending'
+  | 'OverrideRequested'
+  | 'Confirmed'
+  | 'Declined'
+  | 'Cancelled'
+  | 'CompletedByAdmin'
+  | 'RejectedByAdmin'
+
+export interface UnlinkRequest {
+  id: string
+  status: UnlinkRequestStatus
+  requestedByMe: boolean
+  requestedAtUtc: string
+  escalationAvailableAtUtc: string
+}
+
+export interface SupportLink {
+  id: string
+  learnerId: string
+  learnerName: string
+  learnerAvatarId: string | null
+  supporterId: string
+  supporterName: string
+  supporterAvatarId: string | null
+  isPrimary: boolean
+  relationship: SupportRelationship | null
+  status: SupportLinkStatus
+  createdAtUtc: string
+  unlinkRequest: UnlinkRequest | null
+}
+
+export interface SupportInvitation {
+  id: string
+  creatorSide: InvitationSide
+  relationship: SupportRelationship | null
+  expiresAtUtc: string
+}
+
+export interface CreatedInvitation {
+  id: string
+  code: string
+  token: string
+  expiresAtUtc: string
+}
+
+export interface MySupportLinks {
+  asLearner: SupportLink[]
+  asSupporter: SupportLink[]
+  managedForChildren: SupportLink[]
+  openInvitations: SupportInvitation[]
+  hasActiveSupporter: boolean
+}
+
+export interface AdminUnlinkRequest {
+  id: string
+  linkId: string
+  learnerId: string
+  supporterId: string
+  requestedById: string
+  requestedBySide: LinkSide
+  status: UnlinkRequestStatus
+  requestedAtUtc: string
+  escalatedAtUtc: string | null
+}
+
+export interface AdminSupportLink {
+  id: string
+  learnerId: string
+  supporterId: string
+  isPrimary: boolean
+  relationship: SupportRelationship | null
+  status: SupportLinkStatus
+  createdAtUtc: string
 }
 
 export interface AuthToken {

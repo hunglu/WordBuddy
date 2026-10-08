@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using WordBuddy.Identity.Domain;
+using WordBuddy.Identity.Domain.SupportLinks;
+using WordBuddy.Shared.Infrastructure.Messaging;
 
 namespace WordBuddy.Identity.Infrastructure.Persistence;
 
-/// <summary>EF Core context for the Identity service's own database (<c>WordBuddyIdentity</c>).</summary>
+/// <summary>EF Core context for the Identity service database (<c>WordBuddyIdentity</c>).
+/// Also holds the MassTransit outbox tables, so link events commit with the link change.</summary>
 public sealed class IdentityDbContext : DbContext
 {
     public IdentityDbContext(DbContextOptions<IdentityDbContext> options) : base(options)
@@ -11,9 +14,14 @@ public sealed class IdentityDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<SupportLink> SupportLinks => Set<SupportLink>();
+    public DbSet<SupportLinkInvitation> SupportLinkInvitations => Set<SupportLinkInvitation>();
+    public DbSet<UnlinkRequest> UnlinkRequests => Set<UnlinkRequest>();
+    public DbSet<SupportLinkAuditEntry> SupportLinkAuditEntries => Set<SupportLinkAuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IdentityDbContext).Assembly);
+        modelBuilder.AddWordBuddyMessagingEntities();
     }
 }

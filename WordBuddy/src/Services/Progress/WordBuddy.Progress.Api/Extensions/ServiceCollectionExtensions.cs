@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using WordBuddy.Progress.Api.Authorization;
 using WordBuddy.Progress.Application.Extensions;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Infrastructure.Extensions;
@@ -38,7 +39,8 @@ internal static class ServiceCollectionExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options => options.AddSupportLinkPolicies());
+        services.AddSupportLinkAuthorizationHandlers();
 
         return services;
     }

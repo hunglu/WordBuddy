@@ -1,7 +1,7 @@
 # Content — database diagram
 
 Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
-last migration: `20261007150225_AddSenseImage`
+last migration: `20261008023500_AddSupportLinkProjection`
 
 ```mermaid
 erDiagram
@@ -98,6 +98,13 @@ erDiagram
         guid SenseId PK, FK
         int SortOrder
     }
+    SupportLinkProjections {
+        guid LinkId PK "Identity SupportLinks.Id"
+        guid LearnerId "Identity user"
+        guid SupporterId "Identity user"
+        bool IsActive
+        datetime UpdatedAtUtc "time of last applied event"
+    }
 ```
 
 | Index | Columns | Unique / filter |
@@ -112,12 +119,15 @@ erDiagram
 | `IX_LessonSenses_SenseId` | `SenseId` | — |
 | `IX_GrammarRules_LessonId`, `IX_DailyPhrases_LessonId` | `LessonId` | — |
 | `IX_DailyPhrases_AudioAssetId`, `IX_DailyPhrases_VideoAssetId` | asset ids | — |
+| `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
+| `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
 
 - `UserId`, `OwnerUserId`, `ModeratedByUserId` are Identity ids — no FK.
 - `Senses.Id` = the former `VocabularyWords.Id` (kept by the rename). Progress references it (`VocabularyRecallStats.VocabularyWordId`); sense audio is `vocab-{id}-{locale}.mp3`, so sense ids must stay stable.
 - Lexeme audio is `lexeme-{lexemeId}-{locale}.mp3` (`en-GB` / `en-US`); not written yet.
 - Feature rules for these tables: `docs/features/vocabulary.md`.
-- `LearnerWords` inserts/deletes write `OutboxMessage` rows in the same transaction (events `LearnerWordAdded` / `LearnerWordRemoved`, ids and timestamps only). Content only publishes; `InboxState` stays empty.
+- `LearnerWords` inserts/deletes write `OutboxMessage` rows in the same transaction (events `LearnerWordAdded` / `LearnerWordRemoved`, ids and timestamps only). Content also consumes the support-link events, so `InboxState` now holds their dedupe rows.
+- `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.
 
 ## MassTransit messaging tables (WB-21)
 

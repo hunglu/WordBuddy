@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,8 +21,13 @@ public static class ServiceCollectionExtensions
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
                    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
-        // Publisher only: LearnerWord changes go out through the EF Core outbox (ContentDbContext).
-        services.AddWordBuddyMessaging<ContentDbContext>(configuration);
+        // Publisher: LearnerWord changes go out through the EF Core outbox (ContentDbContext).
+        // Consumer: Identity support-link events, deduped by the EF Core inbox.
+        services.AddWordBuddyMessaging<ContentDbContext>(configuration, bus =>
+        {
+            bus.AddConsumer<SupportLinkActivatedConsumer>();
+            bus.AddConsumer<SupportLinkRevokedConsumer>();
+        });
 
         services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
 
@@ -30,6 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVocabularyWordRepository, VocabularyWordRepository>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<ILearnerWordEventPublisher, OutboxLearnerWordEventPublisher>();
+        services.AddScoped<ISupportLinkProjectionRepository, SupportLinkProjectionRepository>();
 
         // No Redis instance exists anywhere in this repo yet (docker-compose has no `redis`
         // service, no service configures `IDistributedCache`) — registering the in-memory

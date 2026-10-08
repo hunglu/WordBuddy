@@ -237,7 +237,14 @@ public sealed class LearnerWordMessagingTests
             },
         });
         response.Ok.Should().BeTrue($"self-registration should succeed, got {response.Status}: {await response.TextAsync()}");
-        return (await response.JsonAsync())!.Value.GetProperty("token").GetString()!;
+        string token = (await response.JsonAsync())!.Value.GetProperty("token").GetString()!;
+        if (ageGroup == "Child")
+        {
+            // WB-24: a child needs an active supporter before learning.
+            await ChildSupport.LinkSupporterAsync(identity, token);
+        }
+
+        return token;
     }
 
     /// <summary>Reads the <c>sub</c> claim (no signature check; test use only).</summary>

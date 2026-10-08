@@ -37,4 +37,12 @@ public sealed record LearnerWordStateDto(Guid SenseId, WordStatus Status, DateTi
 
 /// <summary>The caller's vocabulary settings.</summary>
 /// <param name="NewWordsPerDay">Own daily cap; <see langword="null"/> = backlog rule.</param>
-public sealed record VocabularySettingsDto(int? NewWordsPerDay);
+/// <param name="SupporterNewWordCap">Cap set by a supporter; wins over the own cap when present.</param>
+public sealed record VocabularySettingsDto(int? NewWordsPerDay, int? SupporterNewWordCap);
+
+/// <summary>A learner vocabulary settings as seen by an active supporter.</summary>
+/// <param name="LearnerId">The learner.</param>
+/// <param name="NewWordsPerDay">The learner own cap.</param>
+/// <param name="SupporterNewWordCap">The supporter cap in force, if any.</param>
+/// <param name="SupporterCapSetBy">The supporter who set it.</param>
+public sealed record LearnerVocabularySettingsDto(Guid LearnerId, int? NewWordsPerDay, int? SupporterNewWordCap, Guid? SupporterCapSetBy);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WordBuddy.Content.Api.Authorization;
 using WordBuddy.Content.Api.Extensions;
 using WordBuddy.Content.Api.Models;
 using WordBuddy.Content.Application.Abstractions;
@@ -24,6 +25,7 @@ namespace WordBuddy.Content.Api.Controllers;
 [ApiController]
 [Route("api/vocabulary")]
 [Authorize]
+[Authorize(Policy = SupportLinkPolicies.ChildHasSupporter)]
 public sealed class PersonalVocabularyController : ControllerBase
 {
     private readonly ICommandHandler<AddPersonalVocabularyWordCommand, Guid> _addWord;

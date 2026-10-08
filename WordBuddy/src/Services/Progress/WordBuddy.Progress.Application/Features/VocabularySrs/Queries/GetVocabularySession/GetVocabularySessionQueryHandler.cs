@@ -69,7 +69,8 @@ public sealed class GetVocabularySessionQueryHandler : IQueryHandler<GetVocabula
         }
 
         int? newWordsPerDay = settings.IsSuccess ? settings.Value.NewWordsPerDay : null;
-        int cap = _capPolicy.GetCap(dueCount.Value, newWordsPerDay);
+        int? supporterCap = settings.IsSuccess ? settings.Value.SupporterNewWordCap : null;
+        int cap = _capPolicy.GetCap(dueCount.Value, supporterCap, newWordsPerDay);
 
         (DateTime todayStartUtc, DateTime todayEndUtc) = ClientDateTime.TodayUtcRange(nowUtc, offsetResult.Value);
         Result<int> introducedToday = await _states.CountFirstReviewedBetweenAsync(query.UserId, todayStartUtc, todayEndUtc, ct);

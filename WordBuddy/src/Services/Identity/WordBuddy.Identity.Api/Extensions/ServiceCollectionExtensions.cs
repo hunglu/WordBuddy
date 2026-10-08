@@ -34,7 +34,10 @@ internal static class ServiceCollectionExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+            options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireClaim("is_admin", "true")));
+
+        services.AddWordBuddyRateLimiting();
 
         return services;
     }

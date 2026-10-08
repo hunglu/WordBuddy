@@ -345,7 +345,13 @@ public sealed class PersonalVocabularyTests
         });
         response.Ok.Should().BeTrue($"self-registration should succeed, got {response.Status}: {await response.TextAsync()}");
         JsonElement body = (await response.JsonAsync())!.Value;
-        return body.GetProperty("token").GetString()!;
+        string token = body.GetProperty("token").GetString()!;
+        if (ageGroup == "Child")
+        {
+            await ChildSupport.LinkSupporterAsync(identity, token);
+        }
+
+        return token;
     }
 
     private static async Task<string> LoginAsync(IAPIRequestContext identity, string email, string password)

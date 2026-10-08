@@ -37,6 +37,7 @@ public sealed class ContentDbContext : DbContext
     public DbSet<SenseTranslation> SenseTranslations => Set<SenseTranslation>();
     public DbSet<LearnerWord> LearnerWords => Set<LearnerWord>();
     public DbSet<LessonSense> LessonSenses => Set<LessonSense>();
+    public DbSet<SupportLinkProjection> SupportLinkProjections => Set<SupportLinkProjection>();
 
     /// <inheritdoc />
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)

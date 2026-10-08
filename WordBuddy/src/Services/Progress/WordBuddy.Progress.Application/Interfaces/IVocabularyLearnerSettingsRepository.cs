@@ -11,4 +11,10 @@ public interface IVocabularyLearnerSettingsRepository
 
     /// <summary>Creates or updates the user's settings and saves.</summary>
     Task<Result<VocabularyLearnerSettings>> UpsertAsync(Guid userId, int? newWordsPerDay, CancellationToken ct = default);
+
+    /// <summary>Creates or updates the supporter cap of <paramref name="learnerId"/> and saves.</summary>
+    Task<Result<VocabularyLearnerSettings>> UpsertSupporterCapAsync(Guid learnerId, int? cap, Guid supporterId, CancellationToken ct = default);
+
+    /// <summary>Returns the tracked settings (no save), or not found. Changes are saved by the next context save.</summary>
+    Task<Result<VocabularyLearnerSettings>> GetTrackedAsync(Guid userId, CancellationToken ct = default);
 }

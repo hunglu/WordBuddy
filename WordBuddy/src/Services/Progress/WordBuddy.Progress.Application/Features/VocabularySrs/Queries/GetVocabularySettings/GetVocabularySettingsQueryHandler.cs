@@ -27,10 +27,10 @@ public sealed class GetVocabularySettingsQueryHandler : IQueryHandler<GetVocabul
         if (settings.IsFailure)
         {
             return settings.Error.Type == ErrorType.NotFound
-                ? Result.Success(new VocabularySettingsDto(null))
+                ? Result.Success(new VocabularySettingsDto(null, null))
                 : Result.Failure<VocabularySettingsDto>(settings.Error);
         }
 
-        return Result.Success(new VocabularySettingsDto(settings.Value.NewWordsPerDay));
+        return Result.Success(new VocabularySettingsDto(settings.Value.NewWordsPerDay, settings.Value.SupporterNewWordCap));
     }
 }

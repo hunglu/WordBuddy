@@ -62,8 +62,14 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
         }
     }
 
-    private HttpClient CreateClient(Guid userId, string ageGroup, bool isAdmin = false)
+    private async Task<HttpClient> CreateClientAsync(Guid userId, string ageGroup, bool isAdmin = false)
     {
+        if (ageGroup == "Child")
+        {
+            // WB-24: a child needs an active supporter for learning endpoints.
+            await SupportLinkTestSeed.SeedActiveSupporterAsync(_factory.Services, userId);
+        }
+
         HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", TestJwtTokenFactory.CreateToken(userId, ageGroup, isAdmin));
@@ -81,7 +87,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     private async Task<Guid> AddSharedWordAsync(HttpClient owner, string word)
     {
         Guid id = await AddWordAsync(owner, word);
-        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
         (await owner.PostAsync($"/api/vocabulary/{id}/share", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{id}", new ModerateVocabularyWordRequest(true, true)))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -121,7 +127,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     public async Task AddWord_PublishesLearnerWordAdded_SamePayloadForChildAndAdult(string ageGroup)
     {
         Guid userId = Guid.NewGuid();
-        Guid senseId = await AddWordAsync(CreateClient(userId, ageGroup), $"event-add-{ageGroup}-{userId:N}");
+        Guid senseId = await AddWordAsync(await CreateClientAsync(userId, ageGroup), $"event-add-{ageGroup}-{userId:N}");
 
         (await AddedPublishedAsync(userId, senseId)).Should().BeTrue();
 
@@ -133,11 +139,11 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     [Fact]
     public async Task AdoptSharedWord_PublishesLearnerWordAddedForAdopter()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult");
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult");
         Guid senseId = await AddSharedWordAsync(owner, $"event-adopt-{Guid.NewGuid():N}");
         Guid adopterId = Guid.NewGuid();
 
-        (await CreateClient(adopterId, "Adult").PostAsync($"/api/vocabulary/shared/{senseId}/add-to-mine", content: null))
+        (await (await CreateClientAsync(adopterId, "Adult")).PostAsync($"/api/vocabulary/shared/{senseId}/add-to-mine", content: null))
             .StatusCode.Should().Be(HttpStatusCode.Created);
 
         (await AddedPublishedAsync(adopterId, senseId)).Should().BeTrue();
@@ -147,7 +153,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     public async Task DeleteOwnPrivateWord_OrphanDelete_PublishesLearnerWordRemoved()
     {
         Guid userId = Guid.NewGuid();
-        HttpClient client = CreateClient(userId, "Adult");
+        HttpClient client = await CreateClientAsync(userId, "Adult");
         Guid senseId = await AddWordAsync(client, $"event-orphan-{userId:N}");
 
         (await client.DeleteAsync($"/api/vocabulary/{senseId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -159,7 +165,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     public async Task DeleteSharedWordConfirmed_HandOver_PublishesRemovedForOwnerOnly()
     {
         Guid ownerId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult");
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult");
         Guid senseId = await AddSharedWordAsync(owner, $"event-handover-{ownerId:N}");
 
         (await owner.DeleteAsync($"/api/vocabulary/{senseId}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -173,7 +179,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     public async Task SaveChangesRolledBack_WritesNoOutboxRowAndPublishesNothing()
     {
         Guid ownerId = Guid.NewGuid();
-        Guid senseId = await AddWordAsync(CreateClient(ownerId, "Adult"), $"event-rollback-{ownerId:N}");
+        Guid senseId = await AddWordAsync(await CreateClientAsync(ownerId, "Adult"), $"event-rollback-{ownerId:N}");
         Guid otherUserId = Guid.NewGuid();
 
         using (IServiceScope scope = _factory.Services.CreateScope())
@@ -203,7 +209,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     public async Task RepublishLearnerWords_Admin_PublishesAddedPerLinkWithOriginalTime()
     {
         Guid userId = Guid.NewGuid();
-        HttpClient learner = CreateClient(userId, "Child");
+        HttpClient learner = await CreateClientAsync(userId, "Child");
         Guid firstSenseId = await AddWordAsync(learner, $"event-backfill-a-{userId:N}");
         Guid secondSenseId = await AddWordAsync(learner, $"event-backfill-b-{userId:N}");
         (await AddedPublishedAsync(userId, firstSenseId)).Should().BeTrue();
@@ -218,7 +224,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
                 .ToDictionaryAsync(l => l.SenseId, l => l.AddedAtUtc);
         }
 
-        HttpResponseMessage response = await CreateClient(Guid.NewGuid(), "Adult", isAdmin: true)
+        HttpResponseMessage response = await (await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true))
             .PostAsync("/api/vocabulary/admin/learner-words/republish", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -238,7 +244,7 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
     [InlineData("Child")]
     public async Task RepublishLearnerWords_NonAdmin_ReturnsForbidden(string ageGroup)
     {
-        HttpResponseMessage response = await CreateClient(Guid.NewGuid(), ageGroup)
+        HttpResponseMessage response = await (await CreateClientAsync(Guid.NewGuid(), ageGroup))
             .PostAsync("/api/vocabulary/admin/learner-words/republish", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);

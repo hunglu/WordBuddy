@@ -46,4 +46,37 @@ internal sealed class UserRepository : IUserRepository
 
         return Result.Success();
     }
+
+    public async Task<Result<User>> GetByIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        User? user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
+        return user is null ? Result.Failure<User>(UserErrors.NotFound) : Result.Success(user);
+    }
+
+    public async Task<Result<User>> GetTrackedByIdAsync(Guid userId, CancellationToken ct = default)
+    {
+        User? user = await _dbContext.Users.AsTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
+        return user is null ? Result.Failure<User>(UserErrors.NotFound) : Result.Success(user);
+    }
+
+    public async Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct = default) =>
+        await _dbContext.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToListAsync(ct);
+
+    public Task<bool> AliasTakenAsync(string alias, Guid exceptUserId, CancellationToken ct = default) =>
+        _dbContext.Users.AsNoTracking().AnyAsync(u => u.Alias == alias && u.Id != exceptUserId, ct);
+
+    public async Task<Result> SaveChangesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            // The filtered unique alias index catches a race between two equal aliases.
+            _logger.LogWarning(ex, "User save failed with a database conflict");
+            return Result.Failure(UserErrors.AliasTaken);
+        }
+    }
 }

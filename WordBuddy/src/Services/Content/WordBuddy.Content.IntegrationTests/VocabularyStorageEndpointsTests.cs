@@ -31,8 +31,14 @@ public sealed class VocabularyStorageEndpointsTests
         _factory = factory;
     }
 
-    private HttpClient CreateClient(Guid userId, string ageGroup, bool isAdmin = false)
+    private async Task<HttpClient> CreateClientAsync(Guid userId, string ageGroup, bool isAdmin = false)
     {
+        if (ageGroup == "Child")
+        {
+            // WB-24: a child needs an active supporter for learning endpoints.
+            await SupportLinkTestSeed.SeedActiveSupporterAsync(_factory.Services, userId);
+        }
+
         HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", TestJwtTokenFactory.CreateToken(userId, ageGroup, isAdmin));
@@ -58,8 +64,8 @@ public sealed class VocabularyStorageEndpointsTests
     /// <summary>Owner adds, shares, and an admin approves — returns the shared word's id.</summary>
     private async Task<Guid> CreateSharedWordAsync(string word, bool visibleToChildren)
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult");
-        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult");
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
 
         Guid id = await AddAsync(owner, word, "a shared definition", null);
         (await owner.PostAsync($"/api/vocabulary/{id}/share", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -84,7 +90,7 @@ public sealed class VocabularyStorageEndpointsTests
     [InlineData("Child")]
     public async Task GetLessonDetail_VocabularyLesson_ReturnsWordsInOrderWithUnchangedShape(string ageGroup)
     {
-        HttpClient client = CreateClient(Guid.NewGuid(), ageGroup);
+        HttpClient client = await CreateClientAsync(Guid.NewGuid(), ageGroup);
 
         JsonElement lesson = await GetSeededVocabularyLessonAsync(client);
 
@@ -100,7 +106,7 @@ public sealed class VocabularyStorageEndpointsTests
     [Fact]
     public async Task LessonDetail_Get_JsonShapeUnchanged()
     {
-        HttpClient client = CreateClient(Guid.NewGuid(), "Adult");
+        HttpClient client = await CreateClientAsync(Guid.NewGuid(), "Adult");
 
         JsonElement lesson = await GetSeededVocabularyLessonAsync(client);
 
@@ -118,7 +124,7 @@ public sealed class VocabularyStorageEndpointsTests
     public async Task AddWord_SameAuthorTwice_ReturnsSameIdAndListsOnce()
     {
         Guid userId = Guid.NewGuid();
-        HttpClient client = CreateClient(userId, "Adult");
+        HttpClient client = await CreateClientAsync(userId, "Adult");
         string word = UniqueWord("twice");
 
         Guid first = await AddAsync(client, word, "def", "eg");
@@ -135,8 +141,8 @@ public sealed class VocabularyStorageEndpointsTests
     {
         string word = UniqueWord("private");
 
-        Guid a = await AddAsync(CreateClient(Guid.NewGuid(), "Adult"), word, "def", null);
-        Guid b = await AddAsync(CreateClient(Guid.NewGuid(), "Adult"), word, "def", null);
+        Guid a = await AddAsync(await CreateClientAsync(Guid.NewGuid(), "Adult"), word, "def", null);
+        Guid b = await AddAsync(await CreateClientAsync(Guid.NewGuid(), "Adult"), word, "def", null);
 
         b.Should().NotBe(a);
     }
@@ -146,7 +152,7 @@ public sealed class VocabularyStorageEndpointsTests
     [InlineData("Child")]
     public async Task AddWord_MatchesSystemLessonWord_LinksToLessonWord(string ageGroup)
     {
-        HttpClient client = CreateClient(Guid.NewGuid(), ageGroup);
+        HttpClient client = await CreateClientAsync(Guid.NewGuid(), ageGroup);
         JsonElement dog = (await GetSeededVocabularyLessonAsync(client)).GetProperty("vocabularyItems").EnumerateArray()
             .Single(i => i.GetProperty("word").GetString() == "Dog");
 
@@ -167,7 +173,7 @@ public sealed class VocabularyStorageEndpointsTests
         string word = UniqueWord("kidsafe");
         Guid sharedId = await CreateSharedWordAsync(word, visibleToChildren: true);
 
-        Guid id = await AddAsync(CreateClient(Guid.NewGuid(), "Child"), word, "a shared definition", null);
+        Guid id = await AddAsync(await CreateClientAsync(Guid.NewGuid(), "Child"), word, "a shared definition", null);
 
         id.Should().Be(sharedId);
     }
@@ -178,7 +184,7 @@ public sealed class VocabularyStorageEndpointsTests
         string word = UniqueWord("adultonly");
         Guid sharedId = await CreateSharedWordAsync(word, visibleToChildren: false);
         Guid childId = Guid.NewGuid();
-        HttpClient child = CreateClient(childId, "Child");
+        HttpClient child = await CreateClientAsync(childId, "Child");
 
         Guid id = await AddAsync(child, word, "a shared definition", null);
 
@@ -194,7 +200,7 @@ public sealed class VocabularyStorageEndpointsTests
     {
         Guid sharedId = await CreateSharedWordAsync(UniqueWord("adopt"), visibleToChildren: true);
         Guid adopterId = Guid.NewGuid();
-        HttpClient adopter = CreateClient(adopterId, ageGroup);
+        HttpClient adopter = await CreateClientAsync(adopterId, ageGroup);
 
         HttpResponseMessage first = await adopter.PostAsync($"/api/vocabulary/shared/{sharedId}/add-to-mine", content: null);
         HttpResponseMessage second = await adopter.PostAsync($"/api/vocabulary/shared/{sharedId}/add-to-mine", content: null);
@@ -223,7 +229,7 @@ public sealed class VocabularyStorageEndpointsTests
     {
         Guid sharedId = await CreateSharedWordAsync(UniqueWord("notforkids"), visibleToChildren: false);
 
-        HttpResponseMessage response = await CreateClient(Guid.NewGuid(), "Child")
+        HttpResponseMessage response = await (await CreateClientAsync(Guid.NewGuid(), "Child"))
             .PostAsync($"/api/vocabulary/shared/{sharedId}/add-to-mine", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -233,7 +239,7 @@ public sealed class VocabularyStorageEndpointsTests
     public async Task RequestShare_AdoptedWord_ReturnsConflict()
     {
         Guid sharedId = await CreateSharedWordAsync(UniqueWord("reshare"), visibleToChildren: true);
-        HttpClient adopter = CreateClient(Guid.NewGuid(), "Adult");
+        HttpClient adopter = await CreateClientAsync(Guid.NewGuid(), "Adult");
         await adopter.PostAsync($"/api/vocabulary/shared/{sharedId}/add-to-mine", content: null);
 
         HttpResponseMessage response = await adopter.PostAsync($"/api/vocabulary/{sharedId}/share", content: null);
@@ -245,8 +251,8 @@ public sealed class VocabularyStorageEndpointsTests
     public async Task DeleteWord_AuthorOfSharedWord_RemovesFromMineButKeepsInPool()
     {
         Guid ownerId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult");
-        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult");
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
         Guid id = await AddAsync(owner, UniqueWord("authorshared"), "def", null);
         await owner.PostAsync($"/api/vocabulary/{id}/share", content: null);
         await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{id}", new ModerateVocabularyWordRequest(true, true));
@@ -260,7 +266,7 @@ public sealed class VocabularyStorageEndpointsTests
     [Fact]
     public async Task DeleteWord_AuthorOfPrivateOrphan_DeletesWord()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult");
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult");
         string word = UniqueWord("orphan");
         Guid id = await AddAsync(owner, word, "def", null);
 

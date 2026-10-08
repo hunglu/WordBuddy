@@ -35,7 +35,41 @@ async function register(request: APIRequestContext, ageGroup: string): Promise<{
   })
   expect(response.ok(), await response.text()).toBeTruthy()
   const { token } = (await response.json()) as { token: string }
+  if (ageGroup === 'Child') {
+    await linkSupporter(request, token)
+  }
   return { email, token }
+}
+
+/** WB-24: a child needs an active supporter before learning. Links a fresh adult and waits for the projections. */
+async function linkSupporter(request: APIRequestContext, childToken: string): Promise<void> {
+  const supporterEmail = `supporter-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
+  const register = await request.post('/api/auth/register', {
+    data: { email: supporterEmail, password: learnerPassword, displayName: 'E2E Supporter', ageGroup: 'Adult' },
+  })
+  expect(register.ok(), await register.text()).toBeTruthy()
+  const { token: supporterToken } = (await register.json()) as { token: string }
+  const invitation = await request.post('/api/auth/support-links/invitations', {
+    headers: { Authorization: `Bearer ${childToken}` },
+    data: { inviteAs: 'Learner', relationship: null },
+  })
+  expect(invitation.status(), await invitation.text()).toBe(201)
+  const { code } = (await invitation.json()) as { code: string }
+  const accept = await request.post('/api/auth/support-links/accept', {
+    headers: { Authorization: `Bearer ${supporterToken}` },
+    data: { code, token: null },
+  })
+  expect(accept.ok(), await accept.text()).toBeTruthy()
+  // Content and Progress read a projection fed by RabbitMQ. Empty review body: 403 while gated, 400 once allowed.
+  await expect(async () => {
+    const words = await request.get('/api/lessons', { headers: { Authorization: `Bearer ${childToken}` } })
+    expect(words.status()).toBe(200)
+    const review = await request.post('/api/progress/vocabulary/reviews', {
+      headers: { Authorization: `Bearer ${childToken}` },
+      data: {},
+    })
+    expect(review.status()).toBe(400)
+  }).toPass({ timeout: STATE_TIMEOUT_MS })
 }
 
 async function addWord(request: APIRequestContext, token: string, word: string, definition: string): Promise<string> {

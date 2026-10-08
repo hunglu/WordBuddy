@@ -377,12 +377,44 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.ToTable("ReviewLogs", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Progress.Domain.SupportLinkProjection", b =>
+                {
+                    b.Property<Guid>("LinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SupporterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("LinkId");
+
+                    b.HasIndex("LearnerId", "IsActive");
+
+                    b.HasIndex("SupporterId", "LearnerId");
+
+                    b.ToTable("SupportLinkProjections", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyLearnerSettings", b =>
                 {
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("NewWordsPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SupporterCapSetBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("SupporterNewWordCap")
                         .HasColumnType("int");
 
                     b.HasKey("UserId");

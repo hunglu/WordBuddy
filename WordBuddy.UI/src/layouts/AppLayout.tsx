@@ -27,9 +27,13 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/vocabulary/review', label: 'Review', icon: '🧠', end: true },
   { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
+  { to: '/support', label: 'Supporters', icon: '🤝', end: false },
 ]
 
-const ADMIN_NAV_ITEM: NavItem = { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true }
+const ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true },
+  { to: '/admin/support-links', label: 'Support links', icon: '🔗', end: true },
+]
 
 /**
  * Whether a nav item is the selected one for `pathname`: exact match on `activePaths` when set,
@@ -44,7 +48,7 @@ function isItemActive(item: NavItem, pathname: string): boolean {
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
-  const navItems: NavItem[] = user?.isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS
+  const navItems: NavItem[] = user?.isAdmin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS
   const { pathname } = useLocation()
 
   return (
@@ -74,12 +78,13 @@ export function AppLayout(): ReactElement {
           )
         })}
 
-        <div className="mt-auto flex items-center gap-3 rounded-wb-lg px-4 py-3">
+        <Link to="/profile" className="mt-auto flex items-center gap-3 rounded-wb-lg px-4 py-3 hover:bg-wb-hover-tint">
           <span className="text-2xl">👤</span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-wb-ink">{user?.displayName}</p>
+            <p className="text-xs text-wb-ink-muted">My profile</p>
           </div>
-        </div>
+        </Link>
         <button
           type="button"
           onClick={logout}

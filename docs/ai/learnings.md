@@ -18,3 +18,4 @@ One bullet per lesson, newest last. One line, generic (not a run log), no secret
 
 ## Entries
 
+- 2026-10-08 `WB-24_learner-support-links` (test) — MassTransit `ConfigureEndpoints` names queues after the consumer class, so two services with same-named consumers share one queue and each event reaches only one of them; prefix endpoint names per service and check with `rabbitmqctl list_queues name consumers` → suggested home: WordBuddy/CLAUDE.md (Messaging)

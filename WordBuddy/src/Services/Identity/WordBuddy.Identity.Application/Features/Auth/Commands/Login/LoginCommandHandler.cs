@@ -12,6 +12,7 @@ namespace WordBuddy.Identity.Application.Features.Auth.Commands.Login;
 public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, AuthTokenDto>
 {
     private readonly IUserRepository _userRepository;
+    private readonly ISupportLinkRepository _supportLinks;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IValidator<LoginCommand> _validator;
@@ -19,12 +20,14 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, AuthToke
 
     public LoginCommandHandler(
         IUserRepository userRepository,
+        ISupportLinkRepository supportLinks,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
         IValidator<LoginCommand> validator,
         ILogger<LoginCommandHandler> logger)
     {
         _userRepository = userRepository;
+        _supportLinks = supportLinks;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
         _validator = validator;
@@ -51,7 +54,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, AuthToke
 
         User user = userResult.Value;
         (string token, DateTime expiresAtUtc) = _jwtTokenGenerator.GenerateToken(user);
-        UserDto userDto = new(user.Id, user.Email, user.DisplayName, user.AgeGroup, user.IsAdmin);
+        UserDto userDto = UserDto.From(user, await _supportLinks.HasActiveSupporterAsync(user.Id, ct));
 
         _logger.LogInformation("LoginCommand succeeded: UserId={UserId}", user.Id);
         return Result.Success(new AuthTokenDto(token, expiresAtUtc, userDto));

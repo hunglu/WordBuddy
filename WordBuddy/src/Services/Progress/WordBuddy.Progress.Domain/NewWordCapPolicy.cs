@@ -1,8 +1,8 @@
 namespace WordBuddy.Progress.Domain;
 
 /// <summary>
-/// Daily new-word cap. One rule for every user (D-3): the backlog table, unless the user set
-/// <see cref="VocabularyLearnerSettings.NewWordsPerDay"/> (any user, D-4). Pure.
+/// Daily new-word cap. Order: supporter cap (WB-24) → the user own
+/// <see cref="VocabularyLearnerSettings.NewWordsPerDay"/> (any user, D-4) → the backlog table (D-3). Pure.
 /// </summary>
 public sealed class NewWordCapPolicy
 {
@@ -15,8 +15,16 @@ public sealed class NewWordCapPolicy
     }
 
     /// <summary>Returns the cap for a due <paramref name="backlog"/> and an optional user override.</summary>
-    public int GetCap(int backlog, int? newWordsPerDay)
+    public int GetCap(int backlog, int? newWordsPerDay) => GetCap(backlog, supporterCap: null, newWordsPerDay);
+
+    /// <summary>Returns the cap: supporter cap, else own cap, else the backlog rule.</summary>
+    public int GetCap(int backlog, int? supporterCap, int? newWordsPerDay)
     {
+        if (supporterCap is { } supporter)
+        {
+            return supporter;
+        }
+
         if (newWordsPerDay is { } overrideCap)
         {
             return overrideCap;
