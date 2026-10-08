@@ -2,7 +2,7 @@
 feature: Learner support links
 services: Identity, Content, Progress, UI
 audience: Both
-state: proposed
+state: shipped
 last-updated-by: WB-24_learner-support-links
 ---
 
@@ -12,13 +12,12 @@ An adult supporter supports a learner with one fixed permission set; a child lea
 
 ## What it does
 
-_Implemented on `feature/WB-24_learner-support-links`; not on `main` yet._
-
 - One role: **supporter** = an adult account that supports a learner. Links are one-way (supporter → learner).
 - `Relationship` (Parent, Teacher, Partner, Other) is an optional display label. It has no effect on permissions.
 - Every active supporter has the same permissions: view dashboard, assign words, set daily new-word cap, approve auto-filled words, weekly summary.
 - Identity owns the links and publishes `SupportLinkActivated` / `SupportLinkRevoked` (ids and time only) through the EF outbox.
-- Content and Progress keep a local `SupportLinkProjection` and enforce the policies.
+- Content and Progress keep a local `SupportLinkProjection` and enforce the policies. Each service has its own queues (`content-support-link-*`, `progress-support-link-*`), so every event reaches both.
+- Eventual consistency: right after accept or revoke, Content/Progress can lag Identity briefly (the UI gate refetches on 403).
 
 ```mermaid
 flowchart LR
@@ -107,9 +106,8 @@ stateDiagram-v2
 
 ## Pending changes
 
-- `WB-24_learner-support-links` — learner support links with one supporter role, Primary approval for children, two-sided unlink with admin override (#24)
-  - ADDED: everything above
+None.
 
 ## Change history
 
-None.
+- `WB-24_learner-support-links` (#24) — support links, Primary approval for children, child learning gate, two-sided unlink with admin override, supporter cap, alias and avatar
