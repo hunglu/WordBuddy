@@ -25,8 +25,8 @@ public static class ServiceCollectionExtensions
         // Consumer: Identity support-link events, deduped by the EF Core inbox.
         services.AddWordBuddyMessaging<ContentDbContext>(configuration, bus =>
         {
-            bus.AddConsumer<SupportLinkActivatedConsumer>();
-            bus.AddConsumer<SupportLinkRevokedConsumer>();
+            bus.AddConsumer<SupportLinkActivatedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Activated);
+            bus.AddConsumer<SupportLinkRevokedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Revoked);
         });
 
         services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));

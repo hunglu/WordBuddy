@@ -14,7 +14,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | UI theme tokens | `ui-theme.md` | shipped |
 | App navigation (sidebar) | `app-navigation.md` | shipped |
 | Messaging | `messaging.md` | shipped |
-| Learner support links | `learner-support-links.md` | proposed |
+| Learner support links | `learner-support-links.md` | shipped |
 | Vocabulary autofill | `vocabulary-autofill.md` | proposed |
 | Supporter dashboard | `supporter-dashboard.md` | proposed |
 | Learning groups | `learning-groups.md` | proposed |
