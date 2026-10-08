@@ -1,0 +1,6 @@
+# E2E override: lets the "admin completes escalated unlink" scenario escalate at once.
+# Usage (from WordBuddy/): docker compose -f docker-compose.yml -f ../e2e/docker-compose.e2e.yml up -d
+services:
+  identity-api:
+    environment:
+      SupportLinks__UnlinkOverrideWaitDays: "0"
