@@ -557,6 +557,32 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.ToTable("SenseTranslations", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Content.Domain.SupportLinkProjection", b =>
+                {
+                    b.Property<Guid>("LinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SupporterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("LinkId");
+
+                    b.HasIndex("LearnerId", "IsActive");
+
+                    b.HasIndex("SupporterId", "LearnerId");
+
+                    b.ToTable("SupportLinkProjections", (string)null);
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)

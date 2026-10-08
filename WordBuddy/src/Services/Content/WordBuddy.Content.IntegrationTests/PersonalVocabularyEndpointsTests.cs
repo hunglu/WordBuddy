@@ -36,8 +36,14 @@ public sealed class PersonalVocabularyEndpointsTests
         _factory = factory;
     }
 
-    private HttpClient CreateClient(Guid userId, string ageGroup, bool isAdmin)
+    private async Task<HttpClient> CreateClientAsync(Guid userId, string ageGroup, bool isAdmin)
     {
+        if (ageGroup == "Child")
+        {
+            // WB-24: a child needs an active supporter for learning endpoints.
+            await SupportLinkTestSeed.SeedActiveSupporterAsync(_factory.Services, userId);
+        }
+
         HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", TestJwtTokenFactory.CreateToken(userId, ageGroup, isAdmin));
@@ -49,8 +55,8 @@ public sealed class PersonalVocabularyEndpointsTests
     {
         Guid ownerId = Guid.NewGuid();
         Guid adminId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
-        HttpClient admin = CreateClient(adminId, "Adult", isAdmin: true);
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult", isAdmin: false);
+        HttpClient admin = await CreateClientAsync(adminId, "Adult", isAdmin: true);
 
         HttpResponseMessage addResponse = await owner.PostAsJsonAsync(
             "/api/vocabulary", new AddPersonalVocabularyWordRequest("apple", "a fruit", "I ate an apple."));
@@ -80,9 +86,9 @@ public sealed class PersonalVocabularyEndpointsTests
     {
         Guid ownerId = Guid.NewGuid();
         Guid adminId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
-        HttpClient admin = CreateClient(adminId, "Adult", isAdmin: true);
-        HttpClient child = CreateClient(Guid.NewGuid(), "Child", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult", isAdmin: false);
+        HttpClient admin = await CreateClientAsync(adminId, "Adult", isAdmin: true);
+        HttpClient child = await CreateClientAsync(Guid.NewGuid(), "Child", isAdmin: false);
 
         HttpResponseMessage addResponse = await owner.PostAsJsonAsync(
             "/api/vocabulary", new AddPersonalVocabularyWordRequest("mature-topic", "not for kids", null));
@@ -100,7 +106,7 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task ModerationEndpoint_NonAdminCaller_ReturnsForbidden()
     {
-        HttpClient nonAdmin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient nonAdmin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
 
         HttpResponseMessage response = await nonAdmin.GetAsync("/api/vocabulary/moderation/pending");
 
@@ -110,8 +116,8 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task ShareAndDelete_NonOwnerCaller_ReturnsNotFound()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient otherUser = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient otherUser = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
 
         HttpResponseMessage addResponse = await owner.PostAsJsonAsync(
             "/api/vocabulary", new AddPersonalVocabularyWordRequest("apple", "a fruit", null));
@@ -147,7 +153,7 @@ public sealed class PersonalVocabularyEndpointsTests
         (await owner.PostAsync($"/api/vocabulary/{id}/share", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         if (approve)
         {
-            HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+            HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
             (await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{id}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: visibleToChildren)))
                 .StatusCode.Should().Be(HttpStatusCode.NoContent);
         }
@@ -160,7 +166,7 @@ public sealed class PersonalVocabularyEndpointsTests
     [InlineData(false)]
     public async Task PersonalVocabularyEndpoints_Delete_Returns409WithoutConfirm(bool approved)
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid id = await AddAndShareAsync(owner, UniqueWord("confirm"), approve: approved);
 
         HttpResponseMessage response = await owner.DeleteAsync($"/api/vocabulary/{id}");
@@ -174,8 +180,8 @@ public sealed class PersonalVocabularyEndpointsTests
     public async Task PersonalVocabularyEndpoints_Delete_TransfersSharedWordToSystem()
     {
         Guid ownerId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
-        HttpClient adopter = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult", isAdmin: false);
+        HttpClient adopter = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid id = await AddAndShareAsync(owner, UniqueWord("transfer"), approve: true);
         (await adopter.PostAsync($"/api/vocabulary/shared/{id}/add-to-mine", content: null)).StatusCode.Should().Be(HttpStatusCode.Created);
         // Warm the pool cache so the test proves the delete invalidates it.
@@ -193,7 +199,7 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task PersonalVocabularyEndpoints_AddSharedToMine_FormerOwnerGetsAdopterLink()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid id = await AddAndShareAsync(owner, UniqueWord("readd"), approve: true);
         (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
 
@@ -205,8 +211,8 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task PersonalVocabularyEndpoints_Delete_PendingReviewConfirmed_LeavesModerationQueue()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
         string word = UniqueWord("pending");
         Guid id = await AddAndShareAsync(owner, word, approve: false);
         (await GetListAsync(admin, "/api/vocabulary/moderation/pending")).Should().Contain(w => w.Id == id);
@@ -222,8 +228,8 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task PersonalVocabularyEndpoints_SharedPool_HidesTransferredNonChildSafeWordFromChild()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient child = CreateClient(Guid.NewGuid(), "Child", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient child = await CreateClientAsync(Guid.NewGuid(), "Child", isAdmin: false);
         string word = UniqueWord("adultonly");
         Guid id = await AddAndShareAsync(owner, word, approve: true, visibleToChildren: false);
         (await owner.DeleteAsync($"/api/vocabulary/{id}?confirm=true")).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -239,8 +245,8 @@ public sealed class PersonalVocabularyEndpointsTests
     public async Task PersonalVocabularyEndpoints_SharedPool_IsMineTrueOnlyForOwner()
     {
         Guid ownerId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
-        HttpClient other = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult", isAdmin: false);
+        HttpClient other = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid id = await AddAndShareAsync(owner, UniqueWord("ismine"), approve: true);
 
         List<PersonalVocabularyWordDto> ownerPool = await GetListAsync(owner, "/api/vocabulary/shared");
@@ -274,7 +280,7 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task PersonalVocabularyEndpoints_GetMine_JsonShapeUnchanged()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid id = await AddAsync(owner, UniqueWord("shape-mine"));
 
         JsonElement[] items = await GetJsonArrayAsync(owner, "/api/vocabulary/mine");
@@ -290,8 +296,8 @@ public sealed class PersonalVocabularyEndpointsTests
     [InlineData("Child")]
     public async Task PersonalVocabularyEndpoints_GetShared_JsonShapeUnchangedAndChildSeesOnlyChildVisible(string ageGroup)
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient caller = CreateClient(Guid.NewGuid(), ageGroup, isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient caller = await CreateClientAsync(Guid.NewGuid(), ageGroup, isAdmin: false);
         Guid childSafe = await AddAndShareAsync(owner, UniqueWord("shape-safe"), approve: true, visibleToChildren: true);
         Guid adultOnly = await AddAndShareAsync(owner, UniqueWord("shape-adult"), approve: true, visibleToChildren: false);
 
@@ -315,8 +321,8 @@ public sealed class PersonalVocabularyEndpointsTests
     public async Task AddPersonalVocabularyWord_Post_ReusesNullPosLexemeForSameNormalizedWord()
     {
         string suffix = Guid.NewGuid().ToString("N");
-        HttpClient first = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient second = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient first = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient second = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
 
         HttpResponseMessage a = await first.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest($"Pear{suffix}", "a fruit", null));
         HttpResponseMessage b = await second.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest($" pear{suffix}", "a soft fruit", null));
@@ -339,8 +345,8 @@ public sealed class PersonalVocabularyEndpointsTests
     public async Task DeletePersonalVocabularyWord_Delete_RemovesOrphanLexemeOnly()
     {
         string word = UniqueWord("orphan");
-        HttpClient first = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient second = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient first = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient second = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid firstId = await AddAsync(first, word);
         HttpResponseMessage secondAdd = await second.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest(word, "another meaning", null));
         Guid secondId = await secondAdd.Content.ReadFromJsonAsync<Guid>();
@@ -356,11 +362,11 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task GetSensesByIds_ChildAndAdult_HiddenForeignAndUnknownIdsOmittedWithSame200()
     {
-        HttpClient author = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
-        HttpClient stranger = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient adult = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient child = CreateClient(Guid.NewGuid(), "Child", isAdmin: false);
+        HttpClient author = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient stranger = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient adult = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient child = await CreateClientAsync(Guid.NewGuid(), "Child", isAdmin: false);
 
         Guid hiddenSharedId = await (await author.PostAsJsonAsync(
             "/api/vocabulary", new AddPersonalVocabularyWordRequest($"grownup-{Guid.NewGuid():N}", "adult only", null)))
@@ -391,7 +397,7 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task GetSensesByIds_SenseWithAudioAndImage_ReturnsBothUrls()
     {
-        HttpClient owner = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         Guid senseId = await AddAsync(owner, UniqueWord("media"));
         string audioUrl = $"https://media.test/audio-{Guid.NewGuid():N}.mp3";
         string imageUrl = $"https://media.test/image-{Guid.NewGuid():N}.png";
@@ -427,7 +433,7 @@ public sealed class PersonalVocabularyEndpointsTests
     [Fact]
     public async Task GetSensesByIds_MoreThan100Ids_ReturnsBadRequest()
     {
-        HttpClient adult = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient adult = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
         string query = string.Join("&", Enumerable.Range(0, 101).Select(_ => $"ids={Guid.NewGuid()}"));
 
         HttpResponseMessage response = await adult.GetAsync($"/api/vocabulary/senses?{query}");

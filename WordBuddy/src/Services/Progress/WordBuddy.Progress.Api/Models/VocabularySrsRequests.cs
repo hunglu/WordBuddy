@@ -23,3 +23,7 @@ public sealed record RecordVocabularyReviewRequest(
 /// <summary>Body of <c>PUT /api/progress/vocabulary/settings</c>.</summary>
 /// <param name="NewWordsPerDay">Own daily cap 0–50, or <see langword="null"/> for the backlog rule.</param>
 public sealed record UpdateVocabularySettingsRequest(int? NewWordsPerDay);
+
+/// <summary>Body of <c>PUT /api/progress/vocabulary/learners/{learnerId}/settings</c> (active supporter only).</summary>
+/// <param name="SupporterNewWordCap">Daily cap 0–50 set by the supporter, or <see langword="null"/> to clear it.</param>
+public sealed record UpdateLearnerVocabularySettingsRequest(int? SupporterNewWordCap);

@@ -29,8 +29,14 @@ public sealed class ConcurrentVocabularyAddTests
         _factory = factory;
     }
 
-    private HttpClient CreateClient(Guid userId, string ageGroup, bool isAdmin)
+    private async Task<HttpClient> CreateClientAsync(Guid userId, string ageGroup, bool isAdmin)
     {
+        if (ageGroup == "Child")
+        {
+            // WB-24: a child needs an active supporter for learning endpoints.
+            await SupportLinkTestSeed.SeedActiveSupporterAsync(_factory.Services, userId);
+        }
+
         HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", TestJwtTokenFactory.CreateToken(userId, ageGroup, isAdmin));
@@ -69,8 +75,8 @@ public sealed class ConcurrentVocabularyAddTests
     public async Task AddPersonalVocabularyWord_ConcurrentNewLemmaFromTwoUsers_OneLexemeNo500()
     {
         string word = $"lemma-{Guid.NewGuid():N}";
-        HttpClient first = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
-        HttpClient second = CreateClient(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient first = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        HttpClient second = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
 
         HttpResponseMessage[] responses = await Task.WhenAll(
             first.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest(word, "first meaning", null)),
@@ -109,7 +115,7 @@ public sealed class ConcurrentVocabularyAddTests
     public async Task AddPersonalVocabularyWord_ParallelIdenticalAdds_AllSucceedWithOneWordAndOneLink()
     {
         Guid ownerId = Guid.NewGuid();
-        HttpClient owner = CreateClient(ownerId, "Adult", isAdmin: false);
+        HttpClient owner = await CreateClientAsync(ownerId, "Adult", isAdmin: false);
         string word = $"race-{Guid.NewGuid():N}";
         AddPersonalVocabularyWordRequest request = new(word, "a race", null);
 
@@ -130,9 +136,9 @@ public sealed class ConcurrentVocabularyAddTests
     {
         Guid authorId = Guid.NewGuid();
         Guid adopterId = Guid.NewGuid();
-        HttpClient author = CreateClient(authorId, "Adult", isAdmin: false);
-        HttpClient admin = CreateClient(Guid.NewGuid(), "Adult", isAdmin: true);
-        HttpClient adopter = CreateClient(adopterId, "Child", isAdmin: false);
+        HttpClient author = await CreateClientAsync(authorId, "Adult", isAdmin: false);
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
+        HttpClient adopter = await CreateClientAsync(adopterId, "Child", isAdmin: false);
         string word = $"shared-race-{Guid.NewGuid():N}";
 
         HttpResponseMessage addResponse = await author.PostAsJsonAsync(

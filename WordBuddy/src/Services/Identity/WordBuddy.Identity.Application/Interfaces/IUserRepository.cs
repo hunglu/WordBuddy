@@ -14,4 +14,19 @@ public interface IUserRepository
 
     /// <summary>Persists a new user.</summary>
     Task<Result> AddAsync(User user, CancellationToken ct = default);
+
+    /// <summary>Returns the user (read-only), or <see cref="UserErrors.NotFound"/>.</summary>
+    Task<Result<User>> GetByIdAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Returns the tracked user, or <see cref="UserErrors.NotFound"/>.</summary>
+    Task<Result<User>> GetTrackedByIdAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Returns the users with the given ids (read-only). Missing ids are skipped.</summary>
+    Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct = default);
+
+    /// <summary>Whether another user already has <paramref name="alias"/> (case-insensitive).</summary>
+    Task<bool> AliasTakenAsync(string alias, Guid exceptUserId, CancellationToken ct = default);
+
+    /// <summary>Saves changes to tracked users.</summary>
+    Task<Result> SaveChangesAsync(CancellationToken ct = default);
 }

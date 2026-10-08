@@ -67,12 +67,17 @@ services:
     depends_on:
       sqlserver-init:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: ${IDENTITY_CONNECTION_STRING}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES}
+      Messaging__RabbitMq__Host: rabbitmq
+      Messaging__RabbitMq__Username: ${RABBITMQ_USER}
+      Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
     ports:
       - "5080:8080"
 

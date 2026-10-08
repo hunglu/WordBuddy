@@ -68,7 +68,7 @@ public sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCom
         }
 
         (string token, DateTime expiresAtUtc) = _jwtTokenGenerator.GenerateToken(user);
-        UserDto userDto = new(user.Id, user.Email, user.DisplayName, user.AgeGroup, user.IsAdmin);
+        UserDto userDto = UserDto.From(user, hasActiveSupporter: false);
 
         _logger.LogInformation("RegisterUserCommand succeeded: UserId={UserId}", user.Id);
         return Result.Success(new AuthTokenDto(token, expiresAtUtc, userDto));

@@ -54,4 +54,43 @@ internal sealed class VocabularyLearnerSettingsRepository : IVocabularyLearnerSe
         await _dbContext.SaveChangesAsync(ct);
         return Result.Success(settings);
     }
+
+    public async Task<Result<VocabularyLearnerSettings>> UpsertSupporterCapAsync(Guid learnerId, int? cap, Guid supporterId, CancellationToken ct = default)
+    {
+        VocabularyLearnerSettings? settings = await _dbContext.VocabularyLearnerSettings
+            .AsTracking()
+            .FirstOrDefaultAsync(s => s.UserId == learnerId, ct);
+
+        if (settings is null)
+        {
+            Result<VocabularyLearnerSettings> created = VocabularyLearnerSettings.Create(learnerId, newWordsPerDay: null);
+            if (created.IsFailure)
+            {
+                return created;
+            }
+
+            settings = created.Value;
+            await _dbContext.VocabularyLearnerSettings.AddAsync(settings, ct);
+        }
+
+        Result updated = settings.SetSupporterCap(cap, supporterId);
+        if (updated.IsFailure)
+        {
+            return Result.Failure<VocabularyLearnerSettings>(updated.Error);
+        }
+
+        await _dbContext.SaveChangesAsync(ct);
+        return Result.Success(settings);
+    }
+
+    public async Task<Result<VocabularyLearnerSettings>> GetTrackedAsync(Guid userId, CancellationToken ct = default)
+    {
+        VocabularyLearnerSettings? settings = await _dbContext.VocabularyLearnerSettings
+            .AsTracking()
+            .FirstOrDefaultAsync(s => s.UserId == userId, ct);
+
+        return settings is null
+            ? Result.Failure<VocabularyLearnerSettings>(Error.NotFound("VocabularySettings.NotFound", "No settings saved."))
+            : Result.Success(settings);
+    }
 }

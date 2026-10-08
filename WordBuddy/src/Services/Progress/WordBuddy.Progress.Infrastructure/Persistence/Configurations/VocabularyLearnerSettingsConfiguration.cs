@@ -13,5 +13,7 @@ public sealed class VocabularyLearnerSettingsConfiguration : IEntityTypeConfigur
         builder.HasKey(s => s.UserId);
         builder.Property(s => s.UserId).ValueGeneratedNever();
         builder.Property(s => s.NewWordsPerDay);
+        builder.Property(s => s.SupporterNewWordCap);
+        builder.Property(s => s.SupporterCapSetBy);
     }
 }

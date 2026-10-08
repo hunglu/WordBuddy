@@ -18,6 +18,7 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendi
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetRandomVocabularyWordsForCheck;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSensesByIds;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSharedVocabularyWords;
+using WordBuddy.Content.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 
 namespace WordBuddy.Content.Application.Extensions;
 
@@ -65,6 +66,9 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<RepublishLearnerWordsCommand, RepublishLearnerWordsResult>, RepublishLearnerWordsCommandHandler>();
         services.AddScoped<IValidator<RepublishLearnerWordsCommand>, RepublishLearnerWordsCommandValidator>();
+
+        services.AddScoped<ICommandHandler<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandHandler>();
+        services.AddScoped<IValidator<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandValidator>();
 
         return services;
     }

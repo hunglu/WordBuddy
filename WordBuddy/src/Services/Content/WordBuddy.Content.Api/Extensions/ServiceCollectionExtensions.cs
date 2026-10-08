@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using WordBuddy.Content.Api.Authorization;
 using WordBuddy.Content.Application.Extensions;
 using WordBuddy.Content.Infrastructure.Extensions;
 
@@ -41,6 +42,7 @@ internal static class ServiceCollectionExtensions
         services.AddAuthorization(options =>
         {
             options.AddPolicy("AdminOnly", policy => policy.RequireClaim("is_admin", "true"));
+            options.AddSupportLinkPolicies();
 
             // Child accounts cannot initiate sharing — this feature's first-principles
             // child-safety gate on the write side. An admin may act on any word regardless of
@@ -49,6 +51,7 @@ internal static class ServiceCollectionExtensions
                 string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
         });
+        services.AddSupportLinkAuthorizationHandlers();
 
         return services;
     }

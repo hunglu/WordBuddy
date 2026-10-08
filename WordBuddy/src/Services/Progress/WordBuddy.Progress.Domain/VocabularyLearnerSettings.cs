@@ -2,7 +2,10 @@ using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Progress.Domain;
 
-/// <summary>Per-user vocabulary settings, available to every user (D-4). Keyed by <see cref="UserId"/>.</summary>
+/// <summary>
+/// Per-user vocabulary settings, available to every user (D-4). Keyed by <see cref="UserId"/>.
+/// An active supporter may set <see cref="SupporterNewWordCap"/>; it wins over the own cap (WB-24).
+/// </summary>
 public sealed class VocabularyLearnerSettings
 {
     /// <summary>Lowest allowed <see cref="NewWordsPerDay"/>.</summary>
@@ -16,6 +19,12 @@ public sealed class VocabularyLearnerSettings
 
     /// <summary>Own daily new-word cap. <see langword="null"/> = use the backlog rule (D-3).</summary>
     public int? NewWordsPerDay { get; private set; }
+
+    /// <summary>Daily new-word cap set by a supporter. <see langword="null"/> = none.</summary>
+    public int? SupporterNewWordCap { get; private set; }
+
+    /// <summary>The supporter who set <see cref="SupporterNewWordCap"/>.</summary>
+    public Guid? SupporterCapSetBy { get; private set; }
 
     private VocabularyLearnerSettings(Guid userId)
     {
@@ -35,12 +44,40 @@ public sealed class VocabularyLearnerSettings
     {
         if (newWordsPerDay is < MinNewWordsPerDay or > MaxNewWordsPerDay)
         {
-            return Result.Failure(Error.Validation(
-                "VocabularySettings.OutOfRange",
-                $"NewWordsPerDay must be between {MinNewWordsPerDay} and {MaxNewWordsPerDay}."));
+            return Result.Failure(OutOfRange());
         }
 
         NewWordsPerDay = newWordsPerDay;
         return Result.Success();
     }
+
+    /// <summary>A supporter sets (0–50) or clears (<see langword="null"/>) the supporter cap.</summary>
+    public Result SetSupporterCap(int? cap, Guid supporterId)
+    {
+        if (cap is < MinNewWordsPerDay or > MaxNewWordsPerDay)
+        {
+            return Result.Failure(OutOfRange());
+        }
+
+        SupporterNewWordCap = cap;
+        SupporterCapSetBy = cap is null ? null : supporterId;
+        return Result.Success();
+    }
+
+    /// <summary>Clears the supporter cap when <paramref name="supporterId"/> set it (link revoked). Returns whether it changed.</summary>
+    public bool ClearSupporterCapSetBy(Guid supporterId)
+    {
+        if (SupporterCapSetBy != supporterId)
+        {
+            return false;
+        }
+
+        SupporterNewWordCap = null;
+        SupporterCapSetBy = null;
+        return true;
+    }
+
+    private static Error OutOfRange() => Error.Validation(
+        "VocabularySettings.OutOfRange",
+        $"NewWordsPerDay must be between {MinNewWordsPerDay} and {MaxNewWordsPerDay}.");
 }

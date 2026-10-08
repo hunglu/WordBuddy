@@ -34,8 +34,14 @@ public sealed class VocabularySrsEndpointsTests
         _factory = factory;
     }
 
-    private HttpClient CreateClient(Guid userId, string ageGroup = "Adult")
+    private async Task<HttpClient> CreateClientAsync(Guid userId, string ageGroup = "Adult")
     {
+        if (ageGroup == "Child")
+        {
+            // WB-24: a child needs an active supporter for learning endpoints.
+            await SupportLinkTestSeed.SeedActiveSupporterAsync(_factory.Services, userId);
+        }
+
         HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", TestJwtTokenFactory.CreateToken(userId, ageGroup));
@@ -93,7 +99,7 @@ public sealed class VocabularySrsEndpointsTests
     {
         Guid userId = Guid.NewGuid();
         Guid senseId = await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1));
-        HttpClient client = CreateClient(userId);
+        HttpClient client = await CreateClientAsync(userId);
         Guid sessionId = Guid.NewGuid();
 
         HttpResponseMessage first = await client.PostAsJsonAsync("/api/progress/vocabulary/reviews", Review(sessionId, senseId));
@@ -122,7 +128,7 @@ public sealed class VocabularySrsEndpointsTests
         Guid userId = Guid.NewGuid();
         Guid senseId = await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1));
         Guid sessionId = Guid.NewGuid();
-        HttpClient client = CreateClient(userId);
+        HttpClient client = await CreateClientAsync(userId);
 
         // Same answer sent in parallel (double tap / retry). The race is real, so the loser either
         // fails the unique attempt index / RowVersion (409) or runs after the winner (200, attempt 2).
@@ -161,7 +167,7 @@ public sealed class VocabularySrsEndpointsTests
         IReviewLogRepository reviewLogs = scope.ServiceProvider.GetRequiredService<IReviewLogRepository>();
         LearnerWordState staleState = (await states.GetTrackedAsync(userId, senseId)).Value;
 
-        HttpResponseMessage winner = await CreateClient(userId)
+        HttpResponseMessage winner = await (await CreateClientAsync(userId))
             .PostAsJsonAsync("/api/progress/vocabulary/reviews", Review(sessionId, senseId));
         winner.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -180,7 +186,7 @@ public sealed class VocabularySrsEndpointsTests
     [Fact]
     public async Task PostReviews_UnknownWord_Returns404()
     {
-        HttpResponseMessage response = await CreateClient(Guid.NewGuid())
+        HttpResponseMessage response = await (await CreateClientAsync(Guid.NewGuid()))
             .PostAsJsonAsync("/api/progress/vocabulary/reviews", Review(Guid.NewGuid(), Guid.NewGuid()));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -191,7 +197,7 @@ public sealed class VocabularySrsEndpointsTests
     {
         Guid userId = Guid.NewGuid();
         Guid senseId = await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1));
-        HttpClient client = CreateClient(userId);
+        HttpClient client = await CreateClientAsync(userId);
 
         HttpResponseMessage negativeTime = await client.PostAsJsonAsync(
             "/api/progress/vocabulary/reviews", Review(Guid.NewGuid(), senseId, responseMs: -1));
@@ -222,7 +228,7 @@ public sealed class VocabularySrsEndpointsTests
     [Fact]
     public async Task PostReviews_OverRateLimit_Returns429WithRetryAfter()
     {
-        HttpClient client = CreateClient(Guid.NewGuid());
+        HttpClient client = await CreateClientAsync(Guid.NewGuid());
         HttpResponseMessage? last = null;
 
         for (int i = 0; i < 61; i++)
@@ -249,7 +255,7 @@ public sealed class VocabularySrsEndpointsTests
         }
 
         VocabularySessionDto session = await ReadSessionAsync(
-            await CreateClient(userId, ageGroup).GetAsync("/api/progress/vocabulary/session"));
+            await (await CreateClientAsync(userId, ageGroup)).GetAsync("/api/progress/vocabulary/session"));
 
         session.SessionId.Should().NotBeEmpty();
         session.DueItems.Should().ContainSingle().Which.SenseId.Should().Be(dueSenseId);
@@ -262,7 +268,7 @@ public sealed class VocabularySrsEndpointsTests
     public async Task GetSession_AnsweredNewWordsCountAgainstTodaysCap()
     {
         Guid userId = Guid.NewGuid();
-        HttpClient client = CreateClient(userId, "Child");
+        HttpClient client = await CreateClientAsync(userId, "Child");
         DateTime start = DateTime.UtcNow.AddDays(-1);
         for (int i = 0; i < 12; i++)
         {
@@ -285,7 +291,7 @@ public sealed class VocabularySrsEndpointsTests
     [Fact]
     public async Task GetSession_ClientDateTimeHeader_ValidAccepted_InvalidReturns400()
     {
-        HttpClient client = CreateClient(Guid.NewGuid());
+        HttpClient client = await CreateClientAsync(Guid.NewGuid());
         string local = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)).ToString("yyyy-MM-dd'T'HH:mm:sszzz");
 
         HttpRequestMessage valid = new(HttpMethod.Get, "/api/progress/vocabulary/session");
@@ -304,7 +310,7 @@ public sealed class VocabularySrsEndpointsTests
         Guid senseId = await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1));
         await SeedWordAsync(Guid.NewGuid(), DateTime.UtcNow.AddDays(-1));
 
-        HttpResponseMessage response = await CreateClient(userId).GetAsync("/api/progress/vocabulary/words");
+        HttpResponseMessage response = await (await CreateClientAsync(userId)).GetAsync("/api/progress/vocabulary/words");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         List<LearnerWordStateDto>? words = await response.Content.ReadFromJsonAsync<List<LearnerWordStateDto>>(Json);
@@ -318,7 +324,7 @@ public sealed class VocabularySrsEndpointsTests
     {
         // D-4: child accounts use the same settings as other users (not 403).
         Guid userId = Guid.NewGuid();
-        HttpClient client = CreateClient(userId, ageGroup);
+        HttpClient client = await CreateClientAsync(userId, ageGroup);
 
         VocabularySettingsDto? initial = await client.GetFromJsonAsync<VocabularySettingsDto>("/api/progress/vocabulary/settings", Json);
         initial!.NewWordsPerDay.Should().BeNull();
@@ -343,7 +349,7 @@ public sealed class VocabularySrsEndpointsTests
     [InlineData(51)]
     public async Task Settings_PutOutOfRange_Returns400(int value)
     {
-        HttpResponseMessage put = await CreateClient(Guid.NewGuid())
+        HttpResponseMessage put = await (await CreateClientAsync(Guid.NewGuid()))
             .PutAsJsonAsync("/api/progress/vocabulary/settings", new { newWordsPerDay = value });
 
         put.StatusCode.Should().Be(HttpStatusCode.BadRequest);

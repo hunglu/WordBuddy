@@ -1,9 +1,9 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261007050150_AddReviewConcurrencyGuards`
+last migration: `20261008023837_AddSupportLinkProjection`
 
-The seven domain tables have no foreign keys between them; every id column points to another service.
+The eight domain tables have no foreign keys between them; every id column points to another service.
 
 ```mermaid
 erDiagram
@@ -76,6 +76,15 @@ erDiagram
     VocabularyLearnerSettings {
         guid UserId PK "Identity user"
         int NewWordsPerDay "nullable, 0-50; null = backlog rule"
+        int SupporterNewWordCap "nullable, 0-50; set by a supporter, wins over NewWordsPerDay"
+        guid SupporterCapSetBy "nullable, Identity user"
+    }
+    SupportLinkProjections {
+        guid LinkId PK "Identity SupportLinks.Id"
+        guid LearnerId "Identity user"
+        guid SupporterId "Identity user"
+        bool IsActive
+        datetime UpdatedAtUtc "time of last applied event"
     }
 ```
 
@@ -90,12 +99,16 @@ erDiagram
 | `IX_ReviewLogs_UserId_OccurredAtUtc` | `UserId`, `OccurredAtUtc` | — |
 | `IX_ReviewLogs_UserId_SenseId` | `UserId`, `SenseId` | — |
 | `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` | `UserId`, `SessionId`, `SenseId`, `AttemptNo` | yes |
+| `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
+| `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
 
 - `Word` is copied from Content at submit time, so recall history survives a deleted word.
 - `LearnerWordMemberships` is filled only by Content events (WB-21). No public endpoint reads it yet.
 - `LearnerWordStates` (WB-22) is created and (de)activated in the same save as its membership.
 - `ReviewLogs` (WB-22) is insert-only: no update or delete path exists.
 - Concurrent duplicate answers fail on the unique attempt index or `RowVersion` → `409`; FSRS is applied once.
+- `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.
+- A revoke clears `SupporterNewWordCap` when `SupporterCapSetBy` is the revoked supporter (same save).
 
 ## MassTransit messaging tables (WB-21)
 

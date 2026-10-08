@@ -1,4 +1,7 @@
 using FluentValidation;
+using WordBuddy.Progress.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateLearnerVocabularySettings;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerVocabularySettings;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
@@ -49,6 +52,13 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<UpdateVocabularySettingsCommand, VocabularySettingsDto>, UpdateVocabularySettingsCommandHandler>();
         services.AddScoped<IValidator<UpdateVocabularySettingsCommand>, UpdateVocabularySettingsCommandValidator>();
+
+        // Supporter access (WB-24)
+        services.AddScoped<IQueryHandler<GetLearnerVocabularySettingsQuery, LearnerVocabularySettingsDto>, GetLearnerVocabularySettingsQueryHandler>();
+        services.AddScoped<ICommandHandler<UpdateLearnerVocabularySettingsCommand, LearnerVocabularySettingsDto>, UpdateLearnerVocabularySettingsCommandHandler>();
+        services.AddScoped<IValidator<UpdateLearnerVocabularySettingsCommand>, UpdateLearnerVocabularySettingsCommandValidator>();
+        services.AddScoped<ICommandHandler<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandHandler>();
+        services.AddScoped<IValidator<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandValidator>();
 
         return services;
     }
