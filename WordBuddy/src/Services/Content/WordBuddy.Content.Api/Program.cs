@@ -20,7 +20,7 @@ public sealed class Program
 
         builder.Services
             .AddWordBuddyAuthentication(builder.Configuration)
-            .AddWordBuddyDatabase(builder.Configuration)
+            .AddWordBuddyDatabase(builder.Configuration, builder.Environment.IsDevelopment())
             .AddWordBuddyServices()
             .AddWordBuddyRateLimiting()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);

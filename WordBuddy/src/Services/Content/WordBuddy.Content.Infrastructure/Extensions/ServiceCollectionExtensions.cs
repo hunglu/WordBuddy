@@ -18,7 +18,9 @@ namespace WordBuddy.Content.Infrastructure.Extensions;
 /// <summary>Registers the <see cref="ContentDbContext"/>, repositories, and services with the DI container.</summary>
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    /// <param name="isDevelopment">Host is in the Development environment. Only then may
+    /// <c>Autofill:UseFakeClients</c> switch on the keyless fake auto-fill clients.</param>
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
         services.AddDbContext<ContentDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
@@ -42,7 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISupportLinkProjectionRepository, SupportLinkProjectionRepository>();
         services.AddScoped<IAutofillRepository, AutofillRepository>();
 
-        services.AddAutofillClients(configuration);
+        services.AddAutofillClients(configuration, isDevelopment);
 
         // No Redis instance exists anywhere in this repo yet (docker-compose has no `redis`
         // service, no service configures `IDistributedCache`) — registering the in-memory
@@ -58,7 +60,7 @@ public static class ServiceCollectionExtensions
     /// <summary>Registers the auto-fill settings and the three typed HTTP clients (dictionary,
     /// Claude, audio) with timeouts and the standard resilience handler. The Claude key is read
     /// from configuration at call time (user-secrets / environment only).</summary>
-    public static IServiceCollection AddAutofillClients(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAutofillClients(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
         IConfigurationSection section = configuration.GetSection(AutofillSettings.SectionName);
         services.Configure<AutofillClientSettings>(section);
@@ -66,6 +68,16 @@ public static class ServiceCollectionExtensions
 
         string[] locales = section.GetSection("TranslationLocales").Get<string[]>() ?? [];
         services.AddSingleton(new AutofillSettings { TranslationLocales = locales.Length > 0 ? locales : ["vi"] });
+
+        if (UseFakeClients(configuration, isDevelopment))
+        {
+            // E2E only (e2e/docker-compose.e2e.yml): deterministic, keyless, no network.
+            DevelopmentFakeAutofillClients fakes = new();
+            services.AddSingleton<IDictionaryClient>(fakes);
+            services.AddSingleton<ISenseGenerator>(fakes);
+            services.AddSingleton<IAudioDownloader>(fakes);
+            return services;
+        }
 
         services.AddHttpClient<IDictionaryClient, FreeDictionaryClient>(client =>
                 client.BaseAddress = new Uri(settings.Dictionary.BaseUrl))
@@ -80,6 +92,14 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>Config key of the fake-client switch (default <see langword="false"/>).</summary>
+    public const string UseFakeClientsKey = "Autofill:UseFakeClients";
+
+    /// <summary>True only when <see cref="UseFakeClientsKey"/> is <c>true</c> <b>and</b> the host is
+    /// Development. Outside Development the flag is ignored and the real clients are used.</summary>
+    public static bool UseFakeClients(IConfiguration configuration, bool isDevelopment) =>
+        isDevelopment && configuration.GetValue<bool>(UseFakeClientsKey);
 
     /// <summary>Total timeout = <paramref name="seconds"/>. The Claude call is a paid POST, so it is
     /// never retried.</summary>

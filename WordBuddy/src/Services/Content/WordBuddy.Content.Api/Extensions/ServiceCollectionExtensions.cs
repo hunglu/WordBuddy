@@ -65,9 +65,9 @@ internal static class ServiceCollectionExtensions
     }
 
     /// <summary>Registers the <see cref="ContentDbContext"/> and Infrastructure-layer services.</summary>
-    public static IServiceCollection AddWordBuddyDatabase(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWordBuddyDatabase(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
-        services.AddInfrastructure(configuration);
+        services.AddInfrastructure(configuration, isDevelopment);
         return services;
     }
 
