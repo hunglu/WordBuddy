@@ -1,14 +1,14 @@
 ---
 title: WB-26_Supporter dashboard
-status: implemented
+status: changes-requested
 type: new
 issue: 26
-pr: none
+pr: 38
 affects: docs/features/supporter-dashboard.md
 supersedes: none
-version: 1.2
+version: 1.3
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-09T10:30:00+07:00
+updated: 2026-10-09T21:02:12+07:00
 ---
 
 ## Problem
