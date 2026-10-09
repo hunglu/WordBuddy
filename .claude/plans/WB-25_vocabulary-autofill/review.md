@@ -1,11 +1,40 @@
 # Review: WB-25_Vocabulary autofill
 
-PR: #37 · Round 1 · Reviewed commit: e7a5232 · 2026-10-09T10:39:31+07:00
+PR: #37 · Round 2 · Reviewed commit: 55ce542 · 2026-10-09T15:01:58+07:00
 
 ## Verdict
+Approve — fake auto-fill clients are gated by Development **and** an opt-in flag set only in the e2e override; no network in fakes.
+
+## Focus checks (round 2)
+
+| Check | Result |
+| --- | --- |
+| Fakes outside Development | Impossible — `UseFakeClients = isDevelopment && Autofill:UseFakeClients`; `Program.cs` passes `Environment.IsDevelopment()`; default `false` |
+| Tests for the switch | OK — `AutofillClientSwitchTests` covers flag on/off × Dev/non-Dev |
+| Network in fakes | None — in-memory data; audio URLs use `.invalid` TLD and `DownloadAsync` returns fixed bytes |
+| Base compose / appsettings / k8s | Unchanged — flag only in `e2e/docker-compose.e2e.yml` |
+| Tester commit 7746ccd | Test files, report, learnings only — no app code |
+
+## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | e2e/ui/steps/vocabulary-autofill.steps.ts:14,43 | UI happy path stubs both `/autofill` and `add-to-mine` with `page.route`. It never hits Content, so catalog save, DTO shape and `mine` refresh are untested end to end. | In `/test`, drop the stubs and use the fake-backed stack (word `serendipity`). Keep a stub only for the failure path if needed. |
+| 2 | nit | WordBuddy/docker-compose.yml:96, k8s/configmap.yaml:7 | Base compose and kind both run `Development`, so the environment gate alone does not protect the local cluster; the flag is the real guard. Safe today. | When a non-Dev environment is added, keep the flag out of its config. No change now. |
+| 3–6 | nit | — | Round 1 nits 1–4 still open (orphan MP3, GET writes, lesson link, silent mask). | Optional. |
+
+## Plan conformance
+- Fix round 1 adds test infrastructure only (fake clients + switch). Out of plan, but justified by E2E needs.
+- All plan tasks still covered.
+
+## Previous rounds
+
+### Round 1
+PR: #37 · Round 1 · Reviewed commit: e7a5232 · 2026-10-09T10:39:31+07:00
+
+### Verdict
 Approve — no blockers or majors; child visibility holds on every read path, no secrets or child data leave the service.
 
-## Focus checks
+### Focus checks
 
 | Check | Result |
 | --- | --- |
@@ -18,7 +47,7 @@ Approve — no blockers or majors; child visibility holds on every read path, no
 | Approve auth | OK — `AdultOrAdmin` + `CanSupportLearner` (supporter), `AdminOnly` (admin); child → 403 |
 | DB diagram | OK — `docs/database-diagram/content.md` updated with the migration |
 
-## Coder decisions
+### Coder decisions
 
 | Decision | Judgement |
 | --- | --- |
@@ -32,7 +61,7 @@ Approve — no blockers or majors; child visibility holds on every read path, no
 | `AdultOrAdmin` policy | Accept — needed to stop a child supporter path |
 | GET query writes to DB | Accept with nit 2 |
 
-## Findings
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | nit | Application/Features/Autofill/AutofillCatalogWriter.cs:174 | MP3 files are written before the DB transaction. On a concurrent-save conflict or DB failure the files stay with no `MediaAsset` row (orphans). | Delete stored files when `SaveAsync` fails, or add a later cleanup job. |
@@ -40,7 +69,7 @@ Approve — no blockers or majors; child visibility holds on every read path, no
 | 3 | nit | Application/Features/Lessons/Queries/GetLessonDetail/GetLessonDetailQueryHandler.cs:278 | Lesson detail passes `callerLink: null`, so a supporter-approved word in a lesson stays masked for that child. Safe side, but inconsistent with `mine`. | Accept for v1 (admin approval is global); note in spec. |
 | 4 | nit | Application/Features/Autofill/Queries/LookupAutofill/LookupAutofillQueryHandler.cs:186 | Child mask silently masks all senses when `GetForReviewAsync` fails, with no log. | Log a warning with the error code. |
 
-## Plan conformance
+### Plan conformance
 - All backend, frontend and unit/integration tasks are in the diff.
 - 2 E2E tasks moved to `/test` by Sam — not a finding.
 - Out of scope: `IFileStorageService.SaveNamedAsync`, UnitTests → Infrastructure reference (for client parsing tests). Both justified.
