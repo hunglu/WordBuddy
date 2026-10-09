@@ -1,14 +1,14 @@
 ---
 title: WB-25_Vocabulary autofill
-status: implemented
+status: reviewed
 type: new
 issue: 25
-pr: none
+pr: 37
 affects: docs/features/vocabulary-autofill.md, docs/features/vocabulary.md
 supersedes: none
-version: 1.2
+version: 1.3
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-09T09:00:00+07:00
+updated: 2026-10-09T10:39:31+07:00
 ---
 
 ## Problem
