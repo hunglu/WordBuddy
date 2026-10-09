@@ -3,7 +3,7 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-16_vocabulary-lexeme-sense-model
+last-updated-by: WB-25_vocabulary-autofill
 ---
 
 # Vocabulary storage
@@ -39,6 +39,13 @@ erDiagram
         string ShareStatus
         bool VisibleToChildren
         string ContentHash "word + definition + example"
+        string Origin "Manual | AutoFill"
+        json Examples "0-3"
+        json Collocations
+        json Synonyms
+        json Antonyms
+        json TopicTags
+        string RegisterNote "optional, max 200"
     }
     LearnerWords {
         guid UserId
@@ -47,6 +54,8 @@ erDiagram
         bool IsAuthor "true only for the creator"
         string AddedBy "Learner | Supporter | List"
         string PersonalContext "optional, max 500"
+        datetime ChildApprovedAtUtc "optional, supporter approval"
+        guid ChildApprovedByUserId "optional"
     }
     LessonSenses {
         guid LessonId
@@ -66,6 +75,8 @@ erDiagram
 - `GET /api/lessons/{id}` JSON is unchanged.
 - Personal vocabulary DTOs carry `isAuthor` (always `false` on shared and moderation lists).
 - Shared-pool DTOs carry `isMine` (`true` only when the caller owns the word).
+- Word DTOs carry optional auto-fill fields (`partOfSpeech`, IPA, audio URLs, `examples`, `translations`, enrichment lists, `origin`, `awaitingApproval`). See `vocabulary-autofill.md`.
+- Auto-fill sets `PartOfSpeech`, IPA and audio on lexemes and moves System/Shared senses to the POS lexeme.
 
 ## Rules
 
@@ -90,6 +101,7 @@ erDiagram
   - A `Shared` word always applies the child filter, also after hand-over to System.
   - Dedupe (and the migration) never links a Child to a word the Child cannot see, including System words.
   - Admins moderate (`AdminOnly`) regardless of their own age group.
+  - An `AutoFill` sense is hidden from a Child until approved by an admin (global) or the child's supporter (that child's link only).
 
 ### Accepted limitations
 
@@ -119,10 +131,11 @@ erDiagram
 
 ## Pending changes
 
-- `WB-25_vocabulary-autofill` — auto-fill part of speech, IPA, audio, translations and sense enrichment fields (#25)
+None.
 
 ## Change history
 
 - `refactor-database-scheme-to-store-vocabulary-item` (#6) — one `VocabularyWords` table plus user and lesson link tables; adopt creates a link; Progress pulls id remaps
 - `WB-12_defect-on-sharing-word` (#12, PR #13) — delete of a shared word needs confirmation and hands the word over to System; `isMine` on the pool; child filter for System-owned shared words; `VocabularyWordIdRemaps` table, `/internal/vocabulary-remaps` routes and Progress sync removed
 - `WB-16_vocabulary-lexeme-sense-model` (#16, PR #17) — `VocabularyWords` split into `Lexemes` + `Senses` (same ids); `LearnerWords` (`AddedBy`, `PersonalContext`), `LessonSenses`, `SenseTranslations`; API JSON unchanged
+- `WB-25_vocabulary-autofill` (#25, PR #37) — `Senses.Origin` + enrichment fields, `LearnerWords` child approval columns, lexeme POS/IPA/audio from auto-fill

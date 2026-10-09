@@ -6,9 +6,9 @@ namespace WordBuddy.E2E.Api.Tests;
 
 /// <summary>
 /// WB-25 vocabulary auto-fill, blackbox over HTTP (Identity + Content).
-/// The happy-path tests need a working generator (Claude key in Content). Without it a live
-/// look-up returns <c>autofillUnavailable = true</c> and those tests fail with a clear message.
-/// The failure-path test uses a nonsense word, so the dictionary returns "not found".
+/// Runs against the Development-only fake auto-fill clients (`Autofill__UseFakeClients=true` in the
+/// e2e Content container): "serendipity" is known, any other word returns <c>autofillUnavailable = true</c>.
+/// The failure-path test uses a nonsense word.
 /// </summary>
 [Collection(ApiRequestContextCollection.Name)]
 public sealed class VocabularyAutofillTests
@@ -219,7 +219,7 @@ public sealed class VocabularyAutofillTests
         lookup.Status.Should().Be(200, await lookup.TextAsync());
         JsonElement body = (await lookup.JsonAsync())!.Value;
         body.GetProperty("autofillUnavailable").GetBoolean().Should().BeFalse(
-            "auto-fill must return senses; a live look-up needs Autofill__Claude__ApiKey in the Content container");
+            "auto-fill must return senses; the e2e Content container needs Autofill__UseFakeClients=true");
         return body;
     }
 

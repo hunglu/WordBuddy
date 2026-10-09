@@ -5,7 +5,6 @@ Feature: Vocabulary auto-fill
 
   Scenario: Auto-fill shows sense cards and adds the chosen sense
     Given the learner is logged in
-    And the auto-fill service knows the word "serendipity"
     When they auto-fill the word "serendipity"
     Then they see the auto-filled sense card
     When they add the auto-filled sense

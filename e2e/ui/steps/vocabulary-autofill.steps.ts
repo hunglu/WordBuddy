@@ -1,49 +1,13 @@
 import { expect } from '@playwright/test'
 import { createBdd } from 'playwright-bdd'
 
-const { Given, When, Then } = createBdd()
+const { When, Then } = createBdd()
 
-// WB-25. The Content container has no Claude key, so a live look-up always returns
-// `autofillUnavailable = true`. The happy path therefore stubs the two auto-fill calls in the
-// browser; the failure path uses the real backend (a live dictionary miss can take several seconds).
-const stubSenseId = '00000000-0000-4000-8000-000000000025'
-const stubDefinition = 'Finding something good without looking for it.'
+// WB-25. Runs against the real stack. The e2e Content container uses the Development-only fake
+// auto-fill clients (`Autofill__UseFakeClients=true`): "serendipity" is a known word, any other
+// word returns `autofillUnavailable = true`.
+const knownDefinition = 'Finding something good by chance.'
 let unknownWord = ''
-
-Given('the auto-fill service knows the word {string}', async ({ page }, word: string) => {
-  await page.route('**/api/vocabulary/autofill?**', (route) =>
-    route.fulfill({
-      json: {
-        word,
-        autofillUnavailable: false,
-        senses: [
-          {
-            senseId: stubSenseId,
-            word,
-            definition: stubDefinition,
-            partOfSpeech: 'Noun',
-            ipaUk: '/ˌser.ənˈdɪp.ə.ti/',
-            ipaUs: null,
-            audioUkUrl: null,
-            audioUsUrl: null,
-            examples: ['Meeting her was pure serendipity.'],
-            translations: [{ locale: 'vi', text: 'sự tình cờ may mắn' }],
-            collocations: [],
-            synonyms: [],
-            antonyms: [],
-            topicTags: [],
-            registerNote: null,
-            origin: 'AutoFill',
-            awaitingApproval: false,
-          },
-        ],
-      },
-    }),
-  )
-  await page.route(`**/api/vocabulary/autofill/${stubSenseId}/add-to-mine`, (route) =>
-    route.fulfill({ json: stubSenseId }),
-  )
-})
 
 When('they auto-fill the word {string}', async ({ page }, word: string) => {
   await page.getByRole('link', { name: /My Vocabulary/i }).click()
@@ -53,9 +17,9 @@ When('they auto-fill the word {string}', async ({ page }, word: string) => {
 })
 
 Then('they see the auto-filled sense card', async ({ page }) => {
-  await expect(page.getByText(stubDefinition)).toBeVisible()
-  await expect(page.getByText('Noun')).toBeVisible()
-  await expect(page.getByText('sự tình cờ may mắn')).toBeVisible()
+  await expect(page.getByText(knownDefinition).first()).toBeVisible()
+  await expect(page.getByText('Noun').first()).toBeVisible()
+  await expect(page.getByText('sự tình cờ may mắn').first()).toBeVisible()
 })
 
 When('they add the auto-filled sense', async ({ page }) => {
