@@ -86,6 +86,15 @@ internal sealed class LearnerWordStateRepository : ILearnerWordStateRepository
         return Result.Success<IReadOnlyList<LearnerWordState>>(states);
     }
 
+    public async Task<Result<IReadOnlyList<LearnerWordState>>> GetActiveBySenseIdsAsync(
+        Guid userId, IReadOnlyCollection<Guid> senseIds, CancellationToken ct = default)
+    {
+        List<LearnerWordState> states = await _dbContext.LearnerWordStates
+            .Where(s => s.UserId == userId && s.IsActive && senseIds.Contains(s.SenseId))
+            .ToListAsync(ct);
+        return Result.Success<IReadOnlyList<LearnerWordState>>(states);
+    }
+
     public async Task<Result> SaveChangesAsync(CancellationToken ct = default)
     {
         try

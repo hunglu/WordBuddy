@@ -1,4 +1,6 @@
 import type {
+  DashboardRange,
+  LearnerDashboard,
   LearnerProgress,
   ReviewPayload,
   ReviewResult,
@@ -63,6 +65,24 @@ export async function getVocabularySession(): Promise<VocabularySession> {
 
 export async function postVocabularyReview(payload: ReviewPayload): Promise<ReviewResult> {
   const { data } = await apiClient.post<ReviewResult>('/progress/vocabulary/reviews', payload, {
+    headers: clientDateTimeHeaders(),
+  })
+  return data
+}
+
+/** The caller's own dashboard. The header sets the learner's local day. */
+export async function getMyDashboard(days: DashboardRange): Promise<LearnerDashboard> {
+  const { data } = await apiClient.get<LearnerDashboard>('/progress/dashboard/me', {
+    params: { days },
+    headers: clientDateTimeHeaders(),
+  })
+  return data
+}
+
+/** A learner's dashboard, for an active supporter. No active link gives 403. */
+export async function getLearnerDashboard(learnerId: string, days: DashboardRange): Promise<LearnerDashboard> {
+  const { data } = await apiClient.get<LearnerDashboard>(`/progress/dashboard/learners/${learnerId}`, {
+    params: { days },
     headers: clientDateTimeHeaders(),
   })
   return data

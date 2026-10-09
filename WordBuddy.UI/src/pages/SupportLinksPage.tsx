@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
+import { Link } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
 import { InvitePanel } from '../components/support/InvitePanel'
 import { SupportLinkCard } from '../components/support/SupportLinkCard'
 import { WordsToApprove } from '../components/support/WordsToApprove'
-import { cardClass, formatDate, softButtonClass, successButtonClass, dangerButtonClass } from '../components/support/supportUi'
+import { cardClass, formatDate, primaryButtonClass, softButtonClass, successButtonClass, dangerButtonClass } from '../components/support/supportUi'
 import {
   useCancelInvitation,
   usePendingSupporterApprovals,
@@ -109,6 +110,11 @@ export function SupportLinksPage(): ReactElement {
                   {data.asSupporter.map((link) => (
                     <div key={link.id}>
                       <SupportLinkCard link={link} show="learner" canAct />
+                      {link.status === 'Active' && (
+                        <Link to={`/dashboard/learners/${link.learnerId}`} className={`${primaryButtonClass} mt-2 inline-block`}>
+                          View dashboard
+                        </Link>
+                      )}
                       {link.status === 'Active' && (
                         <WordsToApprove learnerId={link.learnerId} learnerName={link.learnerName} />
                       )}

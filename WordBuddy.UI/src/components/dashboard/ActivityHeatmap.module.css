@@ -1,0 +1,32 @@
+@reference "../../index.css";
+
+/* Review heatmap (WB-26). Theme tokens only. */
+
+.grid {
+  @apply grid grid-flow-col gap-1;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+}
+
+.cell {
+  @apply h-4 w-4 rounded-sm;
+}
+
+.level0 {
+  @apply bg-wb-hover-tint;
+}
+
+.level1 {
+  @apply bg-wb-primary/30;
+}
+
+.level2 {
+  @apply bg-wb-primary/55;
+}
+
+.level3 {
+  @apply bg-wb-primary/80;
+}
+
+.level4 {
+  @apply bg-wb-primary;
+}

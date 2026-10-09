@@ -23,6 +23,7 @@ public sealed class Program
             .AddWordBuddyDatabase(builder.Configuration)
             .AddWordBuddyServices()
             .AddVocabularySrs(builder.Configuration)
+            .AddDashboard(builder.Configuration)
             .AddWordBuddyRateLimiting()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
 

@@ -1,9 +1,9 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261008023837_AddSupportLinkProjection`
+last migration: `20261009142251_AddDashboard`
 
-The eight domain tables have no foreign keys between them; every id column points to another service.
+The domain tables have no foreign keys between them (one exception: `VocabularySessionIssueItems` → `VocabularySessionIssues`); every id column points to another service.
 
 ```mermaid
 erDiagram
@@ -86,6 +86,22 @@ erDiagram
         bool IsActive
         datetime UpdatedAtUtc "time of last applied event"
     }
+    VocabularySessionIssues {
+        guid SessionId PK "id sent to the client"
+        guid UserId "Identity user"
+        datetime IssuedAtUtc "server UTC"
+        int PlannedCount "due + new items"
+        int DurationMinutes "configured session length"
+        datetime ExpiresAtUtc "min(issued + duration, local day end)"
+        datetime EndedAtUtc "nullable, set when all items answered"
+    }
+    VocabularySessionIssueItems {
+        guid SessionId PK "FK to VocabularySessionIssues, cascade"
+        guid SenseId PK "Content sense"
+        bool IsNew "new or due word"
+        int Position "order in the session"
+    }
+    VocabularySessionIssues ||--o{ VocabularySessionIssueItems : plans
 ```
 
 | Index | Columns | Unique |
@@ -101,6 +117,7 @@ erDiagram
 | `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` | `UserId`, `SessionId`, `SenseId`, `AttemptNo` | yes |
 | `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
 | `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
+| `IX_VocabularySessionIssues_UserId_IssuedAtUtc` | `UserId`, `IssuedAtUtc` | — |
 
 - `Word` is copied from Content at submit time, so recall history survives a deleted word.
 - `LearnerWordMemberships` is filled only by Content events (WB-21). No public endpoint reads it yet.
@@ -108,6 +125,8 @@ erDiagram
 - `ReviewLogs` (WB-22) is insert-only: no update or delete path exists.
 - Concurrent duplicate answers fail on the unique attempt index or `RowVersion` → `409`; FSRS is applied once.
 - `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.
+- `VocabularySessionIssues` (WB-26) has one row per non-empty session the session endpoint hands out; the only update is `EndedAtUtc`. While a session is not ended and not expired, a reload resumes it (same `SessionId`). The dashboard compares `PlannedCount` with the answers in `ReviewLogs` (daily goal; unfinished = expired and answered < planned). Ids and counts only.
+- `VocabularySessionIssueItems` (WB-26) lists the planned words of a session, so a resume can return the unanswered ones in order.
 - A revoke clears `SupporterNewWordCap` when `SupporterCapSetBy` is the revoked supporter (same save).
 
 ## MassTransit messaging tables (WB-21)

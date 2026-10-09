@@ -360,3 +360,106 @@ export interface ReviewResult {
   dueAtUtc: string
   rating: FsrsRating
 }
+
+// ── Learner dashboard (WB-26) ───────────────────────────────────────────────
+// Dates are `YYYY-MM-DD` (local day of the learner). No type here carries a time of day.
+
+export type DashboardRange = 7 | 30 | 90
+
+export interface DayActivity {
+  date: string
+  reviews: number
+}
+
+export interface WeekActivity {
+  weekStart: string
+  activeDays: number
+}
+
+export interface DailyGoal {
+  date: string
+  plannedItems: number
+  answeredWords: number
+  percent: number
+}
+
+export interface DashboardActivity {
+  currentStreakDays: number
+  activeDaysPerWeek: WeekActivity[]
+  heatmap: DayActivity[]
+  dailyGoals: DailyGoal[]
+}
+
+export interface SupporterWordsAdded {
+  supporterId: string
+  count: number
+}
+
+export interface WordsAdded {
+  date: string
+  self: number
+  supporters: SupporterWordsAdded[]
+}
+
+export interface WordStatusCount {
+  status: WordStatus
+  count: number
+}
+
+export interface DashboardWords {
+  addedPerDay: WordsAdded[]
+  addedPerWeek: WordsAdded[]
+  perStatus: WordStatusCount[]
+  reviewsPerDay: DayActivity[]
+}
+
+export interface SkillRetention {
+  skill: VocabularySkill
+  retention: number | null
+  sample: number
+}
+
+export interface DashboardRetention {
+  overall: number | null
+  sample: number
+  bySkill: SkillRetention[]
+}
+
+export interface LeechWord {
+  senseId: string
+  lapses: number
+}
+
+export interface SlowWord {
+  senseId: string
+  medianResponseMs: number
+  answers: number
+}
+
+export interface DashboardStruggle {
+  leeches: LeechWord[]
+  weakestSkill: VocabularySkill | null
+  slowestWords: SlowWord[]
+}
+
+export interface DashboardGamingSignals {
+  totalAnswers: number
+  quickWrongCount: number
+  quickWrongPercent: number
+  hintPercent: number
+  hintRateFlagged: boolean
+  unfinishedSessions: number
+}
+
+/** From `GET /api/progress/dashboard/me` and `.../learners/{learnerId}`. */
+export interface LearnerDashboard {
+  learnerId: string
+  days: number
+  from: string
+  to: string
+  activity: DashboardActivity
+  words: DashboardWords
+  retention: DashboardRetention
+  struggle: DashboardStruggle
+  gaming: DashboardGamingSignals
+}

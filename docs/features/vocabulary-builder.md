@@ -3,7 +3,7 @@ feature: Vocabulary builder & check-up
 services: Content | Progress | UI
 audience: Both
 state: shipped
-last-updated-by: WB-23_vocabulary-review-exercises
+last-updated-by: WB-26_supporter-dashboard
 ---
 
 # Vocabulary builder & check-up
@@ -89,6 +89,8 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
 - **SRS grading** (server-side, client sends no rating): wrong → Again; correct + hint or slow → Hard; correct + fast → Easy; else Good. PictureChoice fast/slow 3 s / 10 s (ListeningChoice 4/12, Typing 6/20).
 - **SRS scheduling.** Only the first attempt per session and sense, and only when due (or New), changes the schedule. Every attempt is logged. `ReviewLog` is insert-only.
 - **SRS status.** New → Learning → Review; stability ≥ 21 days → Mastered; lapses ≥ 4 → Leech (still scheduled).
+- **Resumable session.** `GET session` returns the open session (not ended, before `ExpiresAtUtc`) with the same `SessionId` and only its unanswered items, in stored order. `Cap` and `IntroducedToday` are recomputed. When all items are answered the session ends and the next GET builds a new one. Empty sessions are not stored.
+- **Session duration.** `VocabularySchedulingOptions.SessionDurationMinutes`, default 30, same for child and adult. `ExpiresAtUtc = min(issued + duration, end of the learner's local day)`. A session is ended when all its items are answered or when it expires. Each session is recorded for the supporter dashboard (`supporter-dashboard.md`).
 - **Day boundary.** `X-Client-CurrentDateTime` (ISO 8601 + offset): only the offset sets "today"; due checks use server UTC. Missing → UTC. Bad format, offset outside −12…+14, or > 24 h from server time → 400.
 - **New-word cap.** Backlog ≤ 20 → 10, ≤ 40 → 8, ≤ 60 → 6, else 5. A learner may set their own cap 0–50 (`null` = rule). Due list limited to 50.
 - **SRS child vs adult:** same cap rule, same settings, same FSRS. Grading thresholds × 1.25 for Child (PictureChoice 3.75 s / 12.5 s), × 1.0 for Adult. `age_group` comes from the JWT.
@@ -147,3 +149,4 @@ A plain delete that returns 409 opens the dialog. Escape or a backdrop click clo
 - `WB-12_defect-on-sharing-word` (#12, PR #13) — confirm dialog on shared-word delete with hand-over to System; "Your word" badge via `isMine`; pool cache cleared on hand-over
 - `WB-22_vocabulary-srs-engine` (#22, PR #33) — FSRS scheduling, append-only ReviewLog, daily session, server-side grading with child multiplier, own new-word cap
 - `WB-23_vocabulary-review-exercises` (#23, PR #34) — daily review page with 3 exercises on the SRS session; `GET /api/vocabulary/senses?ids=`; optional sense image; child 15-minute cap; `/vocabulary/check` redirects to review
+- `WB-26_supporter-dashboard` (#26, PR #38) — `GET session` resumes the open session; session duration and expiry; sessions recorded for the dashboard
