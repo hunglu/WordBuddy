@@ -34,6 +34,28 @@ public sealed class SenseConfiguration : IEntityTypeConfiguration<Sense>
         builder.Property(w => w.ModeratedAtUtc);
         builder.Property(w => w.ModeratedByUserId);
 
+        builder.Property(w => w.Origin)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(SenseOrigin.Manual)
+            .HasSentinel(SenseOrigin.Manual)
+            .IsRequired();
+        builder.Property(w => w.Examples).AsJsonStringList();
+        builder.Property(w => w.Collocations).AsJsonStringList();
+        builder.Property(w => w.Synonyms).AsJsonStringList();
+        builder.Property(w => w.Antonyms).AsJsonStringList();
+        builder.Property(w => w.TopicTags).AsJsonStringList();
+        builder.Property(w => w.RegisterNote).HasMaxLength(Sense.RegisterNoteMaxLength);
+        builder.Property(w => w.ChildSuitableHint);
+
+        builder.HasIndex(w => new { w.LexemeId, w.Origin });
+
+        builder.HasMany(w => w.Translations)
+            .WithOne()
+            .HasForeignKey(t => t.SenseId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(w => w.Translations).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasIndex(w => w.ContentHash);
         builder.HasIndex(w => new { w.ContentHash, w.OwnerUserId })
             .IsUnique()
@@ -44,7 +66,7 @@ public sealed class SenseConfiguration : IEntityTypeConfiguration<Sense>
 
         // NoAction: a Lexeme is only removed by the guarded orphan delete in the repository, never
         // by a cascade.
-        builder.HasOne<Lexeme>()
+        builder.HasOne(w => w.Lexeme)
             .WithMany()
             .HasForeignKey(w => w.LexemeId)
             .OnDelete(DeleteBehavior.NoAction);

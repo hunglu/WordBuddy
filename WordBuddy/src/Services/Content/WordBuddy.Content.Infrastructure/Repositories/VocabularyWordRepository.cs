@@ -98,7 +98,10 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
 
         List<LearnerWord> links = await _dbContext.LearnerWords
             .AsNoTracking()
-            .Include(l => l.Sense)
+            .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UkAudio)
+            .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UsAudio)
+            .Include(l => l.Sense!).ThenInclude(s => s.Translations)
+            .AsSplitQuery()
             .Where(l => l.UserId == userId)
             .OrderByDescending(l => l.AddedAtUtc)
             .ToListAsync(ct);
@@ -113,7 +116,10 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         // ORDER BY NEWID() is fine at this scale (one learner's own word list).
         List<LearnerWord> links = await _dbContext.LearnerWords
             .AsNoTracking()
-            .Include(l => l.Sense)
+            .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UkAudio)
+            .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UsAudio)
+            .Include(l => l.Sense!).ThenInclude(s => s.Translations)
+            .AsSplitQuery()
             .Where(l => l.UserId == userId)
             .OrderBy(l => Guid.NewGuid())
             .Take(count)
@@ -144,8 +150,7 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
     {
         _logger.LogDebug("Querying shared Senses: ChildSafeOnly={ChildSafeOnly}", childSafeOnly);
 
-        IQueryable<Sense> query = _dbContext.Senses
-            .AsNoTracking()
+        IQueryable<Sense> query = AutofillRepository.WithDetails(_dbContext.Senses.AsNoTracking())
             .Where(w => w.ShareStatus == VocabularyShareStatus.Shared);
 
         if (childSafeOnly)

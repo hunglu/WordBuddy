@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using WordBuddy.Content.Application.Interfaces.Autofill;
 using WordBuddy.Content.Api;
 using WordBuddy.Content.Infrastructure.Persistence;
 
@@ -32,6 +35,9 @@ public sealed class ContentApiFactory : WebApplicationFactory<Program>, IAsyncLi
         Environment.GetEnvironmentVariable("CONTENT_TEST_CONNECTION_STRING")
         ?? $"Server=(localdb)\\mssqllocaldb;Database=WordBuddyContentTests_{Guid.NewGuid():N};Trusted_Connection=true";
 
+    /// <summary>Fake external auto-fill clients shared by all tests (counts calls).</summary>
+    public FakeAutofillClients FakeAutofill { get; } = new();
+
     static ContentApiFactory()
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", ConnectionString);
@@ -44,6 +50,18 @@ public sealed class ContentApiFactory : WebApplicationFactory<Program>, IAsyncLi
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+
+        // WB-25: never call the real dictionary, Claude or audio hosts from tests.
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IDictionaryClient>();
+            services.RemoveAll<ISenseGenerator>();
+            services.RemoveAll<IAudioDownloader>();
+            services.AddSingleton(FakeAutofill);
+            services.AddSingleton<IDictionaryClient>(FakeAutofill);
+            services.AddSingleton<ISenseGenerator>(FakeAutofill);
+            services.AddSingleton<IAudioDownloader>(FakeAutofill);
+        });
     }
 
     public async Task InitializeAsync()

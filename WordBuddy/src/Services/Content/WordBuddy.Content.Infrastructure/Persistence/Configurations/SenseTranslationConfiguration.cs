@@ -19,9 +19,6 @@ public sealed class SenseTranslationConfiguration : IEntityTypeConfiguration<Sen
             .IsUnique()
             .HasDatabaseName("UX_SenseTranslations_SenseId_Locale");
 
-        builder.HasOne<Sense>()
-            .WithMany()
-            .HasForeignKey(t => t.SenseId)
-            .OnDelete(DeleteBehavior.Cascade);
+        // The Sense → Translations relationship (cascade) is configured in SenseConfiguration.
     }
 }

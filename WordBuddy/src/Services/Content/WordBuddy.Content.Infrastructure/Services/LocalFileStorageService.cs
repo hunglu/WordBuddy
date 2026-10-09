@@ -35,6 +35,24 @@ internal sealed class LocalFileStorageService : IFileStorageService
         return relativePath.Replace('\\', '/');
     }
 
+    public async Task<string> SaveNamedAsync(Stream content, string fileName, string contentType, CancellationToken ct = default)
+    {
+        // GetFileName strips any directory part, so a name can never escape the audio folder.
+        string safeName = Path.GetFileName(fileName);
+        string relativePath = Path.Combine("audio", safeName);
+        string absolutePath = Path.Combine(_settings.BasePath, relativePath);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+
+        await using (FileStream fileStream = File.Create(absolutePath))
+        {
+            await content.CopyToAsync(fileStream, ct);
+        }
+
+        _logger.LogInformation("Saved named media file: RelativePath={RelativePath}", relativePath);
+        return relativePath.Replace('\\', '/');
+    }
+
     public Task<Stream> GetAsync(string relativePath, CancellationToken ct = default)
     {
         string absolutePath = Path.Combine(_settings.BasePath, relativePath.Replace('/', Path.DirectorySeparatorChar));

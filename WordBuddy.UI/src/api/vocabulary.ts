@@ -1,4 +1,10 @@
-import type { PersonalVocabularyWord, SenseReview, VocabularyRecallCheckWord } from '../types'
+import type {
+  AutofillResult,
+  ChildApproval,
+  PersonalVocabularyWord,
+  SenseReview,
+  VocabularyRecallCheckWord,
+} from '../types'
 import { apiClient } from './client'
 
 export interface AddVocabularyWordPayload {
@@ -82,4 +88,40 @@ export async function getSensesByIds(ids: string[]): Promise<SenseReview[]> {
     }),
   )
   return replies.flat()
+}
+
+// ── Auto-fill (WB-25) ───────────────────────────────────────────────────────
+
+/** Auto-fills a typed word. Only the word is sent. Rate limited (10/min). */
+export async function lookupAutofill(word: string): Promise<AutofillResult> {
+  const { data } = await apiClient.get<AutofillResult>('/vocabulary/autofill', { params: { word } })
+  return data
+}
+
+/** Adds an auto-filled sense to my list. Idempotent; returns the sense id. */
+export async function addAutofillSense(senseId: string): Promise<string> {
+  const { data } = await apiClient.post<string>(`/vocabulary/autofill/${senseId}/add-to-mine`)
+  return data
+}
+
+/** Supporter queue: auto-filled words a learner waits on. */
+export async function getPendingApprovals(learnerId: string): Promise<ChildApproval[]> {
+  const { data } = await apiClient.get<ChildApproval[]>(`/vocabulary/learners/${learnerId}/pending-approvals`)
+  return data
+}
+
+/** Supporter approval: visible to this child only. */
+export async function approveChildWord(learnerId: string, senseId: string): Promise<void> {
+  await apiClient.post(`/vocabulary/learners/${learnerId}/words/${senseId}/approve`)
+}
+
+/** Admin queue: auto-filled words any child waits on. */
+export async function getAdminPendingApprovals(): Promise<ChildApproval[]> {
+  const { data } = await apiClient.get<ChildApproval[]>('/vocabulary/moderation/autofill-pending')
+  return data
+}
+
+/** Admin approval: visible to every child. */
+export async function approveAutofillForChildren(senseId: string): Promise<void> {
+  await apiClient.post(`/vocabulary/moderation/autofill/${senseId}/approve`)
 }

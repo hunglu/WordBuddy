@@ -274,12 +274,23 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Learner");
 
+                    b.Property<DateTime?>("ChildApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ChildApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsAuthor")
                         .HasColumnType("bit");
 
                     b.Property<string>("PersonalContext")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("RequiresChildApproval")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid>("SenseId")
                         .HasColumnType("uniqueidentifier");
@@ -448,8 +459,23 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Antonyms")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
+
                     b.Property<Guid?>("AudioAssetId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool?>("ChildSuitableHint")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Collocations")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
 
                     b.Property<string>("ContentHash")
                         .IsRequired()
@@ -470,6 +496,12 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("Examples")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
+
                     b.Property<Guid?>("ImageAssetId")
                         .HasColumnType("uniqueidentifier");
 
@@ -482,12 +514,23 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ModeratedByUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Manual");
+
                     b.Property<string>("OwnerAgeGroup")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RegisterNote")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("ShareStatus")
                         .IsRequired()
@@ -498,6 +541,18 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Synonyms")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
+
+                    b.Property<string>("TopicTags")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
 
                     b.Property<bool>("VisibleToChildren")
                         .HasColumnType("bit");
@@ -515,8 +570,6 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ImageAssetId");
 
-                    b.HasIndex("LexemeId");
-
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("ShareStatus");
@@ -525,6 +578,8 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Senses_ContentHash_OwnerUserId_Learner")
                         .HasFilter("[Source] = 'Learner'");
+
+                    b.HasIndex("LexemeId", "Origin");
 
                     b.ToTable("Senses", (string)null);
                 });
@@ -684,7 +739,7 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ImageAssetId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("WordBuddy.Content.Domain.Lexeme", null)
+                    b.HasOne("WordBuddy.Content.Domain.Lexeme", "Lexeme")
                         .WithMany()
                         .HasForeignKey("LexemeId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -693,12 +748,14 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.Navigation("Audio");
 
                     b.Navigation("Image");
+
+                    b.Navigation("Lexeme");
                 });
 
             modelBuilder.Entity("WordBuddy.Content.Domain.SenseTranslation", b =>
                 {
                     b.HasOne("WordBuddy.Content.Domain.Sense", null)
-                        .WithMany()
+                        .WithMany("Translations")
                         .HasForeignKey("SenseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -711,6 +768,11 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.Navigation("GrammarRules");
 
                     b.Navigation("VocabularyWords");
+                });
+
+            modelBuilder.Entity("WordBuddy.Content.Domain.Sense", b =>
+                {
+                    b.Navigation("Translations");
                 });
 #pragma warning restore 612, 618
         }

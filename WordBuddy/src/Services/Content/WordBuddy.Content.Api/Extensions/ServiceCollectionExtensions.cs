@@ -11,6 +11,9 @@ namespace WordBuddy.Content.Api.Extensions;
 
 internal static class ServiceCollectionExtensions
 {
+    /// <summary>Adults and admins pass; Child accounts get 403.</summary>
+    public const string AdultOrAdminPolicy = "AdultOrAdmin";
+
     /// <summary>
     /// Configures JWT bearer validation using the same signing key/issuer Identity uses to issue
     /// tokens (<c>Jwt:Secret</c>/<c>Jwt:Issuer</c> in config — this service never issues tokens
@@ -48,6 +51,11 @@ internal static class ServiceCollectionExtensions
             // child-safety gate on the write side. An admin may act on any word regardless of
             // their own age group.
             options.AddPolicy("CanShareVocabulary", policy => policy.RequireAssertion(context =>
+                string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
+
+            // WB-25: approving auto-filled words for children — never by a child account.
+            options.AddPolicy(AdultOrAdminPolicy, policy => policy.RequireAssertion(context =>
                 string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
         });

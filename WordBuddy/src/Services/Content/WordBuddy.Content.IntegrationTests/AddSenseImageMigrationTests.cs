@@ -57,10 +57,15 @@ VALUES ('{SenseId}', '{LexemeId}', N'Dog', N'An animal.', N'The dog barked.', '{
     [Fact]
     public async Task AddSenseImage_Up_ExistingSenseKeepsDataAndHasNullImage()
     {
-        Sense? sense = await _dbContext.Senses.AsNoTracking().SingleOrDefaultAsync(s => s.Id == SenseId);
+        // Raw SQL: the current model has later columns (WB-25) that this schema step does not have yet.
+        List<SenseRow> rows = await _dbContext.Database
+            .SqlQuery<SenseRow>($"SELECT Word, ImageAssetId FROM Senses WHERE Id = {SenseId}")
+            .ToListAsync();
 
-        sense.Should().NotBeNull();
-        sense!.Word.Should().Be("Dog");
+        SenseRow sense = rows.Should().ContainSingle().Subject;
+        sense.Word.Should().Be("Dog");
         sense.ImageAssetId.Should().BeNull();
     }
+
+    private sealed record SenseRow(string Word, Guid? ImageAssetId);
 }

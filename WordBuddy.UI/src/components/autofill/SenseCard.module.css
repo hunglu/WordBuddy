@@ -1,0 +1,57 @@
+@reference "../../index.css";
+
+/* Auto-filled sense card (WB-25). Theme tokens only. */
+
+.card {
+  @apply flex flex-col gap-2 rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card;
+  border: 2px solid var(--color-wb-vocab-border);
+}
+
+.header {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.word {
+  @apply text-xl font-bold text-wb-ink;
+}
+
+.pos {
+  @apply rounded-wb-pill px-3 py-1 text-xs font-semibold;
+  background-color: var(--color-wb-vocab-bg);
+  color: var(--color-wb-vocab-ink);
+}
+
+.ipa {
+  @apply text-sm text-wb-ink-muted;
+}
+
+.audioButton {
+  @apply rounded-wb-md bg-wb-primary-soft px-2 py-1 text-xs font-bold text-wb-ink hover:bg-wb-primary-soft-hover;
+}
+
+.definition {
+  @apply text-wb-ink;
+}
+
+.examples {
+  @apply flex list-disc flex-col gap-1 pl-5 text-sm italic text-wb-ink-muted;
+}
+
+.translation {
+  @apply text-sm text-wb-ink-muted;
+}
+
+.tags {
+  @apply flex flex-wrap gap-1;
+}
+
+.tag {
+  @apply rounded-wb-pill bg-wb-hover-tint px-2 py-0.5 text-xs text-wb-ink-muted;
+}
+
+.waiting {
+  @apply self-start rounded-wb-pill border px-3 py-1 text-xs font-semibold;
+  background-color: var(--color-wb-share-pending-bg);
+  color: var(--color-wb-share-pending-ink);
+  border-color: var(--color-wb-share-pending-border);
+}

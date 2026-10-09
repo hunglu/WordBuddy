@@ -5,6 +5,8 @@ import { useState, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
+import { AutofillResults } from '../components/autofill/AutofillResults'
+import { SenseDetails } from '../components/autofill/SenseDetails'
 import { DeleteWordConfirmDialog, needsDeleteConfirmation } from '../components/vocabulary/DeleteWordConfirmDialog'
 import {
   useAddVocabularyWord,
@@ -31,6 +33,7 @@ export function VocabularyBuilderPage(): ReactElement {
   const deleteWord = useDeleteVocabularyWord()
   const requestShare = useRequestShareVocabularyWord()
   const [wordToConfirm, setWordToConfirm] = useState<PersonalVocabularyWord | null>(null)
+  const [autofillWord, setAutofillWord] = useState<string | null>(null)
 
   const onDelete = (word: PersonalVocabularyWord): void => {
     deleteWord.reset()
@@ -68,6 +71,7 @@ export function VocabularyBuilderPage(): ReactElement {
     register,
     handleSubmit,
     reset,
+    getValues,
     formState: { errors },
   } = useForm<WordFormValues>({ resolver: zodResolver(wordSchema) })
 
@@ -77,6 +81,11 @@ export function VocabularyBuilderPage(): ReactElement {
       { onSuccess: () => reset() },
     )
   })
+
+  const onAutofill = (): void => {
+    const typed = getValues('word').trim()
+    setAutofillWord(typed.length > 0 ? typed : null)
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -105,13 +114,24 @@ export function VocabularyBuilderPage(): ReactElement {
           <label htmlFor="word" className="mb-1 block text-sm font-semibold text-wb-ink">
             Word
           </label>
-          <input
-            id="word"
-            className="w-full rounded-wb-md border-2 border-wb-border-control px-4 py-3 text-base focus:border-wb-primary"
-            {...register('word')}
-          />
+          <div className="flex gap-2">
+            <input
+              id="word"
+              className="w-full rounded-wb-md border-2 border-wb-border-control px-4 py-3 text-base focus:border-wb-primary"
+              {...register('word')}
+            />
+            <button
+              type="button"
+              onClick={onAutofill}
+              className="whitespace-nowrap rounded-wb-md bg-wb-secondary px-4 py-2 text-sm font-bold text-wb-on-secondary shadow-wb-card hover:bg-wb-secondary-hover"
+            >
+              Auto-fill
+            </button>
+          </div>
           {errors.word && <p className="mt-1 text-sm text-wb-danger">{errors.word.message}</p>}
         </div>
+
+        <AutofillResults word={autofillWord} />
 
         <div>
           <label htmlFor="definition" className="mb-1 block text-sm font-semibold text-wb-ink">
@@ -165,16 +185,20 @@ export function VocabularyBuilderPage(): ReactElement {
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {words.map((word: PersonalVocabularyWord) => (
             <div key={word.id} className="flex flex-col gap-2 rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-xl font-bold text-wb-ink">{word.word}</p>
+              <div className="flex justify-end">
                 <span
                   className={`whitespace-nowrap rounded-wb-pill border px-3 py-1 text-xs font-semibold ${shareStatusClasses[word.shareStatus]}`}
                 >
                   {word.shareStatus}
                 </span>
               </div>
-              <p className="text-wb-ink-muted">{word.definition}</p>
-              {word.example && <p className="text-sm italic text-wb-ink-muted">"{word.example}"</p>}
+              <SenseDetails
+                sense={{
+                  ...word,
+                  // Manual words have no `examples` list yet: fall back to the single example.
+                  examples: word.examples && word.examples.length > 0 ? word.examples : word.example ? [word.example] : [],
+                }}
+              />
 
               <div className="mt-2 flex gap-2">
                 {user?.ageGroup !== 'Child' && word.isAuthor && (word.shareStatus === 'Private' || word.shareStatus === 'Rejected') && (

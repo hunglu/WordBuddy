@@ -2,6 +2,11 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Content.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
+using WordBuddy.Content.Application.Features.Autofill;
+using WordBuddy.Content.Application.Features.Autofill.Commands.AddAutofillSenseToMyList;
+using WordBuddy.Content.Application.Features.Autofill.Commands.ApproveChildWord;
+using WordBuddy.Content.Application.Features.Autofill.Queries.GetPendingChildApprovals;
+using WordBuddy.Content.Application.Features.Autofill.Queries.LookupAutofill;
 using WordBuddy.Content.Application.Features.Lessons.Commands.CreateLesson;
 using WordBuddy.Content.Application.Features.Lessons.Queries.GetLessonDetail;
 using WordBuddy.Content.Application.Features.Lessons.Queries.GetLessons;
@@ -69,6 +74,18 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandHandler>();
         services.AddScoped<IValidator<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandValidator>();
+
+        services.AddScoped<AutofillCatalogWriter>();
+        services.AddScoped<IQueryHandler<LookupAutofillQuery, AutofillResultDto>, LookupAutofillQueryHandler>();
+        services.AddScoped<IValidator<LookupAutofillQuery>, LookupAutofillQueryValidator>();
+
+        services.AddScoped<ICommandHandler<AddAutofillSenseToMyListCommand, Guid>, AddAutofillSenseToMyListCommandHandler>();
+        services.AddScoped<IValidator<AddAutofillSenseToMyListCommand>, AddAutofillSenseToMyListCommandValidator>();
+
+        services.AddScoped<IQueryHandler<GetPendingChildApprovalsQuery, IReadOnlyList<ChildApprovalDto>>, GetPendingChildApprovalsQueryHandler>();
+
+        services.AddScoped<ICommandHandler<ApproveChildWordCommand>, ApproveChildWordCommandHandler>();
+        services.AddScoped<IValidator<ApproveChildWordCommand>, ApproveChildWordCommandValidator>();
 
         return services;
     }

@@ -35,6 +35,42 @@ public sealed class LearnerWord : Entity
     /// or put in an event. Always <see langword="null"/> today.</summary>
     public string? PersonalContext { get; private set; }
 
+    /// <summary>Set when a Child linked an auto-filled sense that children may not see yet. Lists
+    /// the link in the supporter and admin approval queues.</summary>
+    public bool RequiresChildApproval { get; private set; }
+
+    /// <summary>When a supporter approved this auto-filled word for this child (UTC).</summary>
+    public DateTime? ChildApprovedAtUtc { get; private set; }
+
+    /// <summary>The supporter who approved the word for this child.</summary>
+    public Guid? ChildApprovedByUserId { get; private set; }
+
+    /// <summary>Marks the link as waiting for a supporter or admin approval.</summary>
+    public void RequireChildApproval()
+    {
+        RequiresChildApproval = true;
+    }
+
+    /// <summary>Supporter approval for this child only. A second approval returns <c>Conflict</c>.</summary>
+    public Result ApproveForChild(Guid supporterId)
+    {
+        if (ChildApprovedAtUtc is not null)
+        {
+            return Result.Failure(Error.Conflict(
+                "LearnerWord.AlreadyApproved", $"Word {SenseId} is already approved for this learner."));
+        }
+
+        if (supporterId == Guid.Empty)
+        {
+            return Result.Failure(Error.Validation(
+                "LearnerWord.InvalidApprover", "An approval needs a supporter id."));
+        }
+
+        ChildApprovedAtUtc = DateTime.UtcNow;
+        ChildApprovedByUserId = supporterId;
+        return Result.Success();
+    }
+
     /// <summary>Creates a link added by the learner, with no personal context.</summary>
     public LearnerWord(Guid id, Guid userId, Guid senseId, bool isAuthor)
         : base(id)

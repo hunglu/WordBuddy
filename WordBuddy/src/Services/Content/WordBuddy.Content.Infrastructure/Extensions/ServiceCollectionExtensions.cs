@@ -2,7 +2,10 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using WordBuddy.Content.Application.Interfaces;
+using WordBuddy.Content.Application.Interfaces.Autofill;
+using WordBuddy.Content.Infrastructure.Autofill;
 using WordBuddy.Content.Infrastructure.Messaging;
 using WordBuddy.Content.Infrastructure.Persistence;
 using WordBuddy.Content.Infrastructure.Repositories;
@@ -37,6 +40,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<ILearnerWordEventPublisher, OutboxLearnerWordEventPublisher>();
         services.AddScoped<ISupportLinkProjectionRepository, SupportLinkProjectionRepository>();
+        services.AddScoped<IAutofillRepository, AutofillRepository>();
+
+        services.AddAutofillClients(configuration);
 
         // No Redis instance exists anywhere in this repo yet (docker-compose has no `redis`
         // service, no service configures `IDistributedCache`) — registering the in-memory
@@ -47,5 +53,50 @@ public static class ServiceCollectionExtensions
         services.AddDistributedMemoryCache();
 
         return services;
+    }
+
+    /// <summary>Registers the auto-fill settings and the three typed HTTP clients (dictionary,
+    /// Claude, audio) with timeouts and the standard resilience handler. The Claude key is read
+    /// from configuration at call time (user-secrets / environment only).</summary>
+    public static IServiceCollection AddAutofillClients(this IServiceCollection services, IConfiguration configuration)
+    {
+        IConfigurationSection section = configuration.GetSection(AutofillSettings.SectionName);
+        services.Configure<AutofillClientSettings>(section);
+        AutofillClientSettings settings = section.Get<AutofillClientSettings>() ?? new AutofillClientSettings();
+
+        string[] locales = section.GetSection("TranslationLocales").Get<string[]>() ?? [];
+        services.AddSingleton(new AutofillSettings { TranslationLocales = locales.Length > 0 ? locales : ["vi"] });
+
+        services.AddHttpClient<IDictionaryClient, FreeDictionaryClient>(client =>
+                client.BaseAddress = new Uri(settings.Dictionary.BaseUrl))
+            .AddStandardResilienceHandler(options => ConfigureTimeouts(options, settings.Dictionary.TimeoutSeconds, retry: true));
+
+        services.AddHttpClient<ISenseGenerator, ClaudeSenseGenerator>(client =>
+                client.BaseAddress = new Uri(settings.Claude.BaseUrl))
+            .AddStandardResilienceHandler(options => ConfigureTimeouts(options, settings.Claude.TimeoutSeconds, retry: false));
+
+        services.AddHttpClient<IAudioDownloader, HttpAudioDownloader>()
+            .AddStandardResilienceHandler(options => ConfigureTimeouts(options, settings.Audio.TimeoutSeconds, retry: true));
+
+        return services;
+    }
+
+    /// <summary>Total timeout = <paramref name="seconds"/>. The Claude call is a paid POST, so it is
+    /// never retried.</summary>
+    private static void ConfigureTimeouts(HttpStandardResilienceOptions options, int seconds, bool retry)
+    {
+        TimeSpan total = TimeSpan.FromSeconds(Math.Max(1, seconds));
+        options.TotalRequestTimeout.Timeout = total;
+        options.AttemptTimeout.Timeout = retry ? TimeSpan.FromTicks(total.Ticks / 2) : total;
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromTicks(Math.Max(options.AttemptTimeout.Timeout.Ticks * 2, TimeSpan.FromSeconds(30).Ticks));
+        if (!retry)
+        {
+            options.Retry.MaxRetryAttempts = 1;
+            options.Retry.ShouldHandle = _ => ValueTask.FromResult(false);
+        }
+        else
+        {
+            options.Retry.MaxRetryAttempts = 1;
+        }
     }
 }

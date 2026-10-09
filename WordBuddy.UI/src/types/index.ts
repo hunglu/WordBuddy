@@ -11,6 +11,22 @@ export type MediaAssetType = 'Text' | 'Image' | 'Audio' | 'Video'
 
 export type VocabularyShareStatus = 'Private' | 'PendingReview' | 'Shared' | 'Rejected'
 
+/** Part of speech of a word (backend `PartOfSpeech`). */
+export type PartOfSpeech =
+  | 'Noun'
+  | 'Verb'
+  | 'Adjective'
+  | 'Adverb'
+  | 'Pronoun'
+  | 'Preposition'
+  | 'Conjunction'
+  | 'Determiner'
+  | 'Interjection'
+  | 'Phrase'
+
+/** How a word's content was made: by a person, or by the auto-fill (dictionary + Claude). */
+export type SenseOrigin = 'Manual' | 'AutoFill'
+
 // ── Identity ────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -128,7 +144,32 @@ export interface MediaAsset {
   url: string
 }
 
-export interface VocabularyItem {
+export interface SenseTranslation {
+  /** BCP-47 locale, for example `vi`. */
+  locale: string
+  text: string
+}
+
+/** WB-25 enrichment fields, added to every word DTO. Optional: older replies may omit them. */
+export interface SenseEnrichment {
+  partOfSpeech?: PartOfSpeech | null
+  ipaUk?: string | null
+  ipaUs?: string | null
+  audioUkUrl?: string | null
+  audioUsUrl?: string | null
+  examples?: string[] | null
+  translations?: SenseTranslation[] | null
+  collocations?: string[] | null
+  synonyms?: string[] | null
+  antonyms?: string[] | null
+  topicTags?: string[] | null
+  registerNote?: string | null
+  origin?: SenseOrigin
+  /** Child callers only: an auto-filled word not approved yet. Then no content is sent. */
+  awaitingApproval?: boolean
+}
+
+export interface VocabularyItem extends SenseEnrichment {
   id: string
   word: string
   definition: string
@@ -171,7 +212,7 @@ export interface LessonFilters {
   level?: Level
 }
 
-export interface PersonalVocabularyWord {
+export interface PersonalVocabularyWord extends SenseEnrichment {
   id: string
   ownerUserId: string
   word: string
@@ -191,6 +232,48 @@ export interface PersonalVocabularyWord {
 /** A word as returned by the random-selection-for-check endpoint — same shape as
  * {@link PersonalVocabularyWord}, aliased for readability at call sites. */
 export type VocabularyRecallCheckWord = PersonalVocabularyWord
+
+/** One auto-filled sense card. `awaitingApproval` (Child only): content fields are empty. */
+export interface AutofillSense {
+  senseId: string
+  word: string
+  definition: string
+  partOfSpeech: PartOfSpeech | null
+  ipaUk: string | null
+  ipaUs: string | null
+  audioUkUrl: string | null
+  audioUsUrl: string | null
+  examples: string[]
+  translations: SenseTranslation[]
+  collocations: string[]
+  synonyms: string[]
+  antonyms: string[]
+  topicTags: string[]
+  registerNote: string | null
+  origin: SenseOrigin
+  awaitingApproval: boolean
+}
+
+/** Reply of `GET /vocabulary/autofill`. `autofillUnavailable` → show the manual form. */
+export interface AutofillResult {
+  word: string
+  autofillUnavailable: boolean
+  senses: AutofillSense[]
+}
+
+/** An auto-filled word waiting for child approval. `learnerId` is null in the admin queue. */
+export interface ChildApproval {
+  senseId: string
+  learnerId: string | null
+  word: string
+  definition: string
+  partOfSpeech: PartOfSpeech | null
+  examples: string[]
+  translations: SenseTranslation[]
+  /** Generator's hint for approvers; approval is still required. */
+  childSuitableHint: boolean | null
+  createdAtUtc: string
+}
 
 // ── Progress ────────────────────────────────────────────────────────────────
 

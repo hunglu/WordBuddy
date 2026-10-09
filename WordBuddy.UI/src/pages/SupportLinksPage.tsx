@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { problemMessage } from '../api/supportLinks'
 import { InvitePanel } from '../components/support/InvitePanel'
 import { SupportLinkCard } from '../components/support/SupportLinkCard'
+import { WordsToApprove } from '../components/support/WordsToApprove'
 import { cardClass, formatDate, softButtonClass, successButtonClass, dangerButtonClass } from '../components/support/supportUi'
 import {
   useCancelInvitation,
@@ -106,7 +107,12 @@ export function SupportLinksPage(): ReactElement {
               ) : (
                 <div className="mt-3 flex flex-col gap-3">
                   {data.asSupporter.map((link) => (
-                    <SupportLinkCard key={link.id} link={link} show="learner" canAct />
+                    <div key={link.id}>
+                      <SupportLinkCard link={link} show="learner" canAct />
+                      {link.status === 'Active' && (
+                        <WordsToApprove learnerId={link.learnerId} learnerName={link.learnerName} />
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
