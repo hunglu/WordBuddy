@@ -54,7 +54,7 @@ internal sealed class DashboardReadRepository : IDashboardReadRepository
         List<DashboardSessionRow> rows = await _dbContext.VocabularySessionIssues
             .AsNoTracking()
             .Where(i => i.UserId == userId && i.IssuedAtUtc >= fromUtc && i.IssuedAtUtc < toUtc)
-            .Select(i => new DashboardSessionRow(i.SessionId, i.IssuedAtUtc, i.PlannedCount))
+            .Select(i => new DashboardSessionRow(i.SessionId, i.IssuedAtUtc, i.PlannedCount, i.ExpiresAtUtc))
             .ToListAsync(ct);
         return Result.Success<IReadOnlyList<DashboardSessionRow>>(rows);
     }

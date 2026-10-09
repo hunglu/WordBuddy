@@ -16,6 +16,7 @@ public sealed class DashboardCalculator
     public const int MaxDays = 90;
 
     private const int SlowWordsTake = 10;
+    private const int LeechesTake = 10;
     private const int SlowWordMinAnswers = 3;
 
     private readonly DashboardOptions _options;
@@ -74,12 +75,13 @@ public sealed class DashboardCalculator
             words.Where(w => w.Status == WordStatus.Leech)
                 .OrderByDescending(w => w.Lapses)
                 .ThenBy(w => w.SenseId)
+                .Take(LeechesTake)
                 .Select(w => new LeechWordDto(w.SenseId, w.Lapses))
                 .ToList(),
             WeakestSkill(retention),
             BuildSlowestWords(windowReviews));
 
-        GamingSignalsDto gaming = BuildGaming(windowReviews, windowSessions, today, offset);
+        GamingSignalsDto gaming = BuildGaming(windowReviews, windowSessions, nowUtc);
 
         return new LearnerDashboardDto(learnerId, days, from, today, activity, wordsDto, retention, struggle, gaming);
     }
@@ -146,6 +148,11 @@ public sealed class DashboardCalculator
         return result;
     }
 
+    /// <summary>
+    /// Daily goal rule: per local day with a session, <c>planned</c> = planned items of the day's
+    /// first session only; <c>answered</c> = distinct words answered that day across all sessions;
+    /// percent = answered / planned, capped at 100.
+    /// </summary>
     private static List<DailyGoalDto> BuildDailyGoals(
         IReadOnlyList<DashboardReviewRow> windowReviews, IReadOnlyList<DashboardSessionRow> windowSessions, TimeSpan offset)
     {
@@ -250,8 +257,7 @@ public sealed class DashboardCalculator
     private GamingSignalsDto BuildGaming(
         IReadOnlyList<DashboardReviewRow> windowReviews,
         IReadOnlyList<DashboardSessionRow> windowSessions,
-        DateOnly today,
-        TimeSpan offset)
+        DateTime nowUtc)
     {
         int total = windowReviews.Count;
         int quickWrong = windowReviews.Count(r => !r.IsCorrect && r.ResponseMs < _options.FastWrongMs);
@@ -262,9 +268,9 @@ public sealed class DashboardCalculator
             .GroupBy(r => r.SessionId)
             .ToDictionary(g => g.Key, g => g.Select(r => r.SenseId).Distinct().Count());
 
-        // Today's session may still be open, so it is not counted.
+        // Unfinished = expired with fewer distinct words answered than planned. Open sessions are never counted.
         int unfinished = windowSessions.Count(s =>
-            LocalDate(s.IssuedAtUtc, offset) < today
+            s.ExpiresAtUtc <= nowUtc
             && answeredPerSession.GetValueOrDefault(s.SessionId) < s.PlannedCount);
 
         return new GamingSignalsDto(

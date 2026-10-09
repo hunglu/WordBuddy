@@ -4,6 +4,7 @@ import type { ReactElement } from 'react'
 import { Link } from 'react-router-dom'
 import { getUserProgress } from '../api/progress'
 import { CountUpStat } from '../components/CountUpStat'
+import { primaryButtonClass } from '../components/support/supportUi'
 import { useVocabularyRecallProgress } from '../hooks/useVocabulary'
 
 export function ProgressPage(): ReactElement {
@@ -38,7 +39,7 @@ export function ProgressPage(): ReactElement {
         <h1 className="text-3xl font-extrabold text-wb-ink">My Progress</h1>
         <Link
           to="/dashboard/me"
-          className="rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
+          className={primaryButtonClass}
         >
           My dashboard
         </Link>

@@ -30,6 +30,12 @@ public class GetVocabularySessionQueryHandlerTests
         _issues
             .Setup(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
+        _issues
+            .Setup(i => i.GetOpenAsync(_userId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<VocabularySessionIssue>(Error.NotFound("VocabularySession.NoOpenSession", "none")));
+        _issues
+            .Setup(i => i.GetAnsweredSenseIdsAsync(_userId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlySet<Guid>>(new HashSet<Guid>()));
         _states.Setup(s => s.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
         GivenDue([], dueCount: 0);
         GivenIntroducedToday(0);
@@ -80,6 +86,91 @@ public class GetVocabularySessionQueryHandlerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _states.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private VocabularySessionIssue OpenIssue(params (Guid SenseId, bool IsNew)[] items) =>
+        VocabularySessionIssue.Create(Guid.NewGuid(), _userId, Now.AddMinutes(-5), items, 30, Now.AddHours(4));
+
+    private void GivenOpen(VocabularySessionIssue issue, params Guid[] answered)
+    {
+        _issues
+            .Setup(i => i.GetOpenAsync(_userId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(issue));
+        _issues
+            .Setup(i => i.GetAnsweredSenseIdsAsync(_userId, issue.SessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlySet<Guid>>(answered.ToHashSet()));
+        _states
+            .Setup(s => s.GetActiveBySenseIdsAsync(_userId, It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid _, IReadOnlyCollection<Guid> ids, CancellationToken _) =>
+                Result.Success<IReadOnlyList<LearnerWordState>>(
+                    ids.Select(id => LearnerWordState.CreateNew(Guid.NewGuid(), _userId, id, Now)).ToList()));
+    }
+
+    [Fact]
+    public async Task GetVocabularySessionQueryHandler_HandleAsync_TwoGetsReturnSameSessionIdAndStoreOneRow()
+    {
+        VocabularySessionIssue? stored = null;
+        _issues
+            .Setup(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()))
+            .Callback((VocabularySessionIssue issue, CancellationToken _) => stored = issue)
+            .ReturnsAsync(Result.Success());
+        GetVocabularySessionQueryHandler handler = CreateHandler();
+
+        Result<VocabularySessionDto> first = await handler.HandleAsync(new GetVocabularySessionQuery(_userId, null));
+        GivenOpen(stored!);
+        Result<VocabularySessionDto> second = await handler.HandleAsync(new GetVocabularySessionQuery(_userId, null));
+
+        second.Value.SessionId.Should().Be(first.Value.SessionId);
+        second.Value.NewItems.Should().HaveCount(first.Value.NewItems.Count);
+        _issues.Verify(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetVocabularySessionQueryHandler_HandleAsync_NoOpenSessionAfterExpiryCreatesNewSession()
+    {
+        // The repository returns NotFound once the session expired (ExpiresAtUtc <= now).
+        GetVocabularySessionQueryHandler handler = CreateHandler();
+
+        Result<VocabularySessionDto> first = await handler.HandleAsync(new GetVocabularySessionQuery(_userId, null));
+        Result<VocabularySessionDto> second = await handler.HandleAsync(new GetVocabularySessionQuery(_userId, null));
+
+        second.Value.SessionId.Should().NotBe(first.Value.SessionId);
+        _issues.Verify(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task GetVocabularySessionQueryHandler_HandleAsync_AllAnsweredEndsSessionAndCreatesNew()
+    {
+        Guid dueSense = Guid.NewGuid();
+        Guid newSense = Guid.NewGuid();
+        VocabularySessionIssue old = OpenIssue((dueSense, false), (newSense, true));
+        GivenOpen(old, dueSense, newSense);
+
+        Result<VocabularySessionDto> result = await CreateHandler().HandleAsync(new GetVocabularySessionQuery(_userId, null));
+
+        old.EndedAtUtc.Should().Be(Now);
+        result.Value.SessionId.Should().NotBe(old.SessionId);
+        _issues.Verify(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()), Times.Once);
+        _states.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetVocabularySessionQueryHandler_HandleAsync_ResumeReturnsOnlyUnansweredItemsInOrder()
+    {
+        Guid dueDone = Guid.NewGuid();
+        Guid dueLeft = Guid.NewGuid();
+        Guid newDone = Guid.NewGuid();
+        Guid newLeft = Guid.NewGuid();
+        VocabularySessionIssue open = OpenIssue((dueDone, false), (dueLeft, false), (newDone, true), (newLeft, true));
+        GivenOpen(open, dueDone, newDone);
+
+        Result<VocabularySessionDto> result = await CreateHandler().HandleAsync(new GetVocabularySessionQuery(_userId, null));
+
+        result.Value.SessionId.Should().Be(open.SessionId);
+        result.Value.DueItems.Select(i => i.SenseId).Should().Equal(dueLeft);
+        result.Value.NewItems.Select(i => i.SenseId).Should().Equal(newLeft);
+        _issues.Verify(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()), Times.Never);
+        open.EndedAtUtc.Should().BeNull();
     }
 
     [Fact]

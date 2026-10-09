@@ -36,6 +36,10 @@ public class DashboardCalculatorTests
         int hour = 12) =>
         new(senseId ?? Guid.NewGuid(), sessionId ?? Guid.NewGuid(), LocalToUtc(localDate, hour), skill, isCorrect, responseMs, hintUsed, isDue, attemptNo);
 
+    /// <summary>A session row; unless set, it expires 30 minutes after it was issued.</summary>
+    private static DashboardSessionRow Session(Guid id, DateTime issuedAtUtc, int planned, DateTime? expiresAtUtc = null) =>
+        new(id, issuedAtUtc, planned, expiresAtUtc ?? issuedAtUtc.AddMinutes(30));
+
     private LearnerDashboardDto Calculate(
         IReadOnlyList<DashboardReviewRow>? reviews = null,
         IReadOnlyList<DashboardWordRow>? words = null,
@@ -147,8 +151,8 @@ public class DashboardCalculatorTests
         Guid wordB = Guid.NewGuid();
         DashboardSessionRow[] sessions =
         [
-            new(second, LocalToUtc(Today, 18), 99),
-            new(first, LocalToUtc(Today, 8), 4),
+            Session(second, LocalToUtc(Today, 18), 99),
+            Session(first, LocalToUtc(Today, 8), 4),
         ];
         DashboardReviewRow[] reviews =
         [
@@ -166,7 +170,7 @@ public class DashboardCalculatorTests
     public void DashboardCalculator_Calculate_DailyGoalIsCappedAt100()
     {
         Guid session = Guid.NewGuid();
-        DashboardSessionRow[] sessions = [new(session, LocalToUtc(Today, 8), 1)];
+        DashboardSessionRow[] sessions = [Session(session, LocalToUtc(Today, 8), 1)];
         DashboardReviewRow[] reviews = [Review(Today, sessionId: session), Review(Today, sessionId: session)];
 
         Calculate(reviews, sessions: sessions).Activity.DailyGoals.Single().Percent.Should().Be(100);
@@ -285,6 +289,17 @@ public class DashboardCalculatorTests
     }
 
     [Fact]
+    public void DashboardCalculator_Calculate_LeechListIsCappedAtTenByLapses()
+    {
+        DashboardWordRow[] states = Enumerable.Range(0, 15).Select(i => new DashboardWordRow(Guid.NewGuid(), WordStatus.Leech, 4 + i)).ToArray();
+
+        List<LeechWordDto> leeches = Calculate(words: states).Struggle.Leeches.ToList();
+
+        leeches.Should().HaveCount(10);
+        leeches.Min(l => l.Lapses).Should().Be(9);
+    }
+
+    [Fact]
     public void DashboardCalculator_Calculate_WeakestSkillIsLowestWithEnoughAnswers()
     {
         List<DashboardReviewRow> reviews = [];
@@ -377,18 +392,16 @@ public class DashboardCalculatorTests
     }
 
     [Fact]
-    public void DashboardCalculator_Calculate_UnfinishedSessionsExcludeTodaysOpenSession()
+    public void DashboardCalculator_Calculate_UnfinishedSessionsCountOnlyExpiredHalfDoneSessions()
     {
         Guid unfinishedYesterday = Guid.NewGuid();
         Guid finishedYesterday = Guid.NewGuid();
-        Guid openToday = Guid.NewGuid();
         Guid wordA = Guid.NewGuid();
         Guid wordB = Guid.NewGuid();
         DashboardSessionRow[] sessions =
         [
-            new(unfinishedYesterday, LocalToUtc(Today.AddDays(-1)), 3),
-            new(finishedYesterday, LocalToUtc(Today.AddDays(-1), 18), 2),
-            new(openToday, LocalToUtc(Today, 8), 5),
+            Session(unfinishedYesterday, LocalToUtc(Today.AddDays(-1)), 3),
+            Session(finishedYesterday, LocalToUtc(Today.AddDays(-1), 18), 2),
         ];
         DashboardReviewRow[] reviews =
         [
@@ -400,9 +413,42 @@ public class DashboardCalculatorTests
     }
 
     [Fact]
+    public void DashboardCalculator_Calculate_OpenSessionIsNeverUnfinished()
+    {
+        Guid open = Guid.NewGuid();
+        DashboardSessionRow[] sessions = [Session(open, Now.AddMinutes(-10), 5, expiresAtUtc: Now.AddMinutes(20))];
+        DashboardReviewRow[] reviews = [Review(Today, sessionId: open)];
+
+        Calculate(reviews, sessions: sessions).Gaming.UnfinishedSessions.Should().Be(0);
+    }
+
+    [Fact]
+    public void DashboardCalculator_Calculate_ExpiredHalfDoneSessionOfTodayIsUnfinished()
+    {
+        Guid half = Guid.NewGuid();
+        DashboardSessionRow[] sessions = [Session(half, Now.AddMinutes(-40), 5)];
+        DashboardReviewRow[] reviews = [Review(Today, sessionId: half)];
+
+        Calculate(reviews, sessions: sessions).Gaming.UnfinishedSessions.Should().Be(1);
+    }
+
+    [Fact]
+    public void DashboardCalculator_Calculate_ReloadedSessionKeptOneRowAndFinishedGivesZeroUnfinished()
+    {
+        // Two GETs resume the same session, so only one row exists; all planned words were answered.
+        Guid session = Guid.NewGuid();
+        Guid wordA = Guid.NewGuid();
+        Guid wordB = Guid.NewGuid();
+        DashboardSessionRow[] sessions = [Session(session, LocalToUtc(Today.AddDays(-1)), 2)];
+        DashboardReviewRow[] reviews = [Review(Today.AddDays(-1), wordA, session), Review(Today.AddDays(-1), wordB, session)];
+
+        Calculate(reviews, sessions: sessions).Gaming.UnfinishedSessions.Should().Be(0);
+    }
+
+    [Fact]
     public void DashboardCalculator_Calculate_SessionWithNoAnswersCountsAsUnfinished()
     {
-        DashboardSessionRow[] sessions = [new(Guid.NewGuid(), LocalToUtc(Today.AddDays(-2)), 4)];
+        DashboardSessionRow[] sessions = [Session(Guid.NewGuid(), LocalToUtc(Today.AddDays(-2)), 4)];
 
         Calculate(sessions: sessions).Gaming.UnfinishedSessions.Should().Be(1);
     }
@@ -418,7 +464,7 @@ public class DashboardCalculatorTests
             .ToArray();
         DashboardWordRow[] states = [new(Guid.NewGuid(), WordStatus.Leech, 6), new(Guid.NewGuid(), WordStatus.New, 0)];
         DashboardMembershipRow[] memberships = [new(Guid.NewGuid(), _learnerId, LocalToUtc(Today)), new(Guid.NewGuid(), Guid.NewGuid(), LocalToUtc(Today))];
-        DashboardSessionRow[] sessions = [new(session, LocalToUtc(Today.AddDays(-1)), 30)];
+        DashboardSessionRow[] sessions = [Session(session, LocalToUtc(Today.AddDays(-1)), 30)];
 
         LearnerDashboardDto first = Calculate(reviews, states, memberships, sessions);
         LearnerDashboardDto second = Calculate(reviews, states, memberships, sessions);

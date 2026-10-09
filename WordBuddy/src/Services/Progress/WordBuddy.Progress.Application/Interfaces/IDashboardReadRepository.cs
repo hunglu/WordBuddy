@@ -22,7 +22,7 @@ public sealed record DashboardWordRow(Guid SenseId, WordStatus Status, int Lapse
 public sealed record DashboardMembershipRow(Guid SenseId, Guid AddedBy, DateTime AddedAtUtc);
 
 /// <summary>An issued session, projected.</summary>
-public sealed record DashboardSessionRow(Guid SessionId, DateTime IssuedAtUtc, int PlannedCount);
+public sealed record DashboardSessionRow(Guid SessionId, DateTime IssuedAtUtc, int PlannedCount, DateTime ExpiresAtUtc);
 
 /// <summary>Read-only queries for the dashboard. Projected columns, no tracking.</summary>
 public interface IDashboardReadRepository

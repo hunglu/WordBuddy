@@ -25,7 +25,7 @@ model this follows.
 |---|---|---|---|
 | POST | `/api/progress` | Bearer | Records/updates the caller's progress on a lesson (upsert by user+lesson) |
 | GET | `/api/progress` | Bearer | Lists the caller's progress across all lessons |
-| GET | `/api/progress/vocabulary/session` | Bearer | Today's session: due words first, then new words up to the cap; issues a `sessionId` |
+| GET | `/api/progress/vocabulary/session` | Bearer | Today's session: due words first, then new words up to the cap; issues a `sessionId`. An open session (not ended, not expired) is resumed with the same `sessionId` and its unanswered items |
 | POST | `/api/progress/vocabulary/reviews` | Bearer, rate limit `vocabulary-review` | Records one answer; returns `{ status, dueAtUtc, rating }` |
 | GET | `/api/progress/vocabulary/words` | Bearer | The caller's active word states |
 | GET / PUT | `/api/progress/vocabulary/settings` | Bearer | The caller's `newWordsPerDay` (0–50, `null` = backlog rule); any user, child included |
@@ -98,6 +98,7 @@ ReviewLogs + LearnerWordStates + LearnerWordMemberships + VocabularySessionIssue
 | | `MasteredStabilityDays` | `21` |
 | | `LeechLapses` | `4` |
 | | `MaxDueItems` | `50` |
+| | `SessionDurationMinutes` | `30` |
 | `Vocabulary:Grading` | `PictureChoice` / `ListeningChoice` / `Typing` (`FastMs`, `SlowMs`) | 3000/10000, 4000/12000, 6000/20000 |
 | | `AgeGroupMultiplier` (`Child`, `Adult`) | `1.25`, `1.0` |
 | `Vocabulary:NewWordCap` | `LowBacklogMax`/`Cap`, `MediumBacklogMax`/`Cap`, `HighBacklogMax`/`Cap`, `OverflowCap` | 20→10, 40→8, 60→6, else 5 |

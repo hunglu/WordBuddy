@@ -132,3 +132,27 @@ Existing `ReviewLogs` indexes are enough. Sessions issued before release have no
 | Q7 | Thresholds (`MinSample` 10, `FastWrongMs` 1500, `HintRateFlag` 0.3, child vs adult same) | As listed, in options. |
 
 Ideas beyond the goal (not planned): weekly email (phase 2), CSV export, supporter alerts on gaming signals.
+
+## Revisions
+
+### R1 — Resumable sessions (Sam, 2026-10-09, fixes review finding 1)
+
+A session now has a duration and an expiry. A reload resumes the open session; a new session starts only after the old one ends.
+
+```
+GET session ─► open session for user? (not ended, now < ExpiresAtUtc)
+                 ├─ yes ─► same SessionId, remaining items (planned − answered in this session)
+                 │          all answered → mark ended → build new session
+                 └─ no  ─► build new session, store it with its items
+```
+
+| Item | Rule |
+| --- | --- |
+| Duration | `VocabularySchedulingOptions.SessionDurationMinutes`, default 30, same for child and adult |
+| Expiry | `ExpiresAtUtc = min(IssuedAtUtc + duration, end of learner's local day)` |
+| Ended | All planned items answered in this session (`ReviewLog.SessionId`), or `now ≥ ExpiresAtUtc` |
+| Stored | `VocabularySessionIssue` + `DurationMinutes`, `ExpiresAtUtc`, `EndedAtUtc?`; child table `VocabularySessionIssueItems` (`SessionId`, `SenseId`, `IsNew`) |
+| Resume response | Same `SessionId`; remaining due/new items in stored order; `Cap` / `IntroducedToday` recomputed |
+| Unfinished (dashboard) | Expired and answered distinct words < planned. Open sessions are never counted |
+| Migration | `AddDashboard` is not applied anywhere yet → regenerate it, no second migration |
+| Logs | Ids and counts only (`Resumed=true/false`) |

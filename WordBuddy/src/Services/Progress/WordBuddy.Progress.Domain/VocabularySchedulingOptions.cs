@@ -27,6 +27,9 @@ public sealed class VocabularySchedulingOptions
     /// <summary>Most due items one session returns. Default 50.</summary>
     public int MaxDueItems { get; set; } = 50;
 
+    /// <summary>Minutes a session stays open for resuming, capped at the end of the learner's local day. Default 30.</summary>
+    public int SessionDurationMinutes { get; set; } = 30;
+
     /// <summary>Learning steps as time spans, with the FSRS default when not configured.</summary>
     public IReadOnlyList<TimeSpan> GetLearningSteps() =>
         (LearningStepsMinutes ?? [1, 10]).Select(m => TimeSpan.FromMinutes(m)).ToList();

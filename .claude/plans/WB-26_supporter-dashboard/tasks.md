@@ -49,3 +49,20 @@
 - [x] Integration: logs captured during a child dashboard call contain no metric values or timings. — IntegrationTests/DashboardEndpointsTests.cs (captures the handler logger)
 - [x] API E2E (`e2e/api`, tester): supporter links → learner reviews → supporter dashboard shows retention. — moved to `/test` (Sam, 2026-10-09)
 - [x] UI E2E (`e2e/ui`, tester): learner opens own dashboard; supporter opens learner dashboard from `/support`; error state renders when Progress is down. — moved to `/test` (Sam, 2026-10-09)
+
+## Fix round 1 (review.md + plan.md → R1)
+
+- [x] `VocabularySessionIssue`: add `DurationMinutes`, `ExpiresAtUtc`, `EndedAtUtc?`, items (`SenseId`, `IsNew`); `Create(..., items, duration, localDayEndUtc)`, `IsOpen(nowUtc)`, `End(nowUtc)` — expiry = min(issued + duration, local day end). — Domain/VocabularySessionIssue.cs (adds `VocabularySessionIssueItem` with `Position` for stored order)
+- [x] Add `SessionDurationMinutes` (default 30) to `VocabularySchedulingOptions` + config section. — Domain/VocabularySchedulingOptions.cs, Api/appsettings.json, README.md
+- [x] EF: `VocabularySessionIssueItems` child table + new columns; regenerate `AddDashboard` migration (drop and re-add, not applied anywhere); update `docs/database-diagram/progress.md`. — Infrastructure/Persistence/Configurations/VocabularySessionIssueConfiguration.cs, Migrations/20261009142251_AddDashboard* + snapshot (old migration deleted, not applied), docs/database-diagram/progress.md
+- [x] Repository: `GetOpenAsync(userId, nowUtc)` (latest not ended, not expired) and answered sense ids per session from `ReviewLog`. — Application/Interfaces/IVocabularySessionIssueRepository.cs, ILearnerWordStateRepository.cs (`GetActiveBySenseIdsAsync`), Infrastructure repositories
+- [x] `GetVocabularySessionQueryHandler`: resume open session with remaining items; all answered → `End` + new session; else create and store new session with items — reload returns same `SessionId`. — GetVocabularySessionQueryHandler.cs
+- [x] `DashboardCalculator`: unfinished = expired and answered < planned; open sessions excluded — matches R1. — DashboardCalculator.cs, IDashboardReadRepository.cs (`DashboardSessionRow.ExpiresAtUtc`), DashboardReadRepository.cs
+- [x] Review nit 2: document daily-goal rule in XML doc. — DashboardCalculator.cs
+- [x] Review nit 3: cap leech list (top 10, by lapses). — DashboardCalculator.cs (`LeechesTake` = 10)
+- [x] Review nit 4: `ProgressPage.tsx` reuses `primaryButtonClass`. — WordBuddy.UI/src/pages/ProgressPage.tsx
+- [x] Review nit 5: remove dead `?? ''` in `useDashboard.ts` (or comment why it stays). — WordBuddy.UI/src/hooks/useDashboard.ts (`learnerId!` with comment)
+- [x] Unit: `VocabularySessionIssueTests` — expiry capped at local day end; `IsOpen` false after expiry and after `End`. — UnitTests/Domain/VocabularySessionIssueTests.cs
+- [x] Unit: `GetVocabularySessionQueryHandlerTests` — two GETs return same `SessionId` and one stored row; GET after expiry creates new; GET after all answered creates new; resume returns only unanswered items. — UnitTests/Features/VocabularySrs/GetVocabularySessionQueryHandlerTests.cs
+- [x] Unit: `DashboardCalculatorTests` — two GETs + one finished session → 0 unfinished; expired half-done session → 1; open session → 0. — UnitTests/Features/Dashboard/DashboardCalculatorTests.cs (+ leech cap fact)
+- [x] Integration: `GET session` twice → same `SessionId`. — IntegrationTests/VocabularySrsEndpointsTests.cs

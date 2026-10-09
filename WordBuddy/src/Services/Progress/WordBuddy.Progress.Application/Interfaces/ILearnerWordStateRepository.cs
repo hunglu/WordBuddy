@@ -28,6 +28,9 @@ public interface ILearnerWordStateRepository
     /// <summary>All active states of the user.</summary>
     Task<Result<IReadOnlyList<LearnerWordState>>> GetActiveAsync(Guid userId, CancellationToken ct = default);
 
+    /// <summary>Active states of the user for the given sense ids.</summary>
+    Task<Result<IReadOnlyList<LearnerWordState>>> GetActiveBySenseIdsAsync(Guid userId, IReadOnlyCollection<Guid> senseIds, CancellationToken ct = default);
+
     /// <summary>Commits every staged change of this scope in one transaction.</summary>
     Task<Result> SaveChangesAsync(CancellationToken ct = default);
 }

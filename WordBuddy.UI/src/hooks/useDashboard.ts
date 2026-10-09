@@ -16,7 +16,7 @@ export function useMyDashboard(days: DashboardRange, enabled = true) {
 export function useLearnerDashboard(learnerId: string | undefined, days: DashboardRange) {
   return useQuery({
     queryKey: ['dashboard', learnerId, days],
-    queryFn: () => getLearnerDashboard(learnerId ?? '', days),
+    queryFn: () => getLearnerDashboard(learnerId!, days), // runs only when `enabled` (learnerId is defined),
     enabled: learnerId !== undefined,
     retry: false,
   })

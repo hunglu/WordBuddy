@@ -289,6 +289,26 @@ public sealed class VocabularySrsEndpointsTests
     }
 
     [Fact]
+    public async Task GetSession_CalledTwice_ResumesSameSessionId()
+    {
+        Guid userId = Guid.NewGuid();
+        HttpClient client = await CreateClientAsync(userId);
+        for (int i = 0; i < 4; i++)
+        {
+            await SeedWordAsync(userId, DateTime.UtcNow.AddDays(-1).AddMinutes(i));
+        }
+
+        VocabularySessionDto first = await ReadSessionAsync(await client.GetAsync("/api/progress/vocabulary/session"));
+        VocabularySessionDto second = await ReadSessionAsync(await client.GetAsync("/api/progress/vocabulary/session"));
+
+        second.SessionId.Should().Be(first.SessionId);
+        second.NewItems.Select(i => i.SenseId).Should().Equal(first.NewItems.Select(i => i.SenseId));
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext dbContext = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        (await dbContext.VocabularySessionIssues.CountAsync(i => i.UserId == userId)).Should().Be(1);
+    }
+
+    [Fact]
     public async Task GetSession_ClientDateTimeHeader_ValidAccepted_InvalidReturns400()
     {
         HttpClient client = await CreateClientAsync(Guid.NewGuid());

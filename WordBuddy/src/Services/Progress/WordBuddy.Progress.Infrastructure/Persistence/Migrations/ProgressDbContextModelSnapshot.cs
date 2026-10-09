@@ -491,6 +491,15 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("IssuedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -507,6 +516,25 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.ToTable("VocabularySessionIssues", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularySessionIssueItem", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SenseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsNew")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.HasKey("SessionId", "SenseId");
+
+                    b.ToTable("VocabularySessionIssueItems", (string)null);
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
@@ -517,6 +545,20 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("InboxMessageId", "InboxConsumerId")
                         .HasPrincipalKey("MessageId", "ConsumerId");
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularySessionIssueItem", b =>
+                {
+                    b.HasOne("WordBuddy.Progress.Domain.VocabularySessionIssue", null)
+                        .WithMany("Items")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularySessionIssue", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }
