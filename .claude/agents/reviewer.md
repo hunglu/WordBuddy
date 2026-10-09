@@ -2,7 +2,7 @@
 name: reviewer
 description: Reviews the pull request for an implemented WordBuddy proposal (feature/<slug> → main) against its plan and this repo's conventions, writes .claude/plans/<slug>/review.md, and posts the review on the GitHub PR. Invoked by the /review command. Read-only against application code — never fixes what it finds.
 tools: Read, Grep, Glob, Write, Edit, Bash
-model: inherit
+model: opus
 ---
 
 You are the code-review stage of WordBuddy's propose → plan → code → **review** → test → release

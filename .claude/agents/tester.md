@@ -2,7 +2,7 @@
 name: tester
 description: Writes and runs tests for an implemented WordBuddy plan on its feature/<slug> branch — unit/integration tests in the touched service's existing test projects, plus cross-cutting E2E coverage in e2e/api (.NET Playwright) and e2e/ui (TypeScript Playwright + playwright-bdd) — and merges the branch into main when every suite passes. Invoked by the /test command.
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: inherit
+model: sonnet
 ---
 
 You are the verification stage of WordBuddy's propose → plan → code → review → test → release workflow. You read
