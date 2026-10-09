@@ -1,4 +1,5 @@
 using FluentValidation;
+using WordBuddy.Progress.Application.Features.Dashboard.Queries.GetLearnerDashboard;
 using WordBuddy.Progress.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateLearnerVocabularySettings;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerVocabularySettings;
@@ -59,6 +60,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateLearnerVocabularySettingsCommand>, UpdateLearnerVocabularySettingsCommandValidator>();
         services.AddScoped<ICommandHandler<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandHandler>();
         services.AddScoped<IValidator<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandValidator>();
+
+        // Dashboard (WB-26). DashboardOptions and DashboardCalculator are registered by the host.
+        services.AddScoped<IQueryHandler<GetLearnerDashboardQuery, LearnerDashboardDto>, GetLearnerDashboardQueryHandler>();
+        services.AddScoped<IValidator<GetLearnerDashboardQuery>, GetLearnerDashboardQueryValidator>();
 
         return services;
     }

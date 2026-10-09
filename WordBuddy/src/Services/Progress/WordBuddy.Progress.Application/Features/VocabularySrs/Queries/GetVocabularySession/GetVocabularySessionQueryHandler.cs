@@ -10,12 +10,14 @@ namespace WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetVocab
 /// <summary>
 /// Due words first (earliest first, up to <see cref="VocabularySchedulingOptions.MaxDueItems"/>), then
 /// new words up to the cap minus the new words already introduced in the client's day. Same rule
-/// for child and adult (D-3). Not cached: the result changes after every answer.
+/// for child and adult (D-3). Not cached: the result changes after every answer. Also records one
+/// <see cref="VocabularySessionIssue"/> per non-empty session for the dashboard (WB-26).
 /// </summary>
 public sealed class GetVocabularySessionQueryHandler : IQueryHandler<GetVocabularySessionQuery, VocabularySessionDto>
 {
     private readonly ILearnerWordStateRepository _states;
     private readonly IVocabularyLearnerSettingsRepository _settings;
+    private readonly IVocabularySessionIssueRepository _sessionIssues;
     private readonly NewWordCapPolicy _capPolicy;
     private readonly VocabularySchedulingOptions _schedulingOptions;
     private readonly TimeProvider _timeProvider;
@@ -24,6 +26,7 @@ public sealed class GetVocabularySessionQueryHandler : IQueryHandler<GetVocabula
     public GetVocabularySessionQueryHandler(
         ILearnerWordStateRepository states,
         IVocabularyLearnerSettingsRepository settings,
+        IVocabularySessionIssueRepository sessionIssues,
         NewWordCapPolicy capPolicy,
         VocabularySchedulingOptions schedulingOptions,
         TimeProvider timeProvider,
@@ -31,6 +34,7 @@ public sealed class GetVocabularySessionQueryHandler : IQueryHandler<GetVocabula
     {
         _states = states;
         _settings = settings;
+        _sessionIssues = sessionIssues;
         _capPolicy = capPolicy;
         _schedulingOptions = schedulingOptions;
         _timeProvider = timeProvider;
@@ -92,6 +96,24 @@ public sealed class GetVocabularySessionQueryHandler : IQueryHandler<GetVocabula
             newStates.Value.Select(ToItem).ToList(),
             cap,
             introducedToday.Value);
+
+        // The dashboard compares the planned size with the answers. An empty session has nothing to finish.
+        int plannedCount = session.DueItems.Count + session.NewItems.Count;
+        if (plannedCount > 0)
+        {
+            Result staged = await _sessionIssues.AddAsync(
+                VocabularySessionIssue.Create(session.SessionId, query.UserId, nowUtc, plannedCount), ct);
+            if (staged.IsFailure)
+            {
+                return Result.Failure<VocabularySessionDto>(staged.Error);
+            }
+
+            Result saved = await _states.SaveChangesAsync(ct);
+            if (saved.IsFailure)
+            {
+                return Result.Failure<VocabularySessionDto>(saved.Error);
+            }
+        }
 
         _logger.LogInformation(
             "GetVocabularySessionQuery succeeded: UserId={UserId}, SessionId={SessionId}, DueCount={DueCount}, NewCount={NewCount}, Cap={Cap}",

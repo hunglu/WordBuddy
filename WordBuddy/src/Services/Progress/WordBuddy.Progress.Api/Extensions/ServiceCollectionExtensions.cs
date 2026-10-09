@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WordBuddy.Progress.Api.Authorization;
 using WordBuddy.Progress.Application.Extensions;
+using WordBuddy.Progress.Application.Features.Dashboard;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Infrastructure.Extensions;
 
@@ -71,6 +72,17 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<IFsrsScheduler>(new FsrsScheduler(scheduling));
         services.AddSingleton(new AnswerGrader(grading));
         services.AddSingleton(new NewWordCapPolicy(newWordCap));
+
+        return services;
+    }
+
+    /// <summary>Binds <c>Dashboard</c> options and registers the pure <see cref="DashboardCalculator"/>.</summary>
+    public static IServiceCollection AddDashboard(this IServiceCollection services, IConfiguration configuration)
+    {
+        DashboardOptions options = configuration.GetSection(DashboardOptions.SectionName).Get<DashboardOptions>() ?? new();
+
+        services.AddSingleton(options);
+        services.AddSingleton(new DashboardCalculator(options));
 
         return services;
     }

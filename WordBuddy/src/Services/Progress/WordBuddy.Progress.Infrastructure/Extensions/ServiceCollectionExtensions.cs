@@ -26,6 +26,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReviewLogRepository, ReviewLogRepository>();
         services.AddScoped<IVocabularyLearnerSettingsRepository, VocabularyLearnerSettingsRepository>();
         services.AddScoped<ISupportLinkProjectionRepository, SupportLinkProjectionRepository>();
+        services.AddScoped<IVocabularySessionIssueRepository, VocabularySessionIssueRepository>();
+        services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
+
+        // No Redis instance exists in this repo yet; the in-memory IDistributedCache satisfies the
+        // caching convention (dashboard). Swapping in Redis later is a DI-only change.
+        services.AddDistributedMemoryCache();
 
         // Consumer side: Content LearnerWord events and Identity support-link events, deduped by the EF Core inbox.
         services.AddWordBuddyMessaging<ProgressDbContext>(configuration, bus =>

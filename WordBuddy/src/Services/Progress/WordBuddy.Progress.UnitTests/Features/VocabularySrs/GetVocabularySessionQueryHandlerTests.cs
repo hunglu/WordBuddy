@@ -18,6 +18,7 @@ public class GetVocabularySessionQueryHandlerTests
 
     private readonly Mock<ILearnerWordStateRepository> _states = new();
     private readonly Mock<IVocabularyLearnerSettingsRepository> _settings = new();
+    private readonly Mock<IVocabularySessionIssueRepository> _issues = new();
     private readonly Guid _userId = Guid.NewGuid();
     private readonly VocabularySchedulingOptions _options = new() { MaxDueItems = 50 };
 
@@ -26,6 +27,10 @@ public class GetVocabularySessionQueryHandlerTests
         _settings
             .Setup(s => s.GetAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<VocabularyLearnerSettings>(Error.NotFound("VocabularySettings.NotFound", "none")));
+        _issues
+            .Setup(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        _states.Setup(s => s.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
         GivenDue([], dueCount: 0);
         GivenIntroducedToday(0);
         _states
@@ -36,7 +41,7 @@ public class GetVocabularySessionQueryHandlerTests
     }
 
     private GetVocabularySessionQueryHandler CreateHandler() =>
-        new(_states.Object, _settings.Object, new NewWordCapPolicy(new NewWordCapOptions()), _options,
+        new(_states.Object, _settings.Object, _issues.Object, new NewWordCapPolicy(new NewWordCapOptions()), _options,
             new FixedTimeProvider(Now), Mock.Of<ILogger<GetVocabularySessionQueryHandler>>());
 
     private void GivenDue(IReadOnlyList<LearnerWordState> due, int dueCount)
@@ -57,6 +62,37 @@ public class GetVocabularySessionQueryHandlerTests
         LearnerWordState state = LearnerWordState.CreateNew(Guid.NewGuid(), userId, Guid.NewGuid(), reviewedAt);
         state.ApplyReview(FsrsRating.Good, reviewedAt, new FsrsScheduler(options), options);
         return state;
+    }
+
+    [Fact]
+    public async Task GetVocabularySessionQueryHandler_HandleAsync_WritesOneSessionIssueWithPlannedCount()
+    {
+        LearnerWordState due = ReviewedState(_userId, Now.AddDays(-3));
+        GivenDue([due], dueCount: 1);
+
+        Result<VocabularySessionDto> result = await CreateHandler().HandleAsync(new GetVocabularySessionQuery(_userId, null));
+
+        // 1 due + 10 new (default cap) = 11 planned items.
+        _issues.Verify(
+            i => i.AddAsync(
+                It.Is<VocabularySessionIssue>(x =>
+                    x.SessionId == result.Value.SessionId && x.UserId == _userId && x.IssuedAtUtc == Now && x.PlannedCount == 11),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _states.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetVocabularySessionQueryHandler_HandleAsync_EmptySessionWritesNoIssue()
+    {
+        _states
+            .Setup(s => s.GetNewInAddedOrderAsync(_userId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWordState>>([]));
+
+        Result<VocabularySessionDto> result = await CreateHandler().HandleAsync(new GetVocabularySessionQuery(_userId, null));
+
+        result.IsSuccess.Should().BeTrue();
+        _issues.Verify(i => i.AddAsync(It.IsAny<VocabularySessionIssue>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -12,6 +12,7 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { AcceptInvitationPage } from './pages/AcceptInvitationPage'
 import { AdminSupportLinksPage } from './pages/AdminSupportLinksPage'
+import { LearnerDashboardPage } from './pages/LearnerDashboardPage'
 import { LessonDetailPage } from './pages/LessonDetailPage'
 import { LessonsPage } from './pages/LessonsPage'
 import { LoginPage } from './pages/LoginPage'
@@ -59,6 +60,8 @@ function AnimatedRoutes(): ReactElement {
           <Route path="/lessons" element={<ChildSupporterGate><LessonsPage /></ChildSupporterGate>} />
           <Route path="/lessons/:id" element={<ChildSupporterGate><LessonDetailPage /></ChildSupporterGate>} />
           <Route path="/progress" element={<ProgressPage />} />
+          <Route path="/dashboard/me" element={<ChildSupporterGate><LearnerDashboardPage /></ChildSupporterGate>} />
+          <Route path="/dashboard/learners/:learnerId" element={<LearnerDashboardPage />} />
           <Route path="/vocabulary" element={<ChildSupporterGate><VocabularyBuilderPage /></ChildSupporterGate>} />
           <Route path="/vocabulary/review" element={<ChildSupporterGate><VocabularyReviewPage /></ChildSupporterGate>} />
           <Route path="/vocabulary/check" element={<Navigate to="/vocabulary/review" replace />} />

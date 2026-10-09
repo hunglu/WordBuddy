@@ -19,6 +19,7 @@ public sealed class ProgressDbContext : DbContext
     public DbSet<ReviewLog> ReviewLogs => Set<ReviewLog>();
     public DbSet<VocabularyLearnerSettings> VocabularyLearnerSettings => Set<VocabularyLearnerSettings>();
     public DbSet<SupportLinkProjection> SupportLinkProjections => Set<SupportLinkProjection>();
+    public DbSet<VocabularySessionIssue> VocabularySessionIssues => Set<VocabularySessionIssue>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

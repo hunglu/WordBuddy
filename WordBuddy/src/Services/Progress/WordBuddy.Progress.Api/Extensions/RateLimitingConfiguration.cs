@@ -16,6 +16,14 @@ internal static class RateLimitingConfiguration
 
     private static readonly TimeSpan VocabularyReviewWindow = TimeSpan.FromMinutes(1);
 
+    /// <summary>Policy for <c>GET /api/progress/dashboard/*</c>.</summary>
+    public const string DashboardPolicy = "dashboard";
+
+    /// <summary>Dashboard reads per user per window.</summary>
+    private const int DashboardPermitLimit = 30;
+
+    private static readonly TimeSpan DashboardWindow = TimeSpan.FromMinutes(1);
+
     /// <summary>Registers the rate limiter and its policies.</summary>
     public static IServiceCollection AddWordBuddyRateLimiting(this IServiceCollection services)
     {
@@ -33,6 +41,18 @@ internal static class RateLimitingConfiguration
                     {
                         PermitLimit = VocabularyReviewPermitLimit,
                         Window = VocabularyReviewWindow,
+                        QueueLimit = 0,
+                    }));
+
+            options.AddPolicy(DashboardPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "anonymous",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = DashboardPermitLimit,
+                        Window = DashboardWindow,
                         QueueLimit = 0,
                     }));
 

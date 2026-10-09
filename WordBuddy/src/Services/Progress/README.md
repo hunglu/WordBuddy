@@ -29,6 +29,8 @@ model this follows.
 | POST | `/api/progress/vocabulary/reviews` | Bearer, rate limit `vocabulary-review` | Records one answer; returns `{ status, dueAtUtc, rating }` |
 | GET | `/api/progress/vocabulary/words` | Bearer | The caller's active word states |
 | GET / PUT | `/api/progress/vocabulary/settings` | Bearer | The caller's `newWordsPerDay` (0–50, `null` = backlog rule); any user, child included |
+| GET | `/api/progress/dashboard/me?days=7\|30\|90` | Bearer, `ChildHasSupporter`, rate limit `dashboard` | The caller's own dashboard (WB-26) |
+| GET | `/api/progress/dashboard/learners/{learnerId}?days=…` | Bearer, `CanSupportLearner`, rate limit `dashboard` | A learner's dashboard for an active supporter; no link or revoked link → 403 |
 | POST / GET | `/api/progress/vocabulary-recall` | Bearer | Old self-rated recall check; kept until WB-23 ships |
 
 ### Vocabulary SRS (WB-22)
@@ -60,6 +62,31 @@ answer → AnswerGrader (rating) → first attempt of a new/due word? → FSRS-6
 `age_group` comes from the JWT; missing or unknown → treated as Child (more lenient grading).
 This differs from Content, which fails on a missing `age_group` claim. The lenient default is
 safe here: the claim only sets grading thresholds, never content access.
+
+### Dashboard (WB-26)
+
+```text
+ReviewLogs + LearnerWordStates + LearnerWordMemberships + VocabularySessionIssues
+   → DashboardCalculator (pure) → LearnerDashboardDto → cache 5 min → endpoint
+```
+
+- No stored aggregates: every number is computed at read time. A rebuild is a cache delete.
+- Window: `days` = 7, 30 or 90 (default `Dashboard:DefaultDays`). Other value → `400`. "Day" is the
+  learner's local day, from the `X-Client-CurrentDateTime` offset (same rule as the session).
+- The streak looks back up to 90 days whatever `days` is.
+- Cache key `progress:dashboard:{learnerId}:{days}:{offsetMinutes}`, absolute 5 min, no explicit
+  delete: a new answer shows after the TTL.
+- Every active supporter gets the full view (WB-24). The DTO has dates only, never a time of day.
+- The session endpoint now writes one `VocabularySessionIssues` row per non-empty session. Earlier
+  sessions have no row, so "daily goal" and "unfinished sessions" are empty before release.
+- Logs carry ids and counts only.
+
+| Option (`Dashboard:`) | Default |
+| --- | --- |
+| `DefaultDays` | `30` |
+| `MinSample` (answers needed before a retention figure shows) | `10` |
+| `FastWrongMs` (wrong and faster = "quick wrong") | `1500` |
+| `HintRateFlag` | `0.3` |
 
 ### Vocabulary options
 
@@ -98,8 +125,8 @@ Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=prog
 dotnet ef migrations add <Name> --project WordBuddy.Progress.Infrastructure --startup-project WordBuddy.Progress.Infrastructure --output-dir Persistence/Migrations
 ```
 
-Latest migration: `AddVocabularySrs` (`LearnerWordStates`, `ReviewLogs`,
-`VocabularyLearnerSettings`). After applying it, run Content's one-time backfill (see the Content
+Latest migration: `AddDashboard` (`VocabularySessionIssues`). Before it: `AddVocabularySrs`
+(`LearnerWordStates`, `ReviewLogs`, `VocabularyLearnerSettings`). After applying `AddVocabularySrs`, run Content's one-time backfill (see the Content
 `README.md`).
 
 ## Running in Docker / Kubernetes
