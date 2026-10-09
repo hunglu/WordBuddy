@@ -34,7 +34,7 @@ public class GetRandomVocabularyWordsForCheckQueryHandlerTests
             .Setup(r => r.GetRandomLinkedToUserAsync(ownerId, 2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWord>>(links));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(ownerId, 2));
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(ownerId, 2, AgeGroup.Adult));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().HaveCount(2);
@@ -49,7 +49,7 @@ public class GetRandomVocabularyWordsForCheckQueryHandlerTests
     public async Task GetRandomVocabularyWordsForCheckQueryHandler_HandleAsync_CountOutOfRange_ReturnsValidationFailure(int count)
     {
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result =
-            await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(Guid.NewGuid(), count));
+            await CreateHandler().HandleAsync(new GetRandomVocabularyWordsForCheckQuery(Guid.NewGuid(), count, AgeGroup.Adult));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);

@@ -19,6 +19,52 @@ public sealed class Sense : Entity
     public string Definition { get; private set; }
     public string? Example { get; private set; }
 
+    /// <summary>Maximum number of <see cref="Examples"/>.</summary>
+    public const int MaxExamples = 3;
+
+    /// <summary>Maximum length of <see cref="RegisterNote"/>.</summary>
+    public const int RegisterNoteMaxLength = 200;
+
+    /// <summary>Maximum number of items in each enrichment list.</summary>
+    public const int MaxEnrichmentItems = 10;
+
+    /// <summary>Maximum length of one example or enrichment item.</summary>
+    public const int EnrichmentItemMaxLength = 500;
+
+    private readonly List<SenseTranslation> _translations = [];
+
+    /// <summary>How the content was produced. Existing rows are <see cref="SenseOrigin.Manual"/>.</summary>
+    public SenseOrigin Origin { get; private set; }
+
+    /// <summary>Up to <see cref="MaxExamples"/> example sentences (JSON list). Never null.
+    /// <see cref="Example"/> stays the first one, so the dedupe hash is unchanged.</summary>
+    public IReadOnlyList<string> Examples { get; private set; } = [];
+
+    /// <summary>Common word combinations (JSON list). Never null.</summary>
+    public IReadOnlyList<string> Collocations { get; private set; } = [];
+
+    /// <summary>Synonyms (JSON list). Never null.</summary>
+    public IReadOnlyList<string> Synonyms { get; private set; } = [];
+
+    /// <summary>Antonyms (JSON list). Never null.</summary>
+    public IReadOnlyList<string> Antonyms { get; private set; } = [];
+
+    /// <summary>Topic tags such as <c>food</c> (JSON list). Never null.</summary>
+    public IReadOnlyList<string> TopicTags { get; private set; } = [];
+
+    /// <summary>Optional usage register note (formal, slang, ...), at most <see cref="RegisterNoteMaxLength"/>.</summary>
+    public string? RegisterNote { get; private set; }
+
+    /// <summary>Auto-fill only: the generator's hint whether the sense suits children. Shown to
+    /// approvers only; approval is still required.</summary>
+    public bool? ChildSuitableHint { get; private set; }
+
+    /// <summary>Navigation to the lexeme, when loaded.</summary>
+    public Lexeme? Lexeme { get; private set; }
+
+    /// <summary>Translations of this sense, when loaded.</summary>
+    public IReadOnlyList<SenseTranslation> Translations => _translations;
+
     /// <summary>The <see cref="Lexeme"/> this sense belongs to. Set by id only: the repository
     /// finds or creates the lexeme first.</summary>
     public Guid LexemeId { get; private set; }
@@ -136,6 +182,128 @@ public sealed class Sense : Entity
             VocabularyShareStatus.Private,
             visibleToChildren: false,
             DateTime.UtcNow));
+    }
+
+    /// <summary>Creates an auto-filled catalog sense: <see cref="VocabularySource.System"/>,
+    /// <see cref="VocabularyShareStatus.Shared"/>, <see cref="SenseOrigin.AutoFill"/>, and not
+    /// <see cref="VisibleToChildren"/> until an admin approves it. <see cref="Example"/> is the first
+    /// example. Fails on an empty definition, too many examples, or a too long note.</summary>
+    public static Result<Sense> CreateAutoFill(
+        Guid id,
+        Guid lexemeId,
+        string word,
+        string definition,
+        IReadOnlyList<string>? examples,
+        IReadOnlyList<string>? collocations = null,
+        IReadOnlyList<string>? synonyms = null,
+        IReadOnlyList<string>? antonyms = null,
+        IReadOnlyList<string>? topicTags = null,
+        string? registerNote = null,
+        bool? childSuitableHint = null)
+    {
+        string trimmedWord = (word ?? string.Empty).Trim();
+        string trimmedDefinition = (definition ?? string.Empty).Trim();
+        if (trimmedWord.Length == 0 || trimmedDefinition.Length == 0)
+        {
+            return Result.Failure<Sense>(Error.Validation(
+                "Sense.EmptyAutoFill", "An auto-filled sense needs a word and a definition."));
+        }
+
+        List<string> cleanExamples = CleanList(examples);
+        if (cleanExamples.Count > MaxExamples)
+        {
+            return Result.Failure<Sense>(Error.Validation(
+                "Sense.TooManyExamples", $"A sense may have at most {MaxExamples} examples."));
+        }
+
+        string? note = string.IsNullOrWhiteSpace(registerNote) ? null : registerNote.Trim();
+        if (note is { Length: > RegisterNoteMaxLength })
+        {
+            return Result.Failure<Sense>(Error.Validation(
+                "Sense.RegisterNoteTooLong", $"A register note may have at most {RegisterNoteMaxLength} characters."));
+        }
+
+        string? firstExample = cleanExamples.Count > 0 ? cleanExamples[0] : null;
+        Sense sense = new(
+            id,
+            trimmedWord,
+            trimmedDefinition,
+            firstExample,
+            lexemeId,
+            ComputeContentHash(trimmedWord, trimmedDefinition, firstExample),
+            audioAssetId: null,
+            VocabularySource.System,
+            SystemOwner.UserId,
+            ownerAgeGroup: null,
+            VocabularyShareStatus.Shared,
+            visibleToChildren: false,
+            DateTime.UtcNow)
+        {
+            Origin = SenseOrigin.AutoFill,
+            Examples = cleanExamples,
+            Collocations = CleanList(collocations),
+            Synonyms = CleanList(synonyms),
+            Antonyms = CleanList(antonyms),
+            TopicTags = CleanList(topicTags),
+            RegisterNote = note,
+            ChildSuitableHint = childSuitableHint,
+        };
+
+        return Result.Success(sense);
+    }
+
+    /// <summary>Trims items, drops empty and duplicate ones, caps length and count. Never null.</summary>
+    private static List<string> CleanList(IReadOnlyList<string>? items) =>
+        (items ?? [])
+            .Where(i => !string.IsNullOrWhiteSpace(i))
+            .Select(i => i.Trim())
+            .Select(i => i.Length > EnrichmentItemMaxLength ? i[..EnrichmentItemMaxLength] : i)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxEnrichmentItems)
+            .ToList();
+
+    /// <summary>Admin approval of an auto-filled sense for every child (global).</summary>
+    public Result ApproveForChildren(Guid adminId)
+    {
+        if (Origin != SenseOrigin.AutoFill || VisibleToChildren)
+        {
+            return Result.Failure(Error.Conflict(
+                "Sense.InvalidChildApproval",
+                $"Sense {Id} is not an auto-filled sense waiting for child approval."));
+        }
+
+        VisibleToChildren = true;
+        ModeratedAtUtc = DateTime.UtcNow;
+        ModeratedByUserId = adminId;
+        return Result.Success();
+    }
+
+    /// <summary>Moves a catalog sense (<see cref="VocabularySource.System"/> or
+    /// <see cref="VocabularyShareStatus.Shared"/>) to another lexeme, when auto-fill learns its part
+    /// of speech. Private learner senses are never moved.</summary>
+    public Result MoveToLexeme(Guid lexemeId)
+    {
+        if (Source != VocabularySource.System && ShareStatus != VocabularyShareStatus.Shared)
+        {
+            return Result.Failure(Error.Conflict(
+                "Sense.InvalidLexemeMove", $"Sense {Id} is private and cannot be moved."));
+        }
+
+        LexemeId = lexemeId;
+        return Result.Success();
+    }
+
+    /// <summary>Adds a translation of this sense. Replaces nothing: one translation per locale.</summary>
+    public Result AddTranslation(SenseTranslation translation)
+    {
+        if (translation.SenseId != Id || _translations.Any(t => t.Locale == translation.Locale))
+        {
+            return Result.Failure(Error.Conflict(
+                "Sense.InvalidTranslation", $"Sense {Id} already has a '{translation.Locale}' translation."));
+        }
+
+        _translations.Add(translation);
+        return Result.Success();
     }
 
     /// <summary>Checks that a learner sense has a real learner owner (not empty, not the system
@@ -271,4 +439,24 @@ public sealed class Sense : Entity
         (ShareStatus == VocabularyShareStatus.Shared && (ageGroup == AgeGroup.Adult || VisibleToChildren)) ||
         (ShareStatus != VocabularyShareStatus.Shared && Source == VocabularySource.System) ||
         (Source == VocabularySource.Learner && OwnerUserId == userId);
+
+    /// <summary>Like <see cref="IsVisibleTo(Guid, AgeGroup)"/>, plus the caller's own link: a Child
+    /// also sees an <see cref="SenseOrigin.AutoFill"/> sense whose link a supporter approved. The
+    /// adult rule is unchanged.</summary>
+    public bool IsVisibleTo(Guid userId, AgeGroup ageGroup, LearnerWord? callerLink) =>
+        IsVisibleTo(userId, ageGroup) ||
+        (ageGroup == AgeGroup.Child &&
+         Origin == SenseOrigin.AutoFill &&
+         callerLink is { ChildApprovedAtUtc: not null } link &&
+         link.UserId == userId &&
+         link.SenseId == Id);
+
+    /// <summary>Whether a Child caller must wait for approval before seeing this sense's content
+    /// through their own link: an unapproved <see cref="SenseOrigin.AutoFill"/> sense. Always
+    /// <see langword="false"/> for adults.</summary>
+    public bool IsAwaitingChildApproval(AgeGroup ageGroup, LearnerWord? callerLink) =>
+        ageGroup == AgeGroup.Child &&
+        Origin == SenseOrigin.AutoFill &&
+        !VisibleToChildren &&
+        callerLink?.ChildApprovedAtUtc is null;
 }

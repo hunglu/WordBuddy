@@ -22,7 +22,7 @@ public class GetMyVocabularyWordsQueryHandlerTests
             .Setup(r => r.GetLinkedToUserAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWord>>([link]));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(userId));
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(userId, AgeGroup.Adult));
 
         result.IsSuccess.Should().BeTrue();
         return result.Value.Should().ContainSingle().Subject;
@@ -37,7 +37,8 @@ public class GetMyVocabularyWordsQueryHandlerTests
         PersonalVocabularyWordDto dto = await GetSingleAsync(ownerId, new LearnerWord(Guid.NewGuid(), ownerId, word, isAuthor: true));
 
         dto.Should().BeEquivalentTo(new PersonalVocabularyWordDto(
-            word.Id, ownerId, "apple", "a fruit", "eg", VocabularyShareStatus.PendingReview, false, word.CreatedAtUtc, IsAuthor: true));
+            word.Id, ownerId, "apple", "a fruit", "eg", VocabularyShareStatus.PendingReview, false, word.CreatedAtUtc, IsAuthor: true,
+            Examples: ["eg"], Translations: [], Collocations: [], Synonyms: [], Antonyms: [], TopicTags: []));
     }
 
     [Fact]

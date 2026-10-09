@@ -22,6 +22,9 @@ public sealed class LearnerWordConfiguration : IEntityTypeConfiguration<LearnerW
             .HasDefaultValue(LearnerWordAddedBy.Learner)
             .IsRequired();
         builder.Property(l => l.PersonalContext).HasMaxLength(LearnerWord.PersonalContextMaxLength);
+        builder.Property(l => l.RequiresChildApproval).HasDefaultValue(false).IsRequired();
+        builder.Property(l => l.ChildApprovedAtUtc);
+        builder.Property(l => l.ChildApprovedByUserId);
 
         builder.HasIndex(l => new { l.UserId, l.SenseId }).IsUnique();
 

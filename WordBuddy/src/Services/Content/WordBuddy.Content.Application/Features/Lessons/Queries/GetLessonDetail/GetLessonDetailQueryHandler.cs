@@ -46,7 +46,7 @@ public sealed class GetLessonDetailQueryHandler : IQueryHandler<GetLessonDetailQ
                 .Where(link => link.Sense is not null)
                 .OrderBy(link => link.SortOrder)
                 .Select(link => link.Sense!)
-                .Select(v => new VocabularyItemDto(v.Id, v.Word, v.Definition, v.Example ?? string.Empty, ToDto(v.Audio)))
+                .Select(v => ToVocabularyItem(v, query.RequestingAgeGroup))
                 .ToList(),
             lesson.GrammarRules
                 .Select(g => new GrammarRuleDto(g.Id, g.Title, g.Explanation, g.Examples))
@@ -57,6 +57,23 @@ public sealed class GetLessonDetailQueryHandler : IQueryHandler<GetLessonDetailQ
 
         _logger.LogInformation("GetLessonDetailQuery succeeded: LessonId={LessonId}", lesson.Id);
         return Result.Success(dto);
+    }
+
+    /// <summary>Lesson word with WB-25 enrichment. A Child waiting for approval of an auto-filled
+    /// word gets no content.</summary>
+    private static VocabularyItemDto ToVocabularyItem(Sense v, AgeGroup ageGroup)
+    {
+        if (v.IsAwaitingChildApproval(ageGroup, callerLink: null))
+        {
+            return VocabularyItemDto.WithDetails(
+                new VocabularyItemDto(v.Id, v.Word, string.Empty, string.Empty, null), SenseDetails.Empty(v.Origin)) with
+            {
+                AwaitingApproval = true,
+            };
+        }
+
+        return VocabularyItemDto.WithDetails(
+            new VocabularyItemDto(v.Id, v.Word, v.Definition, v.Example ?? string.Empty, ToDto(v.Audio)), SenseDetails.From(v));
     }
 
     private static MediaAssetDto? ToDto(MediaAsset? asset) =>

@@ -1,16 +1,15 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { AutofillApprovalsPanel } from '../components/autofill/AutofillApprovalsPanel'
 import { usePendingVocabularyModeration, useModerateVocabularyWord } from '../hooks/useVocabulary'
 import { useAuthStore } from '../store/authStore'
 
 export function VocabularyModerationPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
-
-  const { data: words, isLoading, isError } = usePendingVocabularyModeration()
-  const moderate = useModerateVocabularyWord()
-  const [visibleToChildrenByWord, setVisibleToChildrenByWord] = useState<Record<string, boolean>>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab: 'shared' | 'autofill' = searchParams.get('tab') === 'autofill' ? 'autofill' : 'shared'
 
   // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard, not the
   // real enforcement.
@@ -21,6 +20,43 @@ export function VocabularyModerationPage(): ReactElement {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-3xl font-extrabold text-wb-ink">Vocabulary Moderation</h1>
+
+      <div role="tablist" className="mt-4 flex gap-2">
+        {TABS.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setSearchParams(key === 'shared' ? {} : { tab: key })}
+            className={`rounded-wb-md px-4 py-2 text-sm font-bold ${
+              tab === key ? 'bg-wb-primary text-wb-on-primary' : 'bg-wb-primary-soft text-wb-ink hover:bg-wb-primary-soft-hover'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'autofill' ? <AutofillApprovalsPanel /> : <SharedWordsQueue />}
+    </motion.div>
+  )
+}
+
+/** Tabs of the moderation page (URL `?tab=`). */
+const TABS = [
+  ['shared', 'Shared words'],
+  ['autofill', 'Auto-filled words'],
+] as const
+
+/** The original moderation queue: learner words asking to join the shared pool. */
+function SharedWordsQueue(): ReactElement {
+  const { data: words, isLoading, isError } = usePendingVocabularyModeration()
+  const moderate = useModerateVocabularyWord()
+  const [visibleToChildrenByWord, setVisibleToChildrenByWord] = useState<Record<string, boolean>>({})
+
+  return (
+    <>
       <p className="mt-2 text-wb-ink-muted">Words awaiting approval before they join the shared pool.</p>
 
       {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading the moderation queue…</p>}
@@ -75,6 +111,6 @@ export function VocabularyModerationPage(): ReactElement {
           })}
         </div>
       )}
-    </motion.div>
+    </>
   )
 }

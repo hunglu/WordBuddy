@@ -1,7 +1,7 @@
 # Content — database diagram
 
 Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
-last migration: `20261008023500_AddSupportLinkProjection`
+last migration: `20261009023746_AddVocabularyAutofill`
 
 ```mermaid
 erDiagram
@@ -77,6 +77,14 @@ erDiagram
         datetime CreatedAtUtc
         datetime ModeratedAtUtc "nullable"
         guid ModeratedByUserId "nullable"
+        string Origin "Manual | AutoFill, max 20, default Manual"
+        string Examples "JSON string list (0-3), default []"
+        string Collocations "JSON string list, default []"
+        string Synonyms "JSON string list, default []"
+        string Antonyms "JSON string list, default []"
+        string TopicTags "JSON string list, default []"
+        string RegisterNote "nullable, max 200"
+        bool ChildSuitableHint "nullable; auto-fill hint for approvers"
     }
     SenseTranslations {
         guid Id PK
@@ -92,6 +100,9 @@ erDiagram
         bool IsAuthor
         string AddedBy "Learner | Supporter | List, max 20"
         string PersonalContext "nullable, max 500"
+        bool RequiresChildApproval "default false; child linked an unapproved auto-fill sense"
+        datetime ChildApprovedAtUtc "nullable; supporter approval"
+        guid ChildApprovedByUserId "nullable; supporter (Identity user)"
     }
     LessonSenses {
         guid LessonId PK, FK
@@ -112,7 +123,8 @@ erDiagram
 | `UX_Lexemes_NormalizedLemma_PartOfSpeech` | `NormalizedLemma`, `PartOfSpeech` | unique, **no filter** (one `NULL` POS per lemma) |
 | `IX_Lexemes_UkAudioAssetId`, `IX_Lexemes_UsAudioAssetId` | asset ids | — |
 | `UX_Senses_ContentHash_OwnerUserId_Learner` | `ContentHash`, `OwnerUserId` | unique, `[Source] = 'Learner'` |
-| `IX_Senses_*` | `ContentHash`; `LexemeId`; `OwnerUserId`; `ShareStatus`; `AudioAssetId`; `ImageAssetId` | — |
+| `IX_Senses_LexemeId_Origin` | `LexemeId`, `Origin` | — (replaces `IX_Senses_LexemeId`) |
+| `IX_Senses_*` | `ContentHash`; `OwnerUserId`; `ShareStatus`; `AudioAssetId`; `ImageAssetId` | — |
 | `UX_SenseTranslations_SenseId_Locale` | `SenseId`, `Locale` | unique |
 | `IX_LearnerWords_UserId_SenseId` | `UserId`, `SenseId` | unique |
 | `IX_LearnerWords_SenseId` | `SenseId` | — |
@@ -124,7 +136,8 @@ erDiagram
 
 - `UserId`, `OwnerUserId`, `ModeratedByUserId` are Identity ids — no FK.
 - `Senses.Id` = the former `VocabularyWords.Id` (kept by the rename). Progress references it (`VocabularyRecallStats.VocabularyWordId`); sense audio is `vocab-{id}-{locale}.mp3`, so sense ids must stay stable.
-- Lexeme audio is `lexeme-{lexemeId}-{locale}.mp3` (`en-GB` / `en-US`); not written yet.
+- Lexeme audio is `lexeme-{lexemeId}-{locale}.mp3` (`en-GB` / `en-US`), written by auto-fill (WB-25) under `audio/`.
+- Auto-fill senses (WB-25): `Origin = AutoFill`, `Source = System`, `ShareStatus = Shared`, `VisibleToChildren = false` until an admin approves. A supporter approval sets `LearnerWords.ChildApprovedAtUtc` for one child only. Existing rows: `Origin = Manual`, lists `[]`.
 - Feature rules for these tables: `docs/features/vocabulary.md`.
 - `LearnerWords` inserts/deletes write `OutboxMessage` rows in the same transaction (events `LearnerWordAdded` / `LearnerWordRemoved`, ids and timestamps only). Content also consumes the support-link events, so `InboxState` now holds their dedupe rows.
 - `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.

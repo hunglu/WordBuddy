@@ -52,7 +52,7 @@ public sealed class GetSensesByIdsQueryHandler : IQueryHandler<GetSensesByIdsQue
         }
 
         IReadOnlyList<SenseReviewDto> dtos = candidatesResult.Value
-            .Where(c => c.Sense.IsVisibleTo(query.RequestingUserId, query.RequestingAgeGroup))
+            .Where(c => c.Sense.IsVisibleTo(query.RequestingUserId, query.RequestingAgeGroup, c.CallerLink))
             .Select(c => ToDto(c, query.RequestingUserId))
             .ToList();
 

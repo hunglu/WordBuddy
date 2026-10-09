@@ -19,3 +19,4 @@ One bullet per lesson, newest last. One line, generic (not a run log), no secret
 ## Entries
 
 - 2026-10-08 `WB-24_learner-support-links` (test) — MassTransit `ConfigureEndpoints` names queues after the consumer class, so two services with same-named consumers share one queue and each event reaches only one of them; prefix endpoint names per service and check with `rabbitmqctl list_queues name consumers` → suggested home: WordBuddy/CLAUDE.md (Messaging)
+- 2026-10-09 `WB-25_vocabulary-autofill` (test) — when a feature's happy path depends on a paid external API with no key in the local stack, the plan must name a keyless E2E path (seed endpoint, fake-client switch, or catalog fixture) or the API E2E cannot go green → suggested home: .claude/agents/planner.md (Tests)

@@ -48,7 +48,10 @@ public sealed class GetRandomVocabularyWordsForCheckQueryHandler : IQueryHandler
             return Result.Failure<IReadOnlyList<PersonalVocabularyWordDto>>(wordsResult.Error);
         }
 
-        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(PersonalVocabularyWordMapper.ToDto).ToList();
+        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value
+            .Where(link => link.Sense is null || !link.Sense.IsAwaitingChildApproval(query.RequestingAgeGroup, link))
+            .Select(link => PersonalVocabularyWordMapper.ToDto(link, query.RequestingAgeGroup))
+            .ToList();
 
         _logger.LogInformation("GetRandomVocabularyWordsForCheckQuery succeeded: Count={Count}", dtos.Count);
         return Result.Success(dtos);

@@ -31,7 +31,7 @@ public sealed class GetMyVocabularyWordsQueryHandler : IQueryHandler<GetMyVocabu
             return Result.Failure<IReadOnlyList<PersonalVocabularyWordDto>>(wordsResult.Error);
         }
 
-        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(PersonalVocabularyWordMapper.ToDto).ToList();
+        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(link => PersonalVocabularyWordMapper.ToDto(link, query.RequestingAgeGroup)).ToList();
 
         _logger.LogInformation("GetMyVocabularyWordsQuery succeeded: Count={Count}", dtos.Count);
         return Result.Success(dtos);

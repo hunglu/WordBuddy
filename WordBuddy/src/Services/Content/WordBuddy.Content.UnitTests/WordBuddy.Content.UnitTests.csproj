@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\WordBuddy.Content.Application\WordBuddy.Content.Application.csproj" />
     <ProjectReference Include="..\WordBuddy.Content.Domain\WordBuddy.Content.Domain.csproj" />
+    <ProjectReference Include="..\WordBuddy.Content.Infrastructure\WordBuddy.Content.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

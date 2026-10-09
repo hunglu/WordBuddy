@@ -97,9 +97,16 @@ public sealed class VocabularyStorageEndpointsTests
         JsonElement[] items = lesson.GetProperty("vocabularyItems").EnumerateArray().ToArray();
         items.Select(i => i.GetProperty("word").GetString()).Should().Equal("Dog", "Cat", "Bird", "Fish");
         items.Should().OnlyContain(i =>
-            i.EnumerateObject().Select(p => p.Name).SequenceEqual(new[] { "id", "word", "definition", "example", "audio" }) &&
+            i.EnumerateObject().Select(p => p.Name).SequenceEqual(LessonItemJsonProperties) &&
             !string.IsNullOrEmpty(i.GetProperty("example").GetString()));
     }
+
+    /// <summary>Lesson word JSON: the original five properties first, in order, then the WB-25
+    /// auto-fill additions.</summary>
+    private static readonly string[] LessonItemJsonProperties =
+        ["id", "word", "definition", "example", "audio",
+         "partOfSpeech", "ipaUk", "ipaUs", "audioUkUrl", "audioUsUrl", "examples", "translations",
+         "collocations", "synonyms", "antonyms", "topicTags", "registerNote", "origin", "awaitingApproval"];
 
     /// <summary>The Lexeme/Sense split must not change lesson JSON: same property names in the same
     /// order, items ordered by <c>SortOrder</c> (the seed order).</summary>
@@ -114,7 +121,7 @@ public sealed class VocabularyStorageEndpointsTests
         items.Should().HaveCount(4);
         foreach (JsonElement item in items)
         {
-            item.EnumerateObject().Select(p => p.Name).Should().Equal("id", "word", "definition", "example", "audio");
+            item.EnumerateObject().Select(p => p.Name).Should().Equal(LessonItemJsonProperties);
         }
 
         items.Select(i => i.GetProperty("word").GetString()).Should().Equal("Dog", "Cat", "Bird", "Fish");

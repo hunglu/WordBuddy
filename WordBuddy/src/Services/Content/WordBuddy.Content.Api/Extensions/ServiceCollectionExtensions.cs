@@ -11,6 +11,9 @@ namespace WordBuddy.Content.Api.Extensions;
 
 internal static class ServiceCollectionExtensions
 {
+    /// <summary>Adults and admins pass; Child accounts get 403.</summary>
+    public const string AdultOrAdminPolicy = "AdultOrAdmin";
+
     /// <summary>
     /// Configures JWT bearer validation using the same signing key/issuer Identity uses to issue
     /// tokens (<c>Jwt:Secret</c>/<c>Jwt:Issuer</c> in config — this service never issues tokens
@@ -50,6 +53,11 @@ internal static class ServiceCollectionExtensions
             options.AddPolicy("CanShareVocabulary", policy => policy.RequireAssertion(context =>
                 string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
+
+            // WB-25: approving auto-filled words for children — never by a child account.
+            options.AddPolicy(AdultOrAdminPolicy, policy => policy.RequireAssertion(context =>
+                string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase)));
         });
         services.AddSupportLinkAuthorizationHandlers();
 
@@ -57,9 +65,9 @@ internal static class ServiceCollectionExtensions
     }
 
     /// <summary>Registers the <see cref="ContentDbContext"/> and Infrastructure-layer services.</summary>
-    public static IServiceCollection AddWordBuddyDatabase(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddWordBuddyDatabase(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
-        services.AddInfrastructure(configuration);
+        services.AddInfrastructure(configuration, isDevelopment);
         return services;
     }
 

@@ -21,6 +21,7 @@ internal static class WebApplicationExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseRateLimiter();
         app.MapWordBuddyHealthChecks();
         app.MapControllers();
     }

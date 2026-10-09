@@ -54,7 +54,7 @@ public sealed class LessonsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetLessonDetail(Guid id, CancellationToken ct)
     {
-        Result<LessonDetailDto> result = await _getLessonDetail.HandleAsync(new GetLessonDetailQuery(id), ct);
+        Result<LessonDetailDto> result = await _getLessonDetail.HandleAsync(new GetLessonDetailQuery(id, User.GetAgeGroup()), ct);
         if (result.IsFailure)
         {
             _logger.LogWarning("GetLessonDetail not found: LessonId={LessonId}", id);

@@ -257,7 +257,10 @@ public sealed class PersonalVocabularyEndpointsTests
         otherPool.Should().ContainSingle(w => w.Id == id).Which.IsMine.Should().BeFalse();
     }
     private static readonly string[] WordJsonProperties =
-        ["id", "ownerUserId", "word", "definition", "example", "shareStatus", "visibleToChildren", "createdAtUtc", "isAuthor", "isMine"];
+        ["id", "ownerUserId", "word", "definition", "example", "shareStatus", "visibleToChildren", "createdAtUtc", "isAuthor", "isMine",
+         // WB-25 auto-fill: added fields only, old ones unchanged.
+         "partOfSpeech", "ipaUk", "ipaUs", "audioUkUrl", "audioUsUrl", "examples", "translations",
+         "collocations", "synonyms", "antonyms", "topicTags", "registerNote", "origin", "awaitingApproval"];
 
     private static async Task<JsonElement[]> GetJsonArrayAsync(HttpClient client, string url)
     {

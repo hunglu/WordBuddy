@@ -4,3 +4,8 @@ services:
   identity-api:
     environment:
       SupportLinks__UnlinkOverrideWaitDays: "0"
+  # WB-25: keyless, deterministic auto-fill (Development only). Known words: serendipity, apple,
+  # happy, run. Any other word returns autofillUnavailable = true.
+  content-api:
+    environment:
+      Autofill__UseFakeClients: "true"

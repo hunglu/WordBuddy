@@ -19,8 +19,14 @@ export function VocabularyList({ items }: { items: VocabularyItem[] }): ReactEle
               </button>
             )}
           </div>
-          <p className="mt-1 text-wb-ink">{item.definition}</p>
-          <p className="mt-1 text-sm italic text-wb-ink-muted">"{item.example}"</p>
+          {item.awaitingApproval ? (
+            <p className="mt-1 text-sm font-semibold text-wb-ink-muted">Waiting for approval</p>
+          ) : (
+            <>
+              <p className="mt-1 text-wb-ink">{item.definition}</p>
+              <p className="mt-1 text-sm italic text-wb-ink-muted">"{item.example}"</p>
+            </>
+          )}
         </li>
       ))}
     </ul>

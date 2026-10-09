@@ -86,7 +86,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     [HttpGet("mine")]
     public async Task<IActionResult> GetMyWords(CancellationToken ct)
     {
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getMyWords.HandleAsync(new GetMyVocabularyWordsQuery(User.GetUserId()), ct);
+        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getMyWords.HandleAsync(new GetMyVocabularyWordsQuery(User.GetUserId(), User.GetAgeGroup()), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
@@ -152,7 +152,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     public async Task<IActionResult> GetRandomWordsForCheck([FromQuery] int count, CancellationToken ct)
     {
         Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getRandomForCheck.HandleAsync(
-            new GetRandomVocabularyWordsForCheckQuery(User.GetUserId(), count), ct);
+            new GetRandomVocabularyWordsForCheckQuery(User.GetUserId(), count, User.GetAgeGroup()), ct);
 
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
