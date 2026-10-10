@@ -39,6 +39,8 @@ public sealed class ContentDbContext : DbContext
     public DbSet<LessonSense> LessonSenses => Set<LessonSense>();
     public DbSet<SupportLinkProjection> SupportLinkProjections => Set<SupportLinkProjection>();
     public DbSet<LearnerGroupMemberProjection> LearnerGroupMemberProjections => Set<LearnerGroupMemberProjection>();
+
+    public DbSet<DeletedLearnerGroup> DeletedLearnerGroups => Set<DeletedLearnerGroup>();
     public DbSet<GroupWordAssignment> GroupWordAssignments => Set<GroupWordAssignment>();
 
     /// <inheritdoc />

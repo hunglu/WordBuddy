@@ -15,6 +15,12 @@ public interface ILearnerGroupProjectionRepository
     /// <summary>Returns every row of a group (read-only).</summary>
     Task<IReadOnlyList<LearnerGroupMemberProjection>> GetGroupAsync(Guid groupId, CancellationToken ct = default);
 
+    /// <summary>Returns the tracked tombstone of a deleted group, or <see langword="null"/>.</summary>
+    Task<DeletedLearnerGroup?> GetDeletedGroupTrackedAsync(Guid groupId, CancellationToken ct = default);
+
+    /// <summary>Stages a new tombstone.</summary>
+    Task AddDeletedGroupAsync(DeletedLearnerGroup tombstone, CancellationToken ct = default);
+
     /// <summary>Stages a new row.</summary>
     Task AddAsync(LearnerGroupMemberProjection projection, CancellationToken ct = default);
 

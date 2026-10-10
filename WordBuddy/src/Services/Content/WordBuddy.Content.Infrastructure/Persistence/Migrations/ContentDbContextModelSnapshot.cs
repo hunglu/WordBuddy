@@ -228,6 +228,19 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.ToTable("DailyPhrases", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Content.Domain.DeletedLearnerGroup", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId");
+
+                    b.ToTable("DeletedLearnerGroups", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Content.Domain.GrammarRule", b =>
                 {
                     b.Property<Guid>("Id")

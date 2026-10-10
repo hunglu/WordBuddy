@@ -12,7 +12,7 @@ using WordBuddy.Content.Infrastructure.Persistence;
 namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ContentDbContext))]
-    [Migration("20261009153814_AddLearnerGroups")]
+    [Migration("20261010142457_AddLearnerGroups")]
     partial class AddLearnerGroups
     {
         /// <inheritdoc />
@@ -229,6 +229,19 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.HasIndex("VideoAssetId");
 
                     b.ToTable("DailyPhrases", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Content.Domain.DeletedLearnerGroup", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId");
+
+                    b.ToTable("DeletedLearnerGroups", (string)null);
                 });
 
             modelBuilder.Entity("WordBuddy.Content.Domain.GrammarRule", b =>

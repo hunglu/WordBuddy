@@ -12,7 +12,7 @@ using WordBuddy.Progress.Infrastructure.Persistence;
 namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ProgressDbContext))]
-    [Migration("20261009154109_AddLearnerGroupProjection")]
+    [Migration("20261010142511_AddLearnerGroupProjection")]
     partial class AddLearnerGroupProjection
     {
         /// <inheritdoc />
@@ -193,6 +193,19 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.HasIndex("Created");
 
                     b.ToTable("OutboxState");
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.DeletedLearnerGroup", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId");
+
+                    b.ToTable("DeletedLearnerGroups", (string)null);
                 });
 
             modelBuilder.Entity("WordBuddy.Progress.Domain.LearnerGroupMemberProjection", b =>

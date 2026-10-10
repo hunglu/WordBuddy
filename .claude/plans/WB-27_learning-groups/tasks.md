@@ -23,14 +23,14 @@
 
 - [x] `LearnerGroupMemberProjection` + consumers + `ApplyLearnerGroupEvent` command — idempotent, ignores older events — Content `LearnerGroupMemberProjection`, `Features/Groups/Commands/ApplyLearnerGroupEvent`, `LearnerGroupEventConsumers`, `LearnerGroupQueues`, repository, config
 - [x] `LearnerWord.CreateBySupporter` — sets `AddedBy = Supporter` — `LearnerWord` (also new `AddedByUserId`, so `LearnerWordAdded.AddedBy` is the supporter), `LearnerWordEventCollector`
-- [x] `GroupWordAssignment` entity + `AddLearnerGroups` migration — tables created — `GroupWordAssignment`, config, `AddedByUserId` column, migration `20261009153814_AddLearnerGroups`, `docs/database-diagram/content.md`
+- [x] `GroupWordAssignment` entity + `AddLearnerGroups` migration — tables created — `GroupWordAssignment`, config, `AddedByUserId` column, migration `20261010142457_AddLearnerGroups`, `docs/database-diagram/content.md`
 - [x] Command `AssignWordsToGroup` (+ validator, max 50) — adds missing links per active member, child approval set, blocked senses skipped, `LearnerWordAdded` per new link, counts returned — `Features/Groups/Commands/AssignWordsToGroup`, `IGroupWordRepository`, `GroupWordRepository`, `ISupportLinkProjectionRepository.GetLearnersWithActiveLinkAsync`
 - [x] Query `GetGroupWordAssignments` — owner only — `Features/Groups/Queries/GetGroupWordAssignments`
 - [x] `GroupVocabularyController` (`api/vocabulary/groups/{groupId}`) — `POST words`, `GET words`, 403 for non-owner — `GroupVocabularyController`, `AssignWordsToGroupRequest`, Content `ResultExtensions` (`.Forbidden` → 403)
 
 ## Backend — Progress
 
-- [x] `LearnerGroupMemberProjection` + consumers + `ApplyLearnerGroupEvent` + `AddLearnerGroupProjection` migration — idempotent — Progress projection, command, consumers, queues, migration `20261009154109_AddLearnerGroupProjection`, `docs/database-diagram/progress.md`
+- [x] `LearnerGroupMemberProjection` + consumers + `ApplyLearnerGroupEvent` + `AddLearnerGroupProjection` migration — idempotent — Progress projection, command, consumers, queues, migration `20261010142511_AddLearnerGroupProjection`, `docs/database-diagram/progress.md`
 - [x] `IDashboardReadRepository` batched `...ForUsersAsync` reads — one query per metric for all members — `IDashboardReadRepository`, `DashboardReadRepository` (4 `...ForUsersAsync` methods)
 - [x] Query `GetGroupDashboard` (+ validator `Days` 7/30/90) — per-member rows via `DashboardCalculator`, filtered by active support link, cached 5 min — `Features/Groups/Queries/GetGroupDashboard`, `DashboardCalculator.CalculateGroup`, `GroupDashboardDtos`, `ISupportLinkProjectionRepository.GetLearnersWithActiveLinkAsync`
 - [x] `CanManageGroup` policy + `GET api/progress/dashboard/groups/{groupId}` — 403 for non-owner — `Authorization/GroupAuthorization.cs`, `DashboardController.GetGroup`, Progress `ResultExtensions` (`.Forbidden` → 403)
@@ -61,3 +61,11 @@
 - [x] Progress integration: group dashboard endpoint — owner 200, other supporter 403 — `IntegrationTests/GroupDashboardEndpointsTests.cs` (ran green on localdb)
 - [x] E2E API (`e2e/api`): teacher creates group, adds adult + child, assigns list once, both learners have the words; revoke removes learner — moved to `/test` (Sam, 2026-10-10)
 - [x] E2E UI (`e2e/ui`): create group, add members, assign words, view group dashboard; child shown by alias + avatar only — moved to `/test` (Sam, 2026-10-10)
+
+## Fix round 1
+
+- [x] Finding 1 (major): `DeletedLearnerGroup` tombstone (group id + deleted-at) in Content and Progress; `LearnerGroupDeleted` writes it; member events at or before the delete are ignored — Content/Progress `Domain/DeletedLearnerGroup.cs`, `DeletedLearnerGroupConfiguration`, DbContexts, `ILearnerGroupProjectionRepository` + implementation, `ApplyLearnerGroupEventCommandHandler`
+- [x] Regenerate the branch's own migrations with the new table (not applied anywhere) — Content `20261010142457_AddLearnerGroups`, Progress `20261010142511_AddLearnerGroupProjection` + snapshots; `docs/database-diagram/{content,progress,README}.md`
+- [x] Unit tests "delete arrives before add" (no active row, replay, event after delete, delete after add) — Content + Progress `ApplyLearnerGroupEventCommandHandlerTests.cs`
+- [x] Finding 2 (nit): dashboard cache — left as is. Key has `days` x client UTC offset; `IDistributedCache` has no prefix delete, so invalidation needs ~300 key removals or a version key. TTL is 5 min, owner check runs before the cache (no leak). Already listed as a scope suggestion (dashboard cache invalidation)
+- [x] Finding 3 (nit): group detail cache alias/avatar — left as is. A profile change would have to find every group of the user and clear each key; expiry is short and absolute. Member add/remove already clears the key

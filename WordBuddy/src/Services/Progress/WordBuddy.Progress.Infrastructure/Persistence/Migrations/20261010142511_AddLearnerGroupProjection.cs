@@ -12,6 +12,18 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "DeletedLearnerGroups",
+                columns: table => new
+                {
+                    GroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeletedLearnerGroups", x => x.GroupId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "LearnerGroupMemberProjections",
                 columns: table => new
                 {
@@ -35,6 +47,9 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "DeletedLearnerGroups");
+
             migrationBuilder.DropTable(
                 name: "LearnerGroupMemberProjections");
         }

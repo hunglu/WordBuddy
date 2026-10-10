@@ -14,6 +14,7 @@ public class ApplyLearnerGroupEventCommandHandlerTests
 
     private readonly Mock<ILearnerGroupProjectionRepository> _repository = new();
     private readonly List<LearnerGroupMemberProjection> _rows = [];
+    private readonly List<DeletedLearnerGroup> _tombstones = [];
     private readonly Guid _groupId = Guid.NewGuid();
     private readonly Guid _ownerId = Guid.NewGuid();
     private readonly Guid _learnerId = Guid.NewGuid();
@@ -29,6 +30,11 @@ public class ApplyLearnerGroupEventCommandHandlerTests
             .ReturnsAsync((Guid group, CancellationToken _) => _rows.Where(p => p.GroupId == group).ToList());
         _repository.Setup(r => r.AddAsync(It.IsAny<LearnerGroupMemberProjection>(), It.IsAny<CancellationToken>()))
             .Callback<LearnerGroupMemberProjection, CancellationToken>((p, _) => _rows.Add(p))
+            .Returns(Task.CompletedTask);
+        _repository.Setup(r => r.GetDeletedGroupTrackedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid group, CancellationToken _) => _tombstones.FirstOrDefault(g => g.GroupId == group));
+        _repository.Setup(r => r.AddDeletedGroupAsync(It.IsAny<DeletedLearnerGroup>(), It.IsAny<CancellationToken>()))
+            .Callback<DeletedLearnerGroup, CancellationToken>((g, _) => _tombstones.Add(g))
             .Returns(Task.CompletedTask);
         _repository.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
     }
@@ -101,5 +107,51 @@ public class ApplyLearnerGroupEventCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task ApplyLearnerGroupEventCommandHandler_HandleAsync_DeletedBeforeActivatedLeavesNoActiveRow()
+    {
+        ApplyLearnerGroupEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(new ApplyLearnerGroupEventCommand(_groupId, _ownerId, null, false, T0.AddHours(1)));
+
+        (await handler.HandleAsync(Member(isActive: true, T0))).IsSuccess.Should().BeTrue();
+
+        _rows.Should().NotContain(p => p.IsActive);
+        _tombstones.Should().ContainSingle(g => g.GroupId == _groupId && g.DeletedAtUtc == T0.AddHours(1));
+    }
+
+    [Fact]
+    public async Task ApplyLearnerGroupEventCommandHandler_HandleAsync_DeletedBeforeActivatedReplayedChangesNothing()
+    {
+        ApplyLearnerGroupEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(new ApplyLearnerGroupEventCommand(_groupId, _ownerId, null, false, T0.AddHours(1)));
+        await handler.HandleAsync(new ApplyLearnerGroupEventCommand(_groupId, _ownerId, null, false, T0.AddHours(1)));
+
+        _tombstones.Should().ContainSingle();
+        _repository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplyLearnerGroupEventCommandHandler_HandleAsync_EventAfterDeleteIsApplied()
+    {
+        ApplyLearnerGroupEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(new ApplyLearnerGroupEventCommand(_groupId, _ownerId, null, false, T0));
+
+        await handler.HandleAsync(Member(isActive: true, T0.AddMinutes(1)));
+
+        _rows.Should().ContainSingle(p => p.IsActive);
+    }
+
+    [Fact]
+    public async Task ApplyLearnerGroupEventCommandHandler_HandleAsync_DeleteAfterActivatedStillDeactivates()
+    {
+        ApplyLearnerGroupEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(Member(isActive: true, T0));
+
+        await handler.HandleAsync(new ApplyLearnerGroupEventCommand(_groupId, _ownerId, null, false, T0.AddHours(1)));
+
+        _rows.Should().ContainSingle(p => !p.IsActive);
+        _tombstones.Should().ContainSingle();
     }
 }

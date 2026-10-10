@@ -192,6 +192,19 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.ToTable("OutboxState");
                 });
 
+            modelBuilder.Entity("WordBuddy.Progress.Domain.DeletedLearnerGroup", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId");
+
+                    b.ToTable("DeletedLearnerGroups", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Progress.Domain.LearnerGroupMemberProjection", b =>
                 {
                     b.Property<Guid>("GroupId")

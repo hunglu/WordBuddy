@@ -1,7 +1,7 @@
 # Content — database diagram
 
 Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
-last migration: `20261009153814_AddLearnerGroups`
+last migration: `20261010142457_AddLearnerGroups`
 
 ```mermaid
 erDiagram
@@ -117,6 +117,10 @@ erDiagram
         bool IsActive
         datetime UpdatedAtUtc "time of last applied event"
     }
+    DeletedLearnerGroups {
+        guid GroupId PK "Identity LearnerGroups.Id"
+        datetime DeletedAtUtc "time of the delete event"
+    }
     LearnerGroupMemberProjections {
         guid GroupId PK "Identity LearnerGroups.Id"
         guid LearnerId PK "Identity user"
@@ -149,6 +153,7 @@ erDiagram
 | `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
 | `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
 | `PK_LearnerGroupMemberProjections` | `GroupId`, `LearnerId` | yes (composite key) |
+| `PK_DeletedLearnerGroups` | `GroupId` | yes (key) |
 | `IX_GroupWordAssignments_GroupId` | `GroupId` | — |
 
 - `UserId`, `OwnerUserId`, `ModeratedByUserId` are Identity ids — no FK.
@@ -158,7 +163,7 @@ erDiagram
 - Feature rules for these tables: `docs/features/vocabulary.md`.
 - `LearnerWords` inserts/deletes write `OutboxMessage` rows in the same transaction (events `LearnerWordAdded` / `LearnerWordRemoved`, ids and timestamps only). Content also consumes the support-link events, so `InboxState` now holds their dedupe rows.
 - `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.
-- `LearnerGroupMemberProjections` (WB-27) is filled only by the Identity events `LearnerGroupMemberActivated` / `LearnerGroupMemberRemoved` / `LearnerGroupDeleted` (upsert by group + learner, older events skipped). A group has no row of its own: the owner is read from its member rows. `GroupWordAssignments` is the history of `AssignWordsToGroup`.
+- `LearnerGroupMemberProjections` (WB-27) is filled only by the Identity events `LearnerGroupMemberActivated` / `LearnerGroupMemberRemoved` / `LearnerGroupDeleted` (upsert by group + learner, older events skipped). A group has no row of its own: the owner is read from its member rows. `GroupWordAssignments` is the history of `AssignWordsToGroup`. `DeletedLearnerGroups` is a tombstone written by `LearnerGroupDeleted`: member events at or before its time are ignored, so a delete that arrives first cannot leave an active member.
 
 ## MassTransit messaging tables (WB-21)
 

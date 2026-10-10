@@ -10,7 +10,8 @@ namespace WordBuddy.Content.Application.Features.Groups.Commands.ApplyLearnerGro
 
 /// <summary>
 /// Idempotent upsert by (<c>GroupId</c>, <c>LearnerId</c>). A replay or an event older than the stored
-/// state changes nothing (still a success). A whole-group event deactivates every known member.
+/// state changes nothing (still a success). A whole-group event deactivates every known member and
+/// stores a tombstone, so member events at or before the delete are ignored even if they arrive later.
 /// </summary>
 public sealed class ApplyLearnerGroupEventCommandHandler : ICommandHandler<ApplyLearnerGroupEventCommand>
 {
@@ -61,6 +62,13 @@ public sealed class ApplyLearnerGroupEventCommandHandler : ICommandHandler<Apply
 
     private async Task<bool> ApplyToMemberAsync(ApplyLearnerGroupEventCommand command, Guid learnerId, CancellationToken ct)
     {
+        DeletedLearnerGroup? tombstone = await _repository.GetDeletedGroupTrackedAsync(command.GroupId, ct);
+        if (tombstone is not null && command.OccurredAtUtc <= tombstone.DeletedAtUtc)
+        {
+            _logger.LogInformation("ApplyLearnerGroupEventCommand ignored: GroupId={GroupId} was deleted after this event", command.GroupId);
+            return false;
+        }
+
         Result<LearnerGroupMemberProjection> existing = await _repository.GetTrackedAsync(command.GroupId, learnerId, ct);
         if (existing.IsSuccess)
         {
@@ -75,8 +83,19 @@ public sealed class ApplyLearnerGroupEventCommandHandler : ICommandHandler<Apply
 
     private async Task<bool> ApplyToGroupAsync(ApplyLearnerGroupEventCommand command, CancellationToken ct)
     {
+        DeletedLearnerGroup? tombstone = await _repository.GetDeletedGroupTrackedAsync(command.GroupId, ct);
+        bool changed;
+        if (tombstone is null)
+        {
+            await _repository.AddDeletedGroupAsync(DeletedLearnerGroup.Create(command.GroupId, command.OccurredAtUtc), ct);
+            changed = true;
+        }
+        else
+        {
+            changed = tombstone.MarkDeleted(command.OccurredAtUtc);
+        }
+
         IReadOnlyList<LearnerGroupMemberProjection> rows = await _repository.GetGroupTrackedAsync(command.GroupId, ct);
-        bool changed = false;
         foreach (LearnerGroupMemberProjection row in rows)
         {
             changed |= row.Apply(isActive: false, command.OccurredAtUtc);

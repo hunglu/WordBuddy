@@ -18,6 +18,18 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                 nullable: true);
 
             migrationBuilder.CreateTable(
+                name: "DeletedLearnerGroups",
+                columns: table => new
+                {
+                    GroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DeletedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DeletedLearnerGroups", x => x.GroupId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GroupWordAssignments",
                 columns: table => new
                 {
@@ -56,6 +68,9 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "DeletedLearnerGroups");
+
             migrationBuilder.DropTable(
                 name: "GroupWordAssignments");
 

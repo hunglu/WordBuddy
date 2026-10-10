@@ -33,6 +33,12 @@ internal sealed class LearnerGroupProjectionRepository : ILearnerGroupProjection
     public async Task<IReadOnlyList<LearnerGroupMemberProjection>> GetGroupAsync(Guid groupId, CancellationToken ct = default) =>
         await _dbContext.LearnerGroupMemberProjections.Where(p => p.GroupId == groupId).ToListAsync(ct);
 
+    public Task<DeletedLearnerGroup?> GetDeletedGroupTrackedAsync(Guid groupId, CancellationToken ct = default) =>
+        _dbContext.DeletedLearnerGroups.AsTracking().FirstOrDefaultAsync(g => g.GroupId == groupId, ct);
+
+    public async Task AddDeletedGroupAsync(DeletedLearnerGroup tombstone, CancellationToken ct = default) =>
+        await _dbContext.DeletedLearnerGroups.AddAsync(tombstone, ct);
+
     public async Task AddAsync(LearnerGroupMemberProjection projection, CancellationToken ct = default) =>
         await _dbContext.LearnerGroupMemberProjections.AddAsync(projection, ct);
 

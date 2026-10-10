@@ -18,6 +18,12 @@ public interface ILearnerGroupProjectionRepository
     /// <summary>Whether <paramref name="ownerId"/> owns the group (any row of the group names them as owner).</summary>
     Task<bool> IsOwnerAsync(Guid groupId, Guid ownerId, CancellationToken ct = default);
 
+    /// <summary>Returns the tracked tombstone of a deleted group, or <see langword="null"/>.</summary>
+    Task<DeletedLearnerGroup?> GetDeletedGroupTrackedAsync(Guid groupId, CancellationToken ct = default);
+
+    /// <summary>Stages a new tombstone.</summary>
+    Task AddDeletedGroupAsync(DeletedLearnerGroup tombstone, CancellationToken ct = default);
+
     /// <summary>Stages a new row.</summary>
     Task AddAsync(LearnerGroupMemberProjection projection, CancellationToken ct = default);
 
