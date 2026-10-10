@@ -1,14 +1,14 @@
 ---
 title: WB-27_Learning groups
-status: implemented
+status: changes-requested
 type: new
 issue: 27
-pr: none
+pr: 39
 affects: docs/features/learning-groups.md
 supersedes: none
-version: 1.2
+version: 1.3
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-10T08:00:00+07:00
+updated: 2026-10-10T21:13:37+07:00
 ---
 
 ## Problem
