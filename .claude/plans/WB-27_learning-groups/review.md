@@ -1,12 +1,46 @@
 # Review: WB-27_Learning groups
 
-PR: #39 · Round 1 · Reviewed commit: 105b417 · 2026-10-10T21:13:37+07:00
+PR: #39 · Round 2 · Reviewed commit: da34a64 · 2026-10-10T21:38:08+07:00
 
 ## Verdict
 
-Changes requested — one major: an out-of-order `LearnerGroupDeleted` can leave active members of a deleted group in the Content and Progress projections.
+Approve — the round-1 major is fixed in Content and Progress; no new blocker or major.
 
 ## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `Content.Application/.../ApplyLearnerGroupEventCommandHandler.cs:65-70, 86-101` (same in Progress) | Residual race. The member and delete consumers run in parallel on different queues. Activated (t1) reads "no tombstone" while Deleted (t2) reads "no rows"; both commit → active row in a deleted group. Window is milliseconds (add then delete almost at once). Duplicate deletes are safe: PK violation → retry → `MarkDeleted` no-op. | Optional: after the member save, re-check the tombstone and deactivate; or take an app lock on `GroupId` (`sp_getapplock`). Can be a follow-up. |
+| 2 | nit | `docs/database-diagram/progress.md` | Whole file rewritten CRLF → LF (411 lines churn); real change is 6 lines. | Optional: keep the original line endings. |
+| 3 | nit | `Content.Infrastructure/Persistence/ContentDbContext.cs:42` (same in Progress) | New `DbSet` has a blank line before it and no XML doc, unlike its neighbours. | Optional. |
+
+Verified, no finding:
+
+- Tombstone: `LearnerGroupDeleted` creates or moves forward `DeletedLearnerGroups` (PK `GroupId`); member events with `OccurredAtUtc <= DeletedAtUtc` are ignored and logged with ids only.
+- Content and Progress handlers are identical except namespaces.
+- Clock: `OccurredAtUtc` comes from the Identity event (`OutboxLearnerGroupEventPublisher`), mapped as-is by the consumers. No consumer clock is used, so no cross-service skew.
+- Tests (both services): delete before add, replayed delete (one save), event after delete applied, delete after add deactivates.
+- Migrations regenerated (branch-only, never applied): `20261010142457_AddLearnerGroups`, `20261010142511_AddLearnerGroupProjection`. Table, snapshot and `docs/database-diagram/{content,progress,README}.md` match.
+- Child privacy: tombstone holds group id + time only; no new PII in logs.
+- Nits 2 and 3 from round 1 left as is: **accepted**. TTL is 5 min, absolute, owner check runs before the cache, and `IDistributedCache` has no prefix delete. Already a scope suggestion.
+
+Ops note (not a code finding): `WordBuddy.Shared.Contracts` 1.3.0 is not yet published (`make publish-shared` → 401). CI/Docker restore may fail. Sam must publish before merge.
+
+## Plan conformance
+
+- All `## Fix round 1` tasks are in the diff.
+- No out-of-scope changes.
+
+## Previous rounds
+
+
+PR: #39 · Round 1 · Reviewed commit: 105b417 · 2026-10-10T21:13:37+07:00
+
+### Verdict
+
+Changes requested — one major: an out-of-order `LearnerGroupDeleted` can leave active members of a deleted group in the Content and Progress projections.
+
+### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
@@ -26,7 +60,7 @@ Verified, no finding:
 
 Ops note (not a code finding): `make publish-shared` failed with 401, so CI/Docker restore of `WordBuddy.Shared.Contracts` 1.3.0 from GitHub Packages may fail on this PR. Only the GitGuardian check ran on 105b417. Sam needs to publish 1.3.0 before merge.
 
-## Plan conformance
+### Plan conformance
 
 - All backend, frontend and test tasks in `tasks.md` are in the diff.
 - E2E API/UI moved to `/test` (Sam, 2026-10-10) — the tester must write them.
