@@ -28,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
   { to: '/support', label: 'Supporters', icon: '🤝', end: false },
+  { to: '/groups', label: 'Groups', icon: '👥', end: false },
 ]
 
 const ADMIN_NAV_ITEMS: NavItem[] = [

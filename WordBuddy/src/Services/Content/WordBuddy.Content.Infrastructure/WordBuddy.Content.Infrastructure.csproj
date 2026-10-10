@@ -14,7 +14,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.12" />
     <PackageReference Include="WordBuddy.Shared.Kernel" Version="1.0.1" />
-    <PackageReference Include="WordBuddy.Shared.Contracts" Version="1.2.0" />
+    <PackageReference Include="WordBuddy.Shared.Contracts" Version="1.3.0" />
     <PackageReference Include="WordBuddy.Shared.Infrastructure" Version="1.1.0" />
   </ItemGroup>
 

@@ -1,7 +1,7 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261009142251_AddDashboard`
+last migration: `20261009154109_AddLearnerGroupProjection`
 
 The domain tables have no foreign keys between them (one exception: `VocabularySessionIssueItems` → `VocabularySessionIssues`); every id column points to another service.
 
@@ -86,6 +86,13 @@ erDiagram
         bool IsActive
         datetime UpdatedAtUtc "time of last applied event"
     }
+    LearnerGroupMemberProjections {
+        guid GroupId PK "Identity LearnerGroups.Id"
+        guid LearnerId PK "Identity user"
+        guid OwnerId "Identity user; the group owner"
+        bool IsActive
+        datetime UpdatedAtUtc "time of last applied event"
+    }
     VocabularySessionIssues {
         guid SessionId PK "id sent to the client"
         guid UserId "Identity user"
@@ -117,6 +124,8 @@ erDiagram
 | `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` | `UserId`, `SessionId`, `SenseId`, `AttemptNo` | yes |
 | `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
 | `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
+| `PK_LearnerGroupMemberProjections` | `GroupId`, `LearnerId` | yes (composite key) |
+| `IX_LearnerGroupMemberProjections_OwnerId` | `OwnerId` | — |
 | `IX_VocabularySessionIssues_UserId_IssuedAtUtc` | `UserId`, `IssuedAtUtc` | — |
 
 - `Word` is copied from Content at submit time, so recall history survives a deleted word.
@@ -125,6 +134,7 @@ erDiagram
 - `ReviewLogs` (WB-22) is insert-only: no update or delete path exists.
 - Concurrent duplicate answers fail on the unique attempt index or `RowVersion` → `409`; FSRS is applied once.
 - `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.
+- `LearnerGroupMemberProjections` (WB-27) is filled only by the Identity events `LearnerGroupMemberActivated` / `LearnerGroupMemberRemoved` / `LearnerGroupDeleted` (upsert by group + learner, older events skipped). A group has no row of its own: the owner is read from its member rows. It backs the `CanManageGroup` policy and the group dashboard.
 - `VocabularySessionIssues` (WB-26) has one row per non-empty session the session endpoint hands out; the only update is `EndedAtUtc`. While a session is not ended and not expired, a reload resumes it (same `SessionId`). The dashboard compares `PlannedCount` with the answers in `ReviewLogs` (daily goal; unfinished = expired and answered < planned). Ids and counts only.
 - `VocabularySessionIssueItems` (WB-26) lists the planned words of a session, so a resume can return the unanswered ones in order.
 - A revoke clears `SupporterNewWordCap` when `SupporterCapSetBy` is the revoked supporter (same save).

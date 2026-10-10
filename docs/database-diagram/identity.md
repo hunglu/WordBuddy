@@ -1,11 +1,12 @@
 # Identity — database diagram
 
 Database `WordBuddyIdentity` · source: `IdentityDbContextModelSnapshot.cs` ·
-last migration: `20261008021803_AddSupportLinks`
+last migration: `20261009153236_AddLearnerGroups`
 
 ```mermaid
 erDiagram
     SupportLinks ||--o{ UnlinkRequests : "LinkId (restrict)"
+    LearnerGroups ||--o{ LearnerGroupMembers : "GroupId (restrict)"
 
     Users {
         guid Id PK
@@ -60,6 +61,23 @@ erDiagram
         datetime AtUtc
         string Reason "nullable, max 500; admin actions"
     }
+    LearnerGroups {
+        guid Id PK
+        guid OwnerId "Users.Id, no FK; always Adult"
+        string Name "max 60"
+        datetime CreatedAtUtc
+        datetime UpdatedAtUtc
+        datetime DeletedAtUtc "nullable; soft delete"
+    }
+    LearnerGroupMembers {
+        guid Id PK
+        guid GroupId FK
+        guid LearnerId "Users.Id, no FK"
+        string Status "PendingPrimaryApproval | Active | Removed, max 30"
+        datetime AddedAtUtc
+        datetime UpdatedAtUtc
+        string RemovedReason "nullable, ByOwner | LinkRevoked | Left | RejectedByPrimary | GroupDeleted, max 30"
+    }
 ```
 
 | Index | Columns | Unique / filter |
@@ -73,12 +91,16 @@ erDiagram
 | `IX_UnlinkRequests_LinkId_Open` | `LinkId` | yes, `[Status] IN ('Pending', 'OverrideRequested')` (one open request per link) |
 | `IX_UnlinkRequests_Status` | `Status` | — |
 | `IX_SupportLinkAuditEntries_LinkId` | `LinkId` | — |
+| `IX_LearnerGroups_OwnerId` | `OwnerId` | — |
+| `IX_LearnerGroupMembers_GroupId_LearnerId_Open` | `GroupId`, `LearnerId` | yes, `[Status] <> 'Removed'` (one open membership per learner and group) |
+| `IX_LearnerGroupMembers_LearnerId` | `LearnerId` | — |
 
 - `Users.Id` is referenced by Content and Progress as `UserId` / `LearnerId` / `SupporterId` (no FK — see [README](README.md)).
 - `SupportLinkAuditEntries` is insert-only. It holds ids, action, time and reason — no names, emails or child data.
 - Activate/revoke writes `OutboxMessage` rows (`SupportLinkActivated` / `SupportLinkRevoked`, ids and time only) in the same transaction. Identity only publishes; `InboxState` stays empty.
+- Group events (`LearnerGroupMemberActivated`, `LearnerGroupMemberRemoved`, `LearnerGroupDeleted`; ids, reason code and time only) go to the same outbox in the same transaction as the group change.
 - No refresh-token table exists in the current model.
-- Feature rules: `docs/features/learner-support-links.md`.
+- Feature rules: `docs/features/learner-support-links.md`, `docs/features/learning-groups.md` (written at /test).
 
 ## MassTransit messaging tables (WB-24)
 

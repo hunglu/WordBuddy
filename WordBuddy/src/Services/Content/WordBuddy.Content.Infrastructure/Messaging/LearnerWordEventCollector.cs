@@ -41,7 +41,7 @@ public static class LearnerWordEventCollector
 
             if (state == EntityState.Added)
             {
-                events.Add(new LearnerWordAdded(link.UserId, link.SenseId, link.UserId, link.AddedAtUtc));
+                events.Add(new LearnerWordAdded(link.UserId, link.SenseId, link.AddedByUserId ?? link.UserId, link.AddedAtUtc));
             }
             else if (state == EntityState.Deleted)
             {

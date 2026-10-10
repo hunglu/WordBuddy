@@ -27,9 +27,11 @@ public sealed class LearnerWord : Entity
     /// they adopted a shared word or matched a system word.</summary>
     public bool IsAuthor { get; private set; }
 
-    /// <summary>Who put the word on the list. Only <see cref="LearnerWordAddedBy.Learner"/> is
-    /// written today.</summary>
+    /// <summary>Who put the word on the list: the learner, or a supporter (group assignment).</summary>
     public LearnerWordAddedBy AddedBy { get; private set; }
+
+    /// <summary>The user who caused the link. <see langword="null"/> means the learner themself.</summary>
+    public Guid? AddedByUserId { get; private set; }
 
     /// <summary>The learner's own note on where they met the word. Private: never logged, shared
     /// or put in an event. Always <see langword="null"/> today.</summary>
@@ -82,6 +84,15 @@ public sealed class LearnerWord : Entity
         PersonalContext = null;
         AddedAtUtc = DateTime.UtcNow;
     }
+
+    /// <summary>Creates a link a supporter put on a learner's list (group word assignment).
+    /// <see cref="AddedBy"/> is <see cref="LearnerWordAddedBy.Supporter"/>; the learner is not the author.</summary>
+    public static LearnerWord CreateBySupporter(Guid userId, Guid senseId, Guid supporterId) =>
+        new(Guid.NewGuid(), userId, senseId, isAuthor: false)
+        {
+            AddedBy = LearnerWordAddedBy.Supporter,
+            AddedByUserId = supporterId,
+        };
 
     /// <summary>Creates a link carrying the sense itself.</summary>
     public LearnerWord(Guid id, Guid userId, Sense sense, bool isAuthor)

@@ -32,6 +32,9 @@ public static class ServiceCollectionExtensions
         {
             bus.AddConsumer<SupportLinkActivatedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Activated);
             bus.AddConsumer<SupportLinkRevokedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Revoked);
+            bus.AddConsumer<LearnerGroupMemberActivatedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberActivated);
+            bus.AddConsumer<LearnerGroupMemberRemovedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberRemoved);
+            bus.AddConsumer<LearnerGroupDeletedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.GroupDeleted);
         });
 
         services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
@@ -42,6 +45,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<ILearnerWordEventPublisher, OutboxLearnerWordEventPublisher>();
         services.AddScoped<ISupportLinkProjectionRepository, SupportLinkProjectionRepository>();
+        services.AddScoped<ILearnerGroupProjectionRepository, LearnerGroupProjectionRepository>();
+        services.AddScoped<IGroupWordRepository, GroupWordRepository>();
+        services.AddSingleton(TimeProvider.System);
         services.AddScoped<IAutofillRepository, AutofillRepository>();
 
         services.AddAutofillClients(configuration, isDevelopment);

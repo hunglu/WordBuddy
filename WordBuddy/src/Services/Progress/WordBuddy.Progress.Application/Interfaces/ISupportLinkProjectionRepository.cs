@@ -20,4 +20,7 @@ public interface ISupportLinkProjectionRepository
 
     /// <summary>Whether the learner has at least one active supporter.</summary>
     Task<bool> HasActiveSupporterAsync(Guid learnerId, CancellationToken ct = default);
+
+    /// <summary>Returns those of <paramref name="learnerIds"/> that <paramref name="supporterId"/> actively supports.</summary>
+    Task<IReadOnlySet<Guid>> GetLearnersWithActiveLinkAsync(Guid supporterId, IReadOnlyCollection<Guid> learnerIds, CancellationToken ct = default);
 }

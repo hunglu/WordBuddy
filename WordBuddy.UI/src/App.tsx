@@ -12,6 +12,8 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { AcceptInvitationPage } from './pages/AcceptInvitationPage'
 import { AdminSupportLinksPage } from './pages/AdminSupportLinksPage'
+import { GroupDetailPage } from './pages/GroupDetailPage'
+import { GroupsPage } from './pages/GroupsPage'
 import { LearnerDashboardPage } from './pages/LearnerDashboardPage'
 import { LessonDetailPage } from './pages/LessonDetailPage'
 import { LessonsPage } from './pages/LessonsPage'
@@ -67,6 +69,8 @@ function AnimatedRoutes(): ReactElement {
           <Route path="/vocabulary/check" element={<Navigate to="/vocabulary/review" replace />} />
           <Route path="/vocabulary/shared" element={<ChildSupporterGate><VocabularySharedPoolPage /></ChildSupporterGate>} />
           <Route path="/vocabulary/moderation" element={<VocabularyModerationPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/groups/:groupId" element={<GroupDetailPage />} />
           <Route path="/support" element={<SupportLinksPage />} />
           <Route path="/support/accept/:token" element={<AcceptInvitationPage />} />
           <Route path="/admin/support-links" element={<AdminSupportLinksPage />} />

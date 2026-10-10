@@ -23,6 +23,9 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendi
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetRandomVocabularyWordsForCheck;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSensesByIds;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetSharedVocabularyWords;
+using WordBuddy.Content.Application.Features.Groups.Commands.ApplyLearnerGroupEvent;
+using WordBuddy.Content.Application.Features.Groups.Commands.AssignWordsToGroup;
+using WordBuddy.Content.Application.Features.Groups.Queries.GetGroupWordAssignments;
 using WordBuddy.Content.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 
 namespace WordBuddy.Content.Application.Extensions;
@@ -74,6 +77,12 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandHandler>();
         services.AddScoped<IValidator<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandValidator>();
+
+        services.AddScoped<ICommandHandler<ApplyLearnerGroupEventCommand>, ApplyLearnerGroupEventCommandHandler>();
+        services.AddScoped<IValidator<ApplyLearnerGroupEventCommand>, ApplyLearnerGroupEventCommandValidator>();
+        services.AddScoped<ICommandHandler<AssignWordsToGroupCommand, GroupWordAssignmentResultDto>, AssignWordsToGroupCommandHandler>();
+        services.AddScoped<IValidator<AssignWordsToGroupCommand>, AssignWordsToGroupCommandValidator>();
+        services.AddScoped<IQueryHandler<GetGroupWordAssignmentsQuery, IReadOnlyList<GroupWordAssignmentDto>>, GetGroupWordAssignmentsQueryHandler>();
 
         services.AddScoped<AutofillCatalogWriter>();
         services.AddScoped<IQueryHandler<LookupAutofillQuery, AutofillResultDto>, LookupAutofillQueryHandler>();

@@ -6,6 +6,7 @@ using WordBuddy.Progress.Api.Extensions;
 using WordBuddy.Progress.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.Dashboard.Queries.GetLearnerDashboard;
+using WordBuddy.Progress.Application.Features.Groups.Queries.GetGroupDashboard;
 using WordBuddy.Progress.Application.Features.VocabularySrs;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Shared.Kernel;
@@ -22,13 +23,16 @@ namespace WordBuddy.Progress.Api.Controllers;
 public sealed class DashboardController : ControllerBase
 {
     private readonly IQueryHandler<GetLearnerDashboardQuery, LearnerDashboardDto> _getDashboard;
+    private readonly IQueryHandler<GetGroupDashboardQuery, GroupDashboardDto> _getGroupDashboard;
     private readonly DashboardOptions _options;
 
     public DashboardController(
         IQueryHandler<GetLearnerDashboardQuery, LearnerDashboardDto> getDashboard,
+        IQueryHandler<GetGroupDashboardQuery, GroupDashboardDto> getGroupDashboard,
         DashboardOptions options)
     {
         _getDashboard = getDashboard;
+        _getGroupDashboard = getGroupDashboard;
         _options = options;
     }
 
@@ -57,6 +61,22 @@ public sealed class DashboardController : ControllerBase
     {
         Result<LearnerDashboardDto> result = await _getDashboard.HandleAsync(
             new GetLearnerDashboardQuery(learnerId, clientCurrentDateTime, days ?? _options.DefaultDays), ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Gets the dashboard of a learning group (WB-27): one row per active member. Caller must own the
+    /// group (<c>CanManageGroup</c>), otherwise 403. <c>days</c> is 7, 30 or 90. Members whose support link to the
+    /// caller ended are left out.</summary>
+    [HttpGet("groups/{groupId:guid}")]
+    [Authorize(Policy = GroupPolicies.CanManageGroup)]
+    public async Task<IActionResult> GetGroup(
+        Guid groupId,
+        [FromQuery] int? days,
+        [FromHeader(Name = ClientDateTime.HeaderName)] string? clientCurrentDateTime,
+        CancellationToken ct)
+    {
+        Result<GroupDashboardDto> result = await _getGroupDashboard.HandleAsync(
+            new GetGroupDashboardQuery(groupId, User.GetUserId(), clientCurrentDateTime, days ?? _options.DefaultDays), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 }

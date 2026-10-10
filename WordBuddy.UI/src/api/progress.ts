@@ -1,5 +1,6 @@
 import type {
   DashboardRange,
+  GroupDashboard,
   LearnerDashboard,
   LearnerProgress,
   ReviewPayload,
@@ -82,6 +83,15 @@ export async function getMyDashboard(days: DashboardRange): Promise<LearnerDashb
 /** A learner's dashboard, for an active supporter. No active link gives 403. */
 export async function getLearnerDashboard(learnerId: string, days: DashboardRange): Promise<LearnerDashboard> {
   const { data } = await apiClient.get<LearnerDashboard>(`/progress/dashboard/learners/${learnerId}`, {
+    params: { days },
+    headers: clientDateTimeHeaders(),
+  })
+  return data
+}
+
+/** The dashboard of a learning group, for its owner. Not the owner gives 403. */
+export async function getGroupDashboard(groupId: string, days: DashboardRange): Promise<GroupDashboard> {
+  const { data } = await apiClient.get<GroupDashboard>(`/progress/dashboard/groups/${groupId}`, {
     params: { days },
     headers: clientDateTimeHeaders(),
   })

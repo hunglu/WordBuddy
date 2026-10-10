@@ -2,6 +2,17 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Identity.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
+using WordBuddy.Identity.Application.Features.Groups;
+using WordBuddy.Identity.Application.Features.Groups.Commands.AddGroupMembers;
+using WordBuddy.Identity.Application.Features.Groups.Commands.CreateGroup;
+using WordBuddy.Identity.Application.Features.Groups.Commands.DeleteGroup;
+using WordBuddy.Identity.Application.Features.Groups.Commands.LeaveGroup;
+using WordBuddy.Identity.Application.Features.Groups.Commands.RemoveGroupMember;
+using WordBuddy.Identity.Application.Features.Groups.Commands.RenameGroup;
+using WordBuddy.Identity.Application.Features.Groups.Commands.RespondToGroupMembership;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroup;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetMyGroups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetPendingGroupApprovals;
 using WordBuddy.Identity.Application.Features.Auth.Commands.Login;
 using WordBuddy.Identity.Application.Features.Auth.Commands.RegisterUser;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileAliasAvatar;
@@ -73,6 +84,28 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQueryHandler<GetPendingSupporterApprovalsQuery, IReadOnlyList<SupportLinkDto>>, GetPendingSupporterApprovalsQueryHandler>();
         services.AddScoped<IQueryHandler<GetUnlinkRequestsForAdminQuery, IReadOnlyList<AdminUnlinkRequestDto>>, GetUnlinkRequestsForAdminQueryHandler>();
         services.AddScoped<IQueryHandler<GetLearnerSupportLinksForAdminQuery, IReadOnlyList<AdminSupportLinkDto>>, GetLearnerSupportLinksForAdminQueryHandler>();
+
+        // Learning groups
+        services.AddScoped<ILearnerGroupMembershipCleaner, LearnerGroupMembershipCleaner>();
+
+        services.AddScoped<ICommandHandler<CreateGroupCommand, Guid>, CreateGroupCommandHandler>();
+        services.AddScoped<IValidator<CreateGroupCommand>, CreateGroupCommandValidator>();
+        services.AddScoped<ICommandHandler<RenameGroupCommand>, RenameGroupCommandHandler>();
+        services.AddScoped<IValidator<RenameGroupCommand>, RenameGroupCommandValidator>();
+        services.AddScoped<ICommandHandler<DeleteGroupCommand>, DeleteGroupCommandHandler>();
+        services.AddScoped<IValidator<DeleteGroupCommand>, DeleteGroupCommandValidator>();
+        services.AddScoped<ICommandHandler<AddGroupMembersCommand, IReadOnlyList<AddMemberResultDto>>, AddGroupMembersCommandHandler>();
+        services.AddScoped<IValidator<AddGroupMembersCommand>, AddGroupMembersCommandValidator>();
+        services.AddScoped<ICommandHandler<RemoveGroupMemberCommand>, RemoveGroupMemberCommandHandler>();
+        services.AddScoped<IValidator<RemoveGroupMemberCommand>, RemoveGroupMemberCommandValidator>();
+        services.AddScoped<ICommandHandler<LeaveGroupCommand>, LeaveGroupCommandHandler>();
+        services.AddScoped<IValidator<LeaveGroupCommand>, LeaveGroupCommandValidator>();
+        services.AddScoped<ICommandHandler<RespondToGroupMembershipCommand>, RespondToGroupMembershipCommandHandler>();
+        services.AddScoped<IValidator<RespondToGroupMembershipCommand>, RespondToGroupMembershipCommandValidator>();
+
+        services.AddScoped<IQueryHandler<GetMyGroupsQuery, MyGroupsDto>, GetMyGroupsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetGroupQuery, LearnerGroupDetailDto>, GetGroupQueryHandler>();
+        services.AddScoped<IQueryHandler<GetPendingGroupApprovalsQuery, IReadOnlyList<PendingGroupApprovalDto>>, GetPendingGroupApprovalsQueryHandler>();
 
         return services;
     }

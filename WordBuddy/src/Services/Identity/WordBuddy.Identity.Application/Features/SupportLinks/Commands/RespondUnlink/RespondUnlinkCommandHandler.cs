@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Identity.Application.Abstractions;
 using WordBuddy.Identity.Application.Caching;
+using WordBuddy.Identity.Application.Features.Groups;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Domain.SupportLinks;
 using WordBuddy.Shared.Kernel;
@@ -16,6 +17,7 @@ public sealed class RespondUnlinkCommandHandler : ICommandHandler<RespondUnlinkC
     private readonly ISupportLinkRepository _links;
     private readonly LinkActorResolver _actorResolver;
     private readonly ISupportLinkEventPublisher _events;
+    private readonly ILearnerGroupMembershipCleaner _groupCleaner;
     private readonly IDistributedCache _cache;
     private readonly TimeProvider _time;
     private readonly IValidator<RespondUnlinkCommand> _validator;
@@ -25,6 +27,7 @@ public sealed class RespondUnlinkCommandHandler : ICommandHandler<RespondUnlinkC
         ISupportLinkRepository links,
         LinkActorResolver actorResolver,
         ISupportLinkEventPublisher events,
+        ILearnerGroupMembershipCleaner groupCleaner,
         IDistributedCache cache,
         TimeProvider time,
         IValidator<RespondUnlinkCommand> validator,
@@ -33,6 +36,7 @@ public sealed class RespondUnlinkCommandHandler : ICommandHandler<RespondUnlinkC
         _links = links;
         _actorResolver = actorResolver;
         _events = events;
+        _groupCleaner = groupCleaner;
         _cache = cache;
         _time = time;
         _validator = validator;
@@ -83,6 +87,7 @@ public sealed class RespondUnlinkCommandHandler : ICommandHandler<RespondUnlinkC
             return respond;
         }
 
+        IReadOnlyList<Guid> affectedGroups = [];
         if (command.Confirm)
         {
             Result revoke = link.Revoke(now);
@@ -92,6 +97,7 @@ public sealed class RespondUnlinkCommandHandler : ICommandHandler<RespondUnlinkC
             }
 
             await _events.PublishRevokedAsync(link, now, ct);
+            affectedGroups = await _groupCleaner.RemoveForLinkAsync(link.LearnerId, link.SupporterId, now, ct);
         }
 
         SupportLinkAuditAction action = command.Confirm ? SupportLinkAuditAction.UnlinkConfirmed : SupportLinkAuditAction.UnlinkDeclined;
@@ -105,6 +111,7 @@ public sealed class RespondUnlinkCommandHandler : ICommandHandler<RespondUnlinkC
         }
 
         await SupportLinkCache.InvalidateAsync(_cache, ct, link.LearnerId, link.SupporterId, actor.Value.LearnerPrimarySupporterId);
+        await LearnerGroupCache.InvalidateAsync(_cache, affectedGroups, ct);
         _logger.LogInformation(
             "RespondUnlinkCommand succeeded: LinkId={LinkId}, RequestStatus={RequestStatus}", link.Id, request.Status);
         return Result.Success();

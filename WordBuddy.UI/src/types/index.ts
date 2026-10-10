@@ -463,3 +463,110 @@ export interface LearnerDashboard {
   struggle: DashboardStruggle
   gaming: DashboardGamingSignals
 }
+
+// ── Learning groups (WB-27) ─────────────────────────────────────────────────
+
+export type GroupMemberStatus = 'PendingPrimaryApproval' | 'Active' | 'Removed'
+
+/** A member as the group owner sees it: public name and avatar only (a child without alias is "Child learner"). */
+export interface GroupMember {
+  memberId: string
+  learnerId: string
+  publicName: string
+  avatarId: string | null
+  ageGroup: AgeGroup
+  status: GroupMemberStatus
+  addedAtUtc: string
+}
+
+/** From `GET /api/auth/groups/{id}` (owner only). */
+export interface LearnerGroupDetail {
+  id: string
+  ownerId: string
+  name: string
+  createdAtUtc: string
+  members: GroupMember[]
+}
+
+export interface OwnedGroup {
+  id: string
+  name: string
+  activeMemberCount: number
+  pendingMemberCount: number
+  createdAtUtc: string
+}
+
+/** A group the caller belongs to: name and owner only, never other members. */
+export interface JoinedGroup {
+  id: string
+  name: string
+  ownerName: string
+  ownerAvatarId: string | null
+}
+
+export interface MyGroups {
+  owned: OwnedGroup[]
+  joined: JoinedGroup[]
+}
+
+export type AddMemberOutcome = 'Added' | 'PendingApproval' | 'Rejected'
+
+export interface AddMemberResult {
+  learnerId: string
+  outcome: AddMemberOutcome
+  /** Set when `outcome` is `Rejected`. */
+  errorCode: string | null
+}
+
+/** A pending child membership waiting for the caller (as Primary supporter). */
+export interface PendingGroupApproval {
+  memberId: string
+  groupId: string
+  groupName: string
+  ownerName: string
+  learnerId: string
+  learnerName: string
+  learnerAvatarId: string | null
+  requestedAtUtc: string
+}
+
+export interface GroupWordAssignmentResult {
+  added: number
+  alreadyHad: number
+  skippedForChildren: number
+}
+
+export interface GroupWordAssignment {
+  id: string
+  senseId: string
+  word: string
+  definition: string
+  assignedAtUtc: string
+}
+
+export interface GroupMemberDashboard {
+  learnerId: string
+  currentStreakDays: number
+  activeDays: number
+  retention: number | null
+  retentionSample: number
+  perStatus: WordStatusCount[]
+  leechCount: number
+  lastActiveDate: string | null
+}
+
+export interface GroupTotals {
+  memberCount: number
+  medianRetention: number | null
+  membersActiveThisWeek: number
+}
+
+/** From `GET /api/progress/dashboard/groups/{groupId}`. Names are not included: join `learnerId` with the group detail. */
+export interface GroupDashboard {
+  groupId: string
+  days: number
+  from: string
+  to: string
+  totals: GroupTotals
+  members: GroupMemberDashboard[]
+}
