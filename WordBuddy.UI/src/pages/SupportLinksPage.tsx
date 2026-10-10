@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { Link } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
+import { GroupRequests } from '../components/groups/GroupRequests'
 import { InvitePanel } from '../components/support/InvitePanel'
 import { SupportLinkCard } from '../components/support/SupportLinkCard'
 import { WordsToApprove } from '../components/support/WordsToApprove'
@@ -84,6 +85,8 @@ export function SupportLinksPage(): ReactElement {
       {!isChild && pending.isError && (
         <p className="mt-4 text-sm text-wb-danger">Couldn't load pending approvals right now.</p>
       )}
+
+      {!isChild && <GroupRequests />}
 
       {data && (
         <>

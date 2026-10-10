@@ -40,8 +40,13 @@ internal static class ServiceCollectionExtensions
                 };
             });
 
-        services.AddAuthorization(options => options.AddSupportLinkPolicies());
+        services.AddAuthorization(options =>
+        {
+            options.AddSupportLinkPolicies();
+            options.AddGroupPolicies();
+        });
         services.AddSupportLinkAuthorizationHandlers();
+        services.AddGroupAuthorizationHandlers();
 
         return services;
     }

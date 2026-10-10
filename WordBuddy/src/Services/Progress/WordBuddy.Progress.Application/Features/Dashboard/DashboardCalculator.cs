@@ -86,6 +86,70 @@ public sealed class DashboardCalculator
         return new LearnerDashboardDto(learnerId, days, from, today, activity, wordsDto, retention, struggle, gaming);
     }
 
+    /// <summary>
+    /// Builds the group dashboard: one row per member from <see cref="Calculate"/>, plus group totals.
+    /// Pure, like <see cref="Calculate"/>. A member with no rows gets a row of zeros, never an error.
+    /// Dates only, never a time of day.
+    /// </summary>
+    public GroupDashboardDto CalculateGroup(
+        Guid groupId,
+        int days,
+        DateTime nowUtc,
+        TimeSpan offset,
+        IReadOnlyList<Guid> memberIds,
+        IReadOnlyDictionary<Guid, IReadOnlyList<DashboardReviewRow>> reviews,
+        IReadOnlyDictionary<Guid, IReadOnlyList<DashboardWordRow>> words,
+        IReadOnlyDictionary<Guid, IReadOnlyList<DashboardMembershipRow>> memberships,
+        IReadOnlyDictionary<Guid, IReadOnlyList<DashboardSessionRow>> sessions)
+    {
+        DateOnly today = LocalDate(nowUtc, offset);
+        DateOnly from = today.AddDays(-(days - 1));
+        DateOnly weekStart = today.AddDays(-6);
+
+        List<GroupMemberDashboardDto> members = [];
+        foreach (Guid memberId in memberIds.Distinct().OrderBy(id => id))
+        {
+            IReadOnlyList<DashboardReviewRow> memberReviews = reviews.GetValueOrDefault(memberId) ?? [];
+            LearnerDashboardDto dashboard = Calculate(
+                memberId,
+                days,
+                nowUtc,
+                offset,
+                memberReviews,
+                words.GetValueOrDefault(memberId) ?? [],
+                memberships.GetValueOrDefault(memberId) ?? [],
+                sessions.GetValueOrDefault(memberId) ?? []);
+
+            DateOnly? lastActive = memberReviews.Count > 0
+                ? memberReviews.Max(r => LocalDate(r.OccurredAtUtc, offset))
+                : null;
+
+            members.Add(new GroupMemberDashboardDto(
+                memberId,
+                dashboard.Activity.CurrentStreakDays,
+                dashboard.Activity.Heatmap.Count(d => d.Reviews > 0),
+                dashboard.Retention.Overall,
+                dashboard.Retention.Sample,
+                dashboard.Words.PerStatus,
+                dashboard.Words.PerStatus.Where(s => s.Status == WordStatus.Leech).Sum(s => s.Count),
+                lastActive));
+        }
+
+        List<double> retentions = members.Where(m => m.Retention.HasValue).Select(m => m.Retention!.Value).Order().ToList();
+        double? median = retentions.Count == 0
+            ? null
+            : Math.Round(retentions.Count % 2 == 1
+                ? retentions[retentions.Count / 2]
+                : (retentions[(retentions.Count / 2) - 1] + retentions[retentions.Count / 2]) / 2.0, 1);
+
+        GroupTotalsDto totals = new(
+            members.Count,
+            median,
+            members.Count(m => m.LastActiveDate.HasValue && m.LastActiveDate.Value >= weekStart));
+
+        return new GroupDashboardDto(groupId, days, from, today, totals, members);
+    }
+
     private static DateOnly LocalDate(DateTime utc, TimeSpan offset) => DateOnly.FromDateTime(utc + offset);
 
     private static bool InWindow(DateOnly date, DateOnly from, DateOnly to) => date >= from && date <= to;

@@ -1,6 +1,8 @@
 import type {
   AutofillResult,
   ChildApproval,
+  GroupWordAssignment,
+  GroupWordAssignmentResult,
   PersonalVocabularyWord,
   SenseReview,
   VocabularyRecallCheckWord,
@@ -124,4 +126,24 @@ export async function getAdminPendingApprovals(): Promise<ChildApproval[]> {
 /** Admin approval: visible to every child. */
 export async function approveAutofillForChildren(senseId: string): Promise<void> {
   await apiClient.post(`/vocabulary/moderation/autofill/${senseId}/approve`)
+}
+
+// ── Learning groups (WB-27) ─────────────────────────────────────────────────
+
+export interface AssignWordsToGroupPayload {
+  groupId: string
+  /** 1 to 50 sense ids. */
+  senseIds: string[]
+}
+
+/** Puts the senses on the list of every active group member. Owner only. */
+export async function assignWordsToGroup({ groupId, senseIds }: AssignWordsToGroupPayload): Promise<GroupWordAssignmentResult> {
+  const { data } = await apiClient.post<GroupWordAssignmentResult>(`/vocabulary/groups/${groupId}/words`, { senseIds })
+  return data
+}
+
+/** Assignment history of the group, newest first. Owner only. */
+export async function getGroupWordAssignments(groupId: string): Promise<GroupWordAssignment[]> {
+  const { data } = await apiClient.get<GroupWordAssignment[]>(`/vocabulary/groups/${groupId}/words`)
+  return data
 }

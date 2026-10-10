@@ -50,4 +50,10 @@ internal sealed class SupportLinkProjectionRepository : ISupportLinkProjectionRe
 
     public Task<bool> HasActiveSupporterAsync(Guid learnerId, CancellationToken ct = default) =>
         _dbContext.SupportLinkProjections.AnyAsync(p => p.LearnerId == learnerId && p.IsActive, ct);
+
+    public async Task<IReadOnlySet<Guid>> GetLearnersWithActiveLinkAsync(Guid supporterId, IReadOnlyCollection<Guid> learnerIds, CancellationToken ct = default) =>
+        (await _dbContext.SupportLinkProjections
+            .Where(p => p.SupporterId == supporterId && p.IsActive && learnerIds.Contains(p.LearnerId))
+            .Select(p => p.LearnerId)
+            .ToListAsync(ct)).ToHashSet();
 }

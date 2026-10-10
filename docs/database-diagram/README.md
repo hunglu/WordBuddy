@@ -6,10 +6,10 @@ these diagrams must match it.
 
 | Service | Database | Tables | Diagram |
 | --- | --- | --- | --- |
-| Identity | `WordBuddyIdentity` | 8 | [identity.md](identity.md) |
-| Content | `WordBuddyContent` | 13 | [content.md](content.md) |
+| Identity | `WordBuddyIdentity` | 10 | [identity.md](identity.md) |
+| Content | `WordBuddyContent` | 16 | [content.md](content.md) |
 | Quiz | `WordBuddyQuiz` | 2 | [quiz.md](quiz.md) |
-| Progress | `WordBuddyProgress` | 12 | [progress.md](progress.md) |
+| Progress | `WordBuddyProgress` | 14 | [progress.md](progress.md) |
 | Notification | — | 0 | no database |
 
 ## Cross-service ids
@@ -23,6 +23,8 @@ flowchart LR
     U -. UserId .-> P[Progress]
     S["Identity.SupportLinks.Id"] -. LinkId (projection) .-> C
     S -. LinkId (projection) .-> P
+    G["Identity.LearnerGroups.Id"] -. GroupId (projection) .-> C
+    G -. GroupId (projection) .-> P
     L["Content.Lessons.Id"] -. LessonId .-> Q[Quiz]
     L -. LessonId .-> P
     V["Content.VocabularyWords.Id"] -. VocabularyWordId .-> P

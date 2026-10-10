@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReviewLogRepository, ReviewLogRepository>();
         services.AddScoped<IVocabularyLearnerSettingsRepository, VocabularyLearnerSettingsRepository>();
         services.AddScoped<ISupportLinkProjectionRepository, SupportLinkProjectionRepository>();
+        services.AddScoped<ILearnerGroupProjectionRepository, LearnerGroupProjectionRepository>();
         services.AddScoped<IVocabularySessionIssueRepository, VocabularySessionIssueRepository>();
         services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
 
@@ -40,6 +41,9 @@ public static class ServiceCollectionExtensions
             bus.AddConsumer<LearnerWordRemovedConsumer>();
             bus.AddConsumer<SupportLinkActivatedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Activated);
             bus.AddConsumer<SupportLinkRevokedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Revoked);
+            bus.AddConsumer<LearnerGroupMemberActivatedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberActivated);
+            bus.AddConsumer<LearnerGroupMemberRemovedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberRemoved);
+            bus.AddConsumer<LearnerGroupDeletedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.GroupDeleted);
         });
 
         return services;

@@ -1,5 +1,8 @@
 using FluentValidation;
 using WordBuddy.Progress.Application.Features.Dashboard.Queries.GetLearnerDashboard;
+using WordBuddy.Progress.Application.Features.Groups;
+using WordBuddy.Progress.Application.Features.Groups.Commands.ApplyLearnerGroupEvent;
+using WordBuddy.Progress.Application.Features.Groups.Queries.GetGroupDashboard;
 using WordBuddy.Progress.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateLearnerVocabularySettings;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerVocabularySettings;
@@ -60,6 +63,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateLearnerVocabularySettingsCommand>, UpdateLearnerVocabularySettingsCommandValidator>();
         services.AddScoped<ICommandHandler<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandHandler>();
         services.AddScoped<IValidator<ApplySupportLinkEventCommand>, ApplySupportLinkEventCommandValidator>();
+
+        // Learning groups (WB-27)
+        services.AddScoped<ICommandHandler<ApplyLearnerGroupEventCommand>, ApplyLearnerGroupEventCommandHandler>();
+        services.AddScoped<IValidator<ApplyLearnerGroupEventCommand>, ApplyLearnerGroupEventCommandValidator>();
+        services.AddScoped<IQueryHandler<GetGroupDashboardQuery, GroupDashboardDto>, GetGroupDashboardQueryHandler>();
+        services.AddScoped<IValidator<GetGroupDashboardQuery>, GetGroupDashboardQueryValidator>();
 
         // Dashboard (WB-26). DashboardOptions and DashboardCalculator are registered by the host.
         services.AddScoped<IQueryHandler<GetLearnerDashboardQuery, LearnerDashboardDto>, GetLearnerDashboardQueryHandler>();

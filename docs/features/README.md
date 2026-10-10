@@ -17,7 +17,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Learner support links | `learner-support-links.md` | shipped |
 | Vocabulary autofill | `vocabulary-autofill.md` | shipped |
 | Supporter dashboard | `supporter-dashboard.md` | shipped |
-| Learning groups | `learning-groups.md` | proposed |
+| Learning groups | `learning-groups.md` | shipped |
 | Vocabulary challenges | `vocabulary-challenges.md` | proposed |
 | User profile | `user-profile.md` | proposed |
 

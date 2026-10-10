@@ -38,4 +38,23 @@ public interface IDashboardReadRepository
 
     /// <summary>Sessions issued in [<paramref name="fromUtc"/>, <paramref name="toUtc"/>).</summary>
     Task<Result<IReadOnlyList<DashboardSessionRow>>> GetSessionIssuesAsync(Guid userId, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+
+    // Batched reads for the group dashboard: one query per metric for all users (no N+1).
+    // Users without rows are absent from the dictionaries.
+
+    /// <summary>Answers of all <paramref name="userIds"/> with <c>OccurredAtUtc</c> in [<paramref name="fromUtc"/>, <paramref name="toUtc"/>).</summary>
+    Task<Result<IReadOnlyDictionary<Guid, IReadOnlyList<DashboardReviewRow>>>> GetReviewLogsForUsersAsync(
+        IReadOnlyCollection<Guid> userIds, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+
+    /// <summary>All active word states of the users.</summary>
+    Task<Result<IReadOnlyDictionary<Guid, IReadOnlyList<DashboardWordRow>>>> GetWordStatesForUsersAsync(
+        IReadOnlyCollection<Guid> userIds, CancellationToken ct = default);
+
+    /// <summary>Active memberships of the users added in [<paramref name="fromUtc"/>, <paramref name="toUtc"/>).</summary>
+    Task<Result<IReadOnlyDictionary<Guid, IReadOnlyList<DashboardMembershipRow>>>> GetMembershipsForUsersAsync(
+        IReadOnlyCollection<Guid> userIds, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
+
+    /// <summary>Sessions of the users issued in [<paramref name="fromUtc"/>, <paramref name="toUtc"/>).</summary>
+    Task<Result<IReadOnlyDictionary<Guid, IReadOnlyList<DashboardSessionRow>>>> GetSessionIssuesForUsersAsync(
+        IReadOnlyCollection<Guid> userIds, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
 }

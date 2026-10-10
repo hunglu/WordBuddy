@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Identity.Application.Abstractions;
 using WordBuddy.Identity.Application.Caching;
+using WordBuddy.Identity.Application.Features.Groups;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Domain.SupportLinks;
 using WordBuddy.Shared.Kernel;
@@ -15,6 +16,7 @@ public sealed class AdminCompleteUnlinkCommandHandler : ICommandHandler<AdminCom
 {
     private readonly ISupportLinkRepository _links;
     private readonly ISupportLinkEventPublisher _events;
+    private readonly ILearnerGroupMembershipCleaner _groupCleaner;
     private readonly IDistributedCache _cache;
     private readonly TimeProvider _time;
     private readonly IValidator<AdminCompleteUnlinkCommand> _validator;
@@ -23,6 +25,7 @@ public sealed class AdminCompleteUnlinkCommandHandler : ICommandHandler<AdminCom
     public AdminCompleteUnlinkCommandHandler(
         ISupportLinkRepository links,
         ISupportLinkEventPublisher events,
+        ILearnerGroupMembershipCleaner groupCleaner,
         IDistributedCache cache,
         TimeProvider time,
         IValidator<AdminCompleteUnlinkCommand> validator,
@@ -30,6 +33,7 @@ public sealed class AdminCompleteUnlinkCommandHandler : ICommandHandler<AdminCom
     {
         _links = links;
         _events = events;
+        _groupCleaner = groupCleaner;
         _cache = cache;
         _time = time;
         _validator = validator;
@@ -80,6 +84,7 @@ public sealed class AdminCompleteUnlinkCommandHandler : ICommandHandler<AdminCom
         }
 
         await _events.PublishRevokedAsync(link, now, ct);
+        IReadOnlyList<Guid> affectedGroups = await _groupCleaner.RemoveForLinkAsync(link.LearnerId, link.SupporterId, now, ct);
         await _links.AddAuditEntryAsync(
             new SupportLinkAuditEntry(Guid.NewGuid(), link.Id, command.AdminId, SupportLinkAuditAction.AdminUnlinkCompleted, now, command.Reason.Trim()),
             ct);
@@ -92,6 +97,7 @@ public sealed class AdminCompleteUnlinkCommandHandler : ICommandHandler<AdminCom
 
         Guid? primaryId = await _links.GetActivePrimarySupporterIdAsync(link.LearnerId, ct);
         await SupportLinkCache.InvalidateAsync(_cache, ct, link.LearnerId, link.SupporterId, primaryId);
+        await LearnerGroupCache.InvalidateAsync(_cache, affectedGroups, ct);
         _logger.LogInformation("AdminCompleteUnlinkCommand succeeded: LinkId={LinkId}", link.Id);
         return Result.Success();
     }

@@ -228,6 +228,19 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.ToTable("DailyPhrases", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Content.Domain.DeletedLearnerGroup", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId");
+
+                    b.ToTable("DeletedLearnerGroups", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Content.Domain.GrammarRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -258,6 +271,52 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                     b.ToTable("GrammarRules", (string)null);
                 });
 
+            modelBuilder.Entity("WordBuddy.Content.Domain.GroupWordAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AssignedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("AssignedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SenseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("GroupWordAssignments", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Content.Domain.LearnerGroupMemberProjection", b =>
+                {
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("GroupId", "LearnerId");
+
+                    b.ToTable("LearnerGroupMemberProjections", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Content.Domain.LearnerWord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -273,6 +332,9 @@ namespace WordBuddy.Content.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Learner");
+
+                    b.Property<Guid?>("AddedByUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("ChildApprovedAtUtc")
                         .HasColumnType("datetime2");

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WordBuddy.Identity.Domain;
+using WordBuddy.Identity.Domain.Groups;
 using WordBuddy.Identity.Domain.SupportLinks;
 using WordBuddy.Shared.Infrastructure.Messaging;
 
@@ -18,6 +19,8 @@ public sealed class IdentityDbContext : DbContext
     public DbSet<SupportLinkInvitation> SupportLinkInvitations => Set<SupportLinkInvitation>();
     public DbSet<UnlinkRequest> UnlinkRequests => Set<UnlinkRequest>();
     public DbSet<SupportLinkAuditEntry> SupportLinkAuditEntries => Set<SupportLinkAuditEntry>();
+    public DbSet<LearnerGroup> LearnerGroups => Set<LearnerGroup>();
+    public DbSet<LearnerGroupMember> LearnerGroupMembers => Set<LearnerGroupMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

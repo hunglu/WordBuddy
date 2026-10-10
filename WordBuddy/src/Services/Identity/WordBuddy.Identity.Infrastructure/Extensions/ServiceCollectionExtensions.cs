@@ -29,11 +29,14 @@ public static class ServiceCollectionExtensions
         SupportLinkOptions supportLinkOptions =
             configuration.GetSection(SupportLinkOptions.SectionName).Get<SupportLinkOptions>() ?? new();
         services.AddSingleton(supportLinkOptions);
+        services.AddSingleton(configuration.GetSection(LearnerGroupOptions.SectionName).Get<LearnerGroupOptions>() ?? new());
         services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISupportLinkRepository, SupportLinkRepository>();
         services.AddScoped<ISupportLinkEventPublisher, OutboxSupportLinkEventPublisher>();
+        services.AddScoped<ILearnerGroupRepository, LearnerGroupRepository>();
+        services.AddScoped<ILearnerGroupEventPublisher, OutboxLearnerGroupEventPublisher>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 

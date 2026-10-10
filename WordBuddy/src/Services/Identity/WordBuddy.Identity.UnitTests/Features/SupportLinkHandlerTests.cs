@@ -220,7 +220,7 @@ public class SupportLinkHandlerTests
             Mock.Of<ILogger<RequestUnlinkCommandHandler>>());
 
     private RespondUnlinkCommandHandler RespondUnlinkHandler() =>
-        new(_f.Links.Object, _f.Resolver, _f.Events.Object, _f.Cache.Object, _f.Time, new RespondUnlinkCommandValidator(),
+        new(_f.Links.Object, _f.Resolver, _f.Events.Object, _f.GroupCleaner.Object, _f.Cache.Object, _f.Time, new RespondUnlinkCommandValidator(),
             Mock.Of<ILogger<RespondUnlinkCommandHandler>>());
 
     private EscalateUnlinkCommandHandler EscalateHandler() =>
@@ -358,7 +358,7 @@ public class SupportLinkHandlerTests
         UnlinkRequest request = GivenEscalated(link, learner.Id);
         Guid adminId = Guid.NewGuid();
 
-        AdminCompleteUnlinkCommandHandler handler = new(_f.Links.Object, _f.Events.Object, _f.Cache.Object, _f.Time,
+        AdminCompleteUnlinkCommandHandler handler = new(_f.Links.Object, _f.Events.Object, _f.GroupCleaner.Object, _f.Cache.Object, _f.Time,
             new AdminCompleteUnlinkCommandValidator(), Mock.Of<ILogger<AdminCompleteUnlinkCommandHandler>>());
         Result result = await handler.HandleAsync(new AdminCompleteUnlinkCommand(adminId, request.Id, "No response for 7 days"));
 

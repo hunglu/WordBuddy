@@ -3,7 +3,7 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-25_vocabulary-autofill
+last-updated-by: WB-27_learning-groups
 ---
 
 # Vocabulary storage
@@ -53,6 +53,7 @@ erDiagram
         datetime AddedAtUtc
         bool IsAuthor "true only for the creator"
         string AddedBy "Learner | Supporter | List"
+        guid AddedByUserId "optional, the supporter for AddedBy = Supporter"
         string PersonalContext "optional, max 500"
         datetime ChildApprovedAtUtc "optional, supporter approval"
         guid ChildApprovedByUserId "optional"
@@ -139,3 +140,4 @@ None.
 - `WB-12_defect-on-sharing-word` (#12, PR #13) — delete of a shared word needs confirmation and hands the word over to System; `isMine` on the pool; child filter for System-owned shared words; `VocabularyWordIdRemaps` table, `/internal/vocabulary-remaps` routes and Progress sync removed
 - `WB-16_vocabulary-lexeme-sense-model` (#16, PR #17) — `VocabularyWords` split into `Lexemes` + `Senses` (same ids); `LearnerWords` (`AddedBy`, `PersonalContext`), `LessonSenses`, `SenseTranslations`; API JSON unchanged
 - `WB-25_vocabulary-autofill` (#25, PR #37) — `Senses.Origin` + enrichment fields, `LearnerWords` child approval columns, lexeme POS/IPA/audio from auto-fill
+- `WB-27_learning-groups` (#27, PR #39) — `LearnerWords.AddedBy = Supporter` is now written by group assignment (`AddedByUserId` = the supporter, also the `LearnerWordAdded.AddedBy`); `GroupWordAssignments` history and `LearnerGroupMemberProjections` tables; see `learning-groups.md`

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
+using WordBuddy.Identity.Application.Features.Groups;
 using WordBuddy.Identity.Application.Features.SupportLinks;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Application.Settings;
@@ -15,6 +16,7 @@ internal sealed class SupportLinkHandlerFixture
     public Mock<IUserRepository> Users { get; } = new();
     public Mock<ISupportLinkRepository> Links { get; } = new();
     public Mock<ISupportLinkEventPublisher> Events { get; } = new();
+    public Mock<ILearnerGroupMembershipCleaner> GroupCleaner { get; } = new();
     public Mock<IDistributedCache> Cache { get; } = new();
     public SupportLinkOptions Options { get; } = new();
     public FixedTimeProvider Time { get; } = new(TestData.Now);
@@ -27,6 +29,8 @@ internal sealed class SupportLinkHandlerFixture
 
     public SupportLinkHandlerFixture()
     {
+        GroupCleaner.Setup(c => c.RemoveForLinkAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         Links.Setup(l => l.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
         Links.Setup(l => l.AddAuditEntryAsync(It.IsAny<SupportLinkAuditEntry>(), It.IsAny<CancellationToken>()))
             .Callback<SupportLinkAuditEntry, CancellationToken>((entry, _) => Audit.Add(entry))

@@ -1,7 +1,7 @@
 # Content — database diagram
 
 Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
-last migration: `20261009023746_AddVocabularyAutofill`
+last migration: `20261010142457_AddLearnerGroups`
 
 ```mermaid
 erDiagram
@@ -99,6 +99,7 @@ erDiagram
         datetime AddedAtUtc
         bool IsAuthor
         string AddedBy "Learner | Supporter | List, max 20"
+        guid AddedByUserId "nullable; the supporter of a group assignment (Identity user); null = the learner"
         string PersonalContext "nullable, max 500"
         bool RequiresChildApproval "default false; child linked an unapproved auto-fill sense"
         datetime ChildApprovedAtUtc "nullable; supporter approval"
@@ -115,6 +116,24 @@ erDiagram
         guid SupporterId "Identity user"
         bool IsActive
         datetime UpdatedAtUtc "time of last applied event"
+    }
+    DeletedLearnerGroups {
+        guid GroupId PK "Identity LearnerGroups.Id"
+        datetime DeletedAtUtc "time of the delete event"
+    }
+    LearnerGroupMemberProjections {
+        guid GroupId PK "Identity LearnerGroups.Id"
+        guid LearnerId PK "Identity user"
+        guid OwnerId "Identity user; the group owner"
+        bool IsActive
+        datetime UpdatedAtUtc "time of last applied event"
+    }
+    GroupWordAssignments {
+        guid Id PK
+        guid GroupId "Identity LearnerGroups.Id, no FK"
+        guid SenseId "Senses.Id, no FK"
+        guid AssignedBy "Identity user; the supporter"
+        datetime AssignedAtUtc
     }
 ```
 
@@ -133,6 +152,9 @@ erDiagram
 | `IX_DailyPhrases_AudioAssetId`, `IX_DailyPhrases_VideoAssetId` | asset ids | — |
 | `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
 | `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
+| `PK_LearnerGroupMemberProjections` | `GroupId`, `LearnerId` | yes (composite key) |
+| `PK_DeletedLearnerGroups` | `GroupId` | yes (key) |
+| `IX_GroupWordAssignments_GroupId` | `GroupId` | — |
 
 - `UserId`, `OwnerUserId`, `ModeratedByUserId` are Identity ids — no FK.
 - `Senses.Id` = the former `VocabularyWords.Id` (kept by the rename). Progress references it (`VocabularyRecallStats.VocabularyWordId`); sense audio is `vocab-{id}-{locale}.mp3`, so sense ids must stay stable.
@@ -141,6 +163,7 @@ erDiagram
 - Feature rules for these tables: `docs/features/vocabulary.md`.
 - `LearnerWords` inserts/deletes write `OutboxMessage` rows in the same transaction (events `LearnerWordAdded` / `LearnerWordRemoved`, ids and timestamps only). Content also consumes the support-link events, so `InboxState` now holds their dedupe rows.
 - `SupportLinkProjections` (WB-24) is filled only by Identity events `SupportLinkActivated` / `SupportLinkRevoked` (upsert by `LinkId`, older events skipped). It backs the `ChildHasSupporter` and `CanSupportLearner` policies.
+- `LearnerGroupMemberProjections` (WB-27) is filled only by the Identity events `LearnerGroupMemberActivated` / `LearnerGroupMemberRemoved` / `LearnerGroupDeleted` (upsert by group + learner, older events skipped). A group has no row of its own: the owner is read from its member rows. `GroupWordAssignments` is the history of `AssignWordsToGroup`. `DeletedLearnerGroups` is a tombstone written by `LearnerGroupDeleted`: member events at or before its time are ignored, so a delete that arrives first cannot leave an active member.
 
 ## MassTransit messaging tables (WB-21)
 

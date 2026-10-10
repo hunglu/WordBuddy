@@ -192,6 +192,72 @@ namespace WordBuddy.Identity.Infrastructure.Persistence.Migrations
                     b.ToTable("OutboxState");
                 });
 
+            modelBuilder.Entity("WordBuddy.Identity.Domain.Groups.LearnerGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("LearnerGroups", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Identity.Domain.Groups.LearnerGroupMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AddedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("LearnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RemovedReason")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LearnerId");
+
+                    b.HasIndex(new[] { "GroupId", "LearnerId" }, "IX_LearnerGroupMembers_GroupId_LearnerId_Open")
+                        .IsUnique()
+                        .HasFilter("[Status] <> 'Removed'");
+
+                    b.ToTable("LearnerGroupMembers", (string)null);
+                });
+
             modelBuilder.Entity("WordBuddy.Identity.Domain.SupportLinks.SupportLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -427,6 +493,15 @@ namespace WordBuddy.Identity.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("InboxMessageId", "InboxConsumerId")
                         .HasPrincipalKey("MessageId", "ConsumerId");
+                });
+
+            modelBuilder.Entity("WordBuddy.Identity.Domain.Groups.LearnerGroupMember", b =>
+                {
+                    b.HasOne("WordBuddy.Identity.Domain.Groups.LearnerGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WordBuddy.Identity.Domain.SupportLinks.UnlinkRequest", b =>

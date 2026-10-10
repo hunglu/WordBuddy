@@ -16,6 +16,13 @@ internal static class RateLimitingConfiguration
 
     private static readonly TimeSpan SupportLinkInvitationWindow = TimeSpan.FromMinutes(1);
 
+    /// <summary>Policy for group writes (create, rename, delete, add and remove members).</summary>
+    public const string GroupWritePolicy = "group-write";
+
+    private const int GroupWritePermitLimit = 30;
+
+    private static readonly TimeSpan GroupWriteWindow = TimeSpan.FromMinutes(1);
+
     /// <summary>Registers the rate limiter and its policies.</summary>
     public static IServiceCollection AddWordBuddyRateLimiting(this IServiceCollection services)
     {
@@ -33,6 +40,18 @@ internal static class RateLimitingConfiguration
                     {
                         PermitLimit = SupportLinkInvitationPermitLimit,
                         Window = SupportLinkInvitationWindow,
+                        QueueLimit = 0,
+                    }));
+
+            options.AddPolicy(GroupWritePolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "anonymous",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = GroupWritePermitLimit,
+                        Window = GroupWriteWindow,
                         QueueLimit = 0,
                     }));
 
