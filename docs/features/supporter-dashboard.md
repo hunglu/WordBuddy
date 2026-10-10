@@ -3,7 +3,7 @@ feature: Supporter dashboard
 services: Progress, UI
 audience: Both
 state: shipped
-last-updated-by: WB-26_supporter-dashboard
+last-updated-by: WB-27_learning-groups
 ---
 
 # Supporter dashboard
@@ -51,6 +51,17 @@ Word text is not in Progress. The API returns sense ids and the UI resolves text
 - **Logs.** Ids and counts only. No metric values, timings or child data.
 - **Child vs adult.** Same dashboard and same thresholds. A child needs an active supporter to open their own view. A supporter of a child gets the full view. Child accounts cannot be supporters. The UI wording for answer patterns is neutral for both.
 
+## Group dashboard
+
+An owner of a learning group (see `learning-groups.md`) sees one table for all active members.
+
+- `GET /api/progress/dashboard/groups/{groupId}?days=7|30|90`, policy `CanManageGroup` (caller is the group owner in Progress' group projection), rate limit `dashboard`. Non-owner: 403.
+- One row per active member whose support link to the owner is active (a stale group event never leaks a learner). Row: streak, active days, true retention (`null` below the minimum sample), words per status, leech count, last active date. Totals: member count, median retention, members active this week.
+- Same calculator and thresholds as the single-learner dashboard. Reads are batched per metric for all members, no N+1.
+- No names in Progress. The UI joins `learnerId` with Identity's group detail (public name and avatar). A child shows by alias and avatar only.
+- Cache key `progress:dashboard:group:{groupId}:{days}:{offsetMinutes}`, 5 min absolute, no explicit delete: a member change can take up to 5 min to show.
+- UI: Dashboard tab on `/groups/:groupId`, with a link to `/dashboard/learners/:learnerId` per row.
+
 ## Resumable review sessions
 
 `GET /api/progress/vocabulary/session` now resumes the open session instead of making a new one on every call.
@@ -70,6 +81,7 @@ See `vocabulary-builder.md` for the duration and expiry rule.
 |---|---|---|---|
 | GET | `/api/progress/dashboard/me?days=7\|30\|90` | Progress | `ChildHasSupporter` (own data, rate limit `dashboard`) |
 | GET | `/api/progress/dashboard/learners/{learnerId}?days=7\|30\|90` | Progress | `CanSupportLearner` (rate limit `dashboard`) |
+| GET | `/api/progress/dashboard/groups/{groupId}?days=7\|30\|90` | Progress | `CanManageGroup` (rate limit `dashboard`) |
 
 Any other `days` value returns 400.
 
@@ -91,3 +103,4 @@ None.
 ## Change history
 
 - `WB-26_supporter-dashboard` (#26, PR #38) — dashboard endpoints and page, session issue records, resumable review sessions
+- `WB-27_learning-groups` (#27, PR #39) — group dashboard endpoint (`CanManageGroup`) and Dashboard tab on the group page
