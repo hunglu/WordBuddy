@@ -25,6 +25,15 @@ public sealed class ReviewLogConfiguration : IEntityTypeConfiguration<ReviewLog>
         builder.Property(l => l.AttemptNo).IsRequired();
         builder.Property(l => l.Rating).HasConversion<string>().HasMaxLength(10).IsRequired();
 
+        // WB-28: nullable so rows written before server-side checking stay valid.
+        builder.Property(l => l.ExerciseId);
+        builder.Property(l => l.ClientResponseMs);
+        builder.Property(l => l.ServerResponseMs);
+        builder.Property(l => l.TimingAdjusted).HasDefaultValue(false).IsRequired();
+
+        // One answer per exercise, also under a concurrent replay.
+        builder.HasIndex(l => l.ExerciseId).IsUnique().HasFilter("[ExerciseId] IS NOT NULL");
+
         builder.HasIndex(l => new { l.UserId, l.OccurredAtUtc });
         builder.HasIndex(l => new { l.UserId, l.SenseId });
 

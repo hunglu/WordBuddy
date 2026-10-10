@@ -9,9 +9,14 @@ internal static class ResultExtensions
     // The shared Kernel has no Forbidden error type; codes ending in this suffix map to 403.
     private const string ForbiddenSuffix = "Forbidden";
 
+    // Content is a downstream dependency: when it is down, the caller should retry later.
+    private const string ContentUnavailableCode = "Content.Unavailable";
+
     public static IActionResult ToProblemResult(this Result result, ControllerBase controller)
     {
-        int statusCode = result.Error.Code.EndsWith(ForbiddenSuffix, StringComparison.Ordinal)
+        int statusCode = result.Error.Code == ContentUnavailableCode
+            ? StatusCodes.Status503ServiceUnavailable
+            : result.Error.Code.EndsWith(ForbiddenSuffix, StringComparison.Ordinal)
             ? StatusCodes.Status403Forbidden
             : result.Error.Type switch
             {

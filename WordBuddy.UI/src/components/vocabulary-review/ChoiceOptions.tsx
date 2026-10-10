@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react'
-import type { SenseReview } from '../../types'
+import type { ExerciseOption } from '../../types'
 
 interface ChoiceOptionsProps {
-  options: SenseReview[]
+  options: ExerciseOption[]
   disabled: boolean
-  onPick: (option: SenseReview) => void
+  onPick: (option: ExerciseOption) => void
 }
 
 /** The 4 word buttons shared by the choice exercises. */
@@ -13,13 +13,13 @@ export function ChoiceOptions({ options, disabled, onPick }: ChoiceOptionsProps)
     <div className="mt-6 grid grid-cols-2 gap-3">
       {options.map((option) => (
         <button
-          key={option.senseId}
+          key={option.key}
           type="button"
           disabled={disabled}
           onClick={() => onPick(option)}
           className="rounded-wb-md bg-wb-primary-soft px-4 py-3 text-lg font-bold text-wb-ink hover:bg-wb-primary-soft-hover disabled:opacity-60"
         >
-          {option.word}
+          {option.text}
         </button>
       ))}
     </div>

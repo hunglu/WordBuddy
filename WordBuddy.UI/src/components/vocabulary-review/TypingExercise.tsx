@@ -1,21 +1,21 @@
 import type { FormEvent, ReactElement } from 'react'
 import { useState } from 'react'
-import type { SenseReview } from '../../types'
+import type { VocabularyExercise } from '../../types'
 import type { ExerciseAnswer } from './sessionQueue'
-import { isTypedAnswerCorrect } from './sessionQueue'
 import { useResponseTimer } from './useResponseTimer'
 
 interface TypingExerciseProps {
-  sense: SenseReview
+  exercise: VocabularyExercise
   onAnswer: (answer: ExerciseAnswer) => void
 }
 
-/** Shows the definition; the learner types the word. Hint = first letter. */
-export function TypingExercise({ sense, onAnswer }: TypingExerciseProps): ReactElement {
+/** Shows the definition; the learner types the word. The server checks it. Hint = first letter. */
+export function TypingExercise({ exercise, onAnswer }: TypingExerciseProps): ReactElement {
   const elapsed = useResponseTimer()
   const [typed, setTyped] = useState('')
   const [hintUsed, setHintUsed] = useState(false)
   const [answered, setAnswered] = useState(false)
+  const { prompt } = exercise
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
@@ -23,16 +23,16 @@ export function TypingExercise({ sense, onAnswer }: TypingExerciseProps): ReactE
       return
     }
     setAnswered(true)
-    onAnswer({ isCorrect: isTypedAnswerCorrect(typed, sense.word), responseMs: elapsed(), hintUsed })
+    onAnswer({ answer: { text: typed }, clientResponseMs: elapsed(), hintUsed })
   }
 
   return (
     <form data-testid="exercise-typing" onSubmit={handleSubmit}>
       <p className="text-wb-ink-muted">Type the word for this meaning.</p>
-      <p className="mt-4 text-xl font-semibold text-wb-ink">{sense.definition}</p>
+      <p className="mt-4 text-xl font-semibold text-wb-ink">{prompt.definition}</p>
       {hintUsed ? (
         <p className="mt-3 text-wb-ink-muted">
-          Starts with <span className="font-bold text-wb-ink">{sense.word.trim().charAt(0)}</span>
+          Starts with <span className="font-bold text-wb-ink">{prompt.hintFirstLetter ?? ''}</span>
         </p>
       ) : (
         <button

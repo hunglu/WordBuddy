@@ -8,7 +8,7 @@ namespace WordBuddy.Progress.Api.Extensions;
 /// <summary>Per-endpoint rate-limit policies. Rejections return <c>429</c> with <c>Retry-After</c>.</summary>
 internal static class RateLimitingConfiguration
 {
-    /// <summary>Policy for <c>POST /api/progress/vocabulary/reviews</c> — strict, like quiz submission.</summary>
+    /// <summary>Policy for <c>POST /api/progress/vocabulary/exercises</c> and <c>/reviews</c> — strict, like quiz submission.</summary>
     public const string VocabularyReviewPolicy = "vocabulary-review";
 
     /// <summary>Answers per user per window.</summary>

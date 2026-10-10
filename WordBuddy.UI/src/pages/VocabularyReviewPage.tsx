@@ -1,50 +1,40 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactElement } from 'react'
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { problemCode } from '../api/supportLinks'
 import { ListeningChoiceExercise } from '../components/vocabulary-review/ListeningChoiceExercise'
 import { PersonalContextNote } from '../components/vocabulary-review/PersonalContextNote'
 import { PictureChoiceExercise } from '../components/vocabulary-review/PictureChoiceExercise'
 import { SessionSummary } from '../components/vocabulary-review/SessionSummary'
 import { TypingExercise } from '../components/vocabulary-review/TypingExercise'
 import {
-  CHOICE_OPTION_COUNT,
-  buildChoiceOptions,
   createSessionState,
-  pickExercise,
   sessionReducer,
   type ExerciseAnswer,
-  type PickedExercise,
 } from '../components/vocabulary-review/sessionQueue'
-import { useRecordReview, useSenses, useVocabularySession } from '../hooks/useVocabularyReview'
+import { useCreateExercise, useRecordReview, useVocabularySession } from '../hooks/useVocabularyReview'
 import { useAuthStore } from '../store/authStore'
-import type { SenseReview, VocabularySession } from '../types'
+import type { ReviewResult, VocabularyExercise, VocabularySession } from '../types'
 
 /** Child sessions: soft notice at 10 min, hard stop at 15 min. UI cap only; unanswered items stay due. */
 const CHILD_NOTICE_MS = 10 * 60 * 1000
 const CHILD_STOP_MS = 15 * 60 * 1000
 
-interface LastAnswer {
-  isCorrect: boolean
-  word: string
-  saveFailed: boolean
-}
+/** Problem codes of "no exercise for this word": the word is skipped (hidden, removed or already done). */
+const SKIP_CODES: ReadonlySet<string> = new Set([
+  'Exercise.SenseUnavailable',
+  'Exercise.SenseNotInSession',
+  'Exercise.SenseCompleted',
+  'Review.WordNotInList',
+])
 
-/** Daily vocabulary review: runs the SRS session with 3 exercise types. No self-rating. */
+const PRIMARY_BUTTON =
+  'rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover'
+
+/** Daily vocabulary review: runs the SRS session with 3 exercise types. The server builds each exercise and checks each answer. */
 export function VocabularyReviewPage(): ReactElement {
   const session = useVocabularySession()
-  const ids: string[] = useMemo(
-    () => (session.data ? [...session.data.dueItems, ...session.data.newItems].map((item) => item.senseId) : []),
-    [session.data],
-  )
-  const senses = useSenses(ids)
-
-  function retry(): void {
-    void session.refetch()
-    if (ids.length > 0) {
-      void senses.refetch()
-    }
-  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -54,27 +44,22 @@ export function VocabularyReviewPage(): ReactElement {
   )
 
   function renderBody(): ReactElement {
-    if (session.isError || senses.isError) {
+    if (session.isError) {
       return (
         <div className="flex flex-col items-start gap-3">
           <p className="text-lg text-wb-danger">Couldn't load your review right now.</p>
-          <button
-            type="button"
-            onClick={retry}
-            className="rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
-          >
+          <button type="button" onClick={() => void session.refetch()} className={PRIMARY_BUTTON}>
             Try again
           </button>
         </div>
       )
     }
 
-    if (session.isLoading || (ids.length > 0 && senses.isLoading) || !session.data) {
+    if (session.isLoading || !session.data) {
       return <p className="text-lg text-wb-ink-muted">Getting today's words ready…</p>
     }
 
-    const loadedSenses: SenseReview[] = senses.data ?? []
-    if (loadedSenses.length === 0) {
+    if (session.data.dueItems.length + session.data.newItems.length === 0) {
       return (
         <div>
           <p className="text-lg text-wb-ink-muted">Nothing to review today. Add some words to your list!</p>
@@ -85,22 +70,18 @@ export function VocabularyReviewPage(): ReactElement {
       )
     }
 
-    return <ReviewSession key={session.data.sessionId} session={session.data} senses={loadedSenses} />
+    return <ReviewSession key={session.data.sessionId} session={session.data} />
   }
 }
 
 interface ReviewSessionProps {
   session: VocabularySession
-  senses: SenseReview[]
 }
 
-function ReviewSession({ session, senses }: ReviewSessionProps): ReactElement {
-  const senseById: Map<string, SenseReview> = useMemo(() => new Map(senses.map((s) => [s.senseId, s])), [senses])
+function ReviewSession({ session }: ReviewSessionProps): ReactElement {
   const [state, dispatch] = useReducer(sessionReducer, undefined, () =>
-    createSessionState(session.dueItems, session.newItems, new Set(senseById.keys())),
+    createSessionState(session.dueItems, session.newItems),
   )
-  const [lastAnswer, setLastAnswer] = useState<LastAnswer | null>(null)
-  const recordReview = useRecordReview()
   const isChild: boolean = useAuthStore((s) => s.user?.ageGroup === 'Child')
   const [nearlyDone, setNearlyDone] = useState(false)
 
@@ -116,52 +97,12 @@ function ReviewSession({ session, senses }: ReviewSessionProps): ReactElement {
     }
   }, [isChild])
 
+  const handleNext = useCallback((isCorrect: boolean): void => dispatch({ type: 'answer', isCorrect }), [])
+  const handleSkip = useCallback((): void => dispatch({ type: 'skip' }), [])
+
   const current = state.queue[0]
-  const currentSense: SenseReview | undefined = current ? senseById.get(current.senseId) : undefined
-
-  const currentKey: string | undefined = current?.key
-  // Recomputed per presentation only, so options stay stable while the learner answers.
-  const options: SenseReview[] = useMemo(
-    () => (currentKey && currentSense ? buildChoiceOptions(currentSense, senses) : []),
-    [currentKey, currentSense, senses],
-  )
-
-  if (!current || !currentSense) {
+  if (!current) {
     return <SessionSummary answered={state.answered} correct={state.correct} stoppedByTimeCap={state.stoppedByTimeCap} />
-  }
-
-  const picked: PickedExercise = pickExercise(current, currentSense, senses.length)
-  const exercise: PickedExercise =
-    picked.exerciseType !== 'Typing' && options.length < CHOICE_OPTION_COUNT
-      ? { exerciseType: 'Typing', skill: 'Spelling' }
-      : picked
-
-  function handleAnswer(answer: ExerciseAnswer): void {
-    if (!currentSense) {
-      return
-    }
-    const word: string = currentSense.word
-    setLastAnswer({ isCorrect: answer.isCorrect, word, saveFailed: false })
-    recordReview.mutate(
-      {
-        sessionId: session.sessionId,
-        senseId: currentSense.senseId,
-        exerciseType: exercise.exerciseType,
-        skill: exercise.skill,
-        isCorrect: answer.isCorrect,
-        responseMs: answer.responseMs,
-        hintUsed: answer.hintUsed,
-      },
-      { onError: () => setLastAnswer({ isCorrect: answer.isCorrect, word, saveFailed: true }) },
-    )
-  }
-
-  function handleNext(): void {
-    if (!lastAnswer) {
-      return
-    }
-    dispatch({ type: 'answer', isCorrect: lastAnswer.isCorrect })
-    setLastAnswer(null)
   }
 
   return (
@@ -184,35 +125,129 @@ function ReviewSession({ session, senses }: ReviewSessionProps): ReactElement {
           transition={{ duration: 0.25 }}
           className="w-full max-w-md rounded-wb-card bg-wb-surface-card p-8 text-center shadow-wb-card"
         >
-          {exercise.exerciseType === 'PictureChoice' && (
-            <PictureChoiceExercise sense={currentSense} options={options} onAnswer={handleAnswer} />
-          )}
-          {exercise.exerciseType === 'ListeningChoice' && (
-            <ListeningChoiceExercise sense={currentSense} options={options} onAnswer={handleAnswer} />
-          )}
-          {exercise.exerciseType === 'Typing' && <TypingExercise sense={currentSense} onAnswer={handleAnswer} />}
-
-          <PersonalContextNote personalContext={currentSense.personalContext} />
-
-          {lastAnswer && (
-            <div data-testid="answer-feedback" className="mt-6 flex flex-col items-center gap-3">
-              <p className={`text-lg font-bold ${lastAnswer.isCorrect ? 'text-wb-success' : 'text-wb-danger'}`}>
-                {lastAnswer.isCorrect ? 'Correct!' : `The answer was "${lastAnswer.word}".`}
-              </p>
-              {lastAnswer.saveFailed && (
-                <p className="text-sm text-wb-danger">Couldn't save this answer. It will come back next time.</p>
-              )}
-              <button
-                type="button"
-                onClick={handleNext}
-                className="rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <ExerciseCard
+            sessionId={session.sessionId}
+            senseId={current.senseId}
+            onNext={handleNext}
+            onSkip={handleSkip}
+          />
         </motion.div>
       </AnimatePresence>
     </div>
+  )
+}
+
+interface ExerciseCardProps {
+  sessionId: string
+  senseId: string
+  onNext: (isCorrect: boolean) => void
+  onSkip: () => void
+}
+
+/**
+ * One presentation: asks the server for the exercise, renders it, sends the raw answer, and shows the
+ * server's verdict. The browser never knows the right answer before the server replies.
+ */
+function ExerciseCard({ sessionId, senseId, onNext, onSkip }: ExerciseCardProps): ReactElement {
+  const createExercise = useCreateExercise()
+  const recordReview = useRecordReview()
+  const requested = useRef(false)
+  const [exercise, setExercise] = useState<VocabularyExercise | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [submitted, setSubmitted] = useState<ExerciseAnswer | null>(null)
+  const [result, setResult] = useState<ReviewResult | null>(null)
+  const [saveFailed, setSaveFailed] = useState(false)
+
+  const { mutate: createMutate } = createExercise
+  const loadExercise = useCallback((): void => {
+    setLoadFailed(false)
+    createMutate(
+      { sessionId, senseId },
+      {
+        onSuccess: (data) => setExercise(data),
+        onError: (error) => {
+          if (SKIP_CODES.has(problemCode(error) ?? '')) {
+            onSkip()
+          } else {
+            setLoadFailed(true)
+          }
+        },
+      },
+    )
+  }, [createMutate, sessionId, senseId, onSkip])
+
+  useEffect(() => {
+    if (requested.current) {
+      return
+    }
+    requested.current = true
+    loadExercise()
+  }, [loadExercise])
+
+  const { mutate: reviewMutate } = recordReview
+  function send(answer: ExerciseAnswer): void {
+    if (!exercise) {
+      return
+    }
+    setSubmitted(answer)
+    setSaveFailed(false)
+    reviewMutate(
+      { exerciseId: exercise.exerciseId, ...answer },
+      {
+        onSuccess: (data) => setResult(data),
+        onError: () => setSaveFailed(true),
+      },
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-wb-danger">Couldn't load this word.</p>
+        <button type="button" onClick={loadExercise} className={PRIMARY_BUTTON}>
+          Try again
+        </button>
+        <button type="button" onClick={onSkip} className="text-sm font-semibold text-wb-ink-muted hover:underline">
+          Skip this word
+        </button>
+      </div>
+    )
+  }
+
+  if (!exercise) {
+    return <p className="text-wb-ink-muted">Getting your word ready…</p>
+  }
+
+  return (
+    <>
+      {exercise.exerciseType === 'PictureChoice' && <PictureChoiceExercise exercise={exercise} onAnswer={send} />}
+      {exercise.exerciseType === 'ListeningChoice' && <ListeningChoiceExercise exercise={exercise} onAnswer={send} />}
+      {exercise.exerciseType === 'Typing' && <TypingExercise exercise={exercise} onAnswer={send} />}
+
+      <PersonalContextNote personalContext={exercise.prompt.personalContext} />
+
+      {result && (
+        <div data-testid="answer-feedback" className="mt-6 flex flex-col items-center gap-3">
+          <p className={`text-lg font-bold ${result.isCorrect ? 'text-wb-success' : 'text-wb-danger'}`}>
+            {result.isCorrect ? 'Correct!' : `The answer was "${result.correctAnswer}".`}
+          </p>
+          <button type="button" onClick={() => onNext(result.isCorrect)} className={PRIMARY_BUTTON}>
+            Next
+          </button>
+        </div>
+      )}
+
+      {saveFailed && submitted && (
+        <div data-testid="answer-save-failed" className="mt-6 flex flex-col items-center gap-3">
+          <p className="text-sm text-wb-danger">Couldn't save this answer.</p>
+          <button type="button" onClick={() => send(submitted)} className={PRIMARY_BUTTON}>
+            Try again
+          </button>
+          <button type="button" onClick={onSkip} className="text-sm font-semibold text-wb-ink-muted hover:underline">
+            Skip this word
+          </button>
+        </div>
+      )}
+    </>
   )
 }

@@ -26,7 +26,8 @@ model this follows.
 | POST | `/api/progress` | Bearer | Records/updates the caller's progress on a lesson (upsert by user+lesson) |
 | GET | `/api/progress` | Bearer | Lists the caller's progress across all lessons |
 | GET | `/api/progress/vocabulary/session` | Bearer | Today's session: due words first, then new words up to the cap; issues a `sessionId`. An open session (not ended, not expired) is resumed with the same `sessionId` and its unanswered items |
-| POST | `/api/progress/vocabulary/reviews` | Bearer, rate limit `vocabulary-review` | Records one answer; returns `{ status, dueAtUtc, rating }` |
+| POST | `/api/progress/vocabulary/exercises` | Bearer, rate limit `vocabulary-review` | Builds the next exercise for one session word (WB-28); returns `{ exerciseId, exerciseType, skill, prompt, options }` — never the answer |
+| POST | `/api/progress/vocabulary/reviews` | Bearer, rate limit `vocabulary-review` | Grades the raw answer to an issued exercise; returns `{ status, dueAtUtc, rating, isCorrect, correctAnswer }` |
 | GET | `/api/progress/vocabulary/words` | Bearer | The caller's active word states |
 | GET / PUT | `/api/progress/vocabulary/settings` | Bearer | The caller's `newWordsPerDay` (0–50, `null` = backlog rule); any user, child included |
 | GET | `/api/progress/dashboard/me?days=7\|30\|90` | Bearer, `ChildHasSupporter`, rate limit `dashboard` | The caller's own dashboard (WB-26) |
@@ -40,10 +41,12 @@ answer → AnswerGrader (rating) → first attempt of a new/due word? → FSRS-6
        → one ReviewLog row (insert-only) → one save
 ```
 
-- The client sends answers only: `sessionId`, `senseId`, `exerciseType`, `skill`, `isCorrect`,
-  `responseMs`, `hintUsed`. Rating, `IsDue` and `AttemptNo` are server-derived.
-- Unknown or removed word → `404 Review.WordNotInList`. Bad input → `400`. Over the limit
-  (60 answers/minute/user) → `429` + `Retry-After`.
+- The client sends the raw answer only: `exerciseId`, `answer` (`{ optionKey }` or `{ text }`),
+  `clientResponseMs`, `hintUsed`. Correctness, exercise type, skill, sense, session, rating, `IsDue`
+  and `AttemptNo` are server-derived. Unknown JSON fields (a forged `isCorrect`) are ignored.
+- Unknown or removed word → `404 Review.WordNotInList`. Unknown or foreign exercise → `404
+  Exercise.NotFound`. Exercise already answered → `409 Exercise.AlreadyAnswered`. Bad input → `400`.
+  Over the limit (60 calls/minute/user, exercises and reviews together) → `429` + `Retry-After`.
 - Same answer sent twice at once (double tap, retry) → one `200`, the other `409
   LearnerWordState.ConcurrentUpdate`. Guards: unique `(UserId, SessionId, SenseId, AttemptNo)`
   on `ReviewLogs` and a `RowVersion` on `LearnerWordStates`. FSRS is applied once.
@@ -62,6 +65,31 @@ answer → AnswerGrader (rating) → first attempt of a new/due word? → FSRS-6
 `age_group` comes from the JWT; missing or unknown → treated as Child (more lenient grading).
 This differs from Content, which fails on a missing `age_group` claim. The lenient default is
 safe here: the claim only sets grading thresholds, never content access.
+
+### Server-side answer checking (WB-28)
+
+```text
+session → POST exercises {sessionId, senseId}
+        → Content senses (caller's JWT forwarded, cached per session) → ExerciseSelector → VocabularyExercise stored
+        → POST reviews {exerciseId, answer, clientResponseMs}
+        → AnswerChecker + ResponseTimeEvaluator → AnswerGrader → FSRS → ReviewLog
+```
+
+- Progress picks the exercise type and the options. The reply carries opaque option keys and no sense ids.
+  The Typing prompt has no word, only its first letter for the hint.
+- Choice: the key must equal the stored key. Typing: trim + case-insensitive match. The answer text is
+  never stored or logged.
+- Timing: the server measures `answeredAt - issuedAt`. The client value is accepted only when
+  `0 <= client <= server` and `server - client <= Vocabulary:Grading:ToleranceMs` (default 3000).
+  Otherwise `server - tolerance` (floor 0) is used and `ReviewLogs.TimingAdjusted` is set.
+- Content down → `503 Content.Unavailable`. A sense Content does not return (hidden for a child, deleted)
+  → `404 Exercise.SenseUnavailable`; the UI skips it.
+- A word is done for the session after 2 correct answers → `409 Exercise.SenseCompleted` for more exercises.
+
+| Rule | Child | Adult |
+| --- | --- | --- |
+| Senses used as prompt and distractor | Child-visible only (Content filter, forwarded JWT) | All |
+| Timing tolerance | 3000 ms | 3000 ms |
 
 ### Dashboard (WB-26)
 
@@ -144,6 +172,7 @@ Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyProgress`)
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Progress validates
   tokens Identity issued
+- `Services:Content:BaseUrl` — Content base URL (default `http://localhost:5081`; `Services__Content__BaseUrl` in compose and k8s);
 - `Messaging:RabbitMq:{Host,VirtualHost,Username}` — broker (defaults in `appsettings.json`);
   `Messaging:RabbitMq:Password` only via user-secrets or env `Messaging__RabbitMq__Password`.
   `Messaging:Transport = InMemory` is for tests only.

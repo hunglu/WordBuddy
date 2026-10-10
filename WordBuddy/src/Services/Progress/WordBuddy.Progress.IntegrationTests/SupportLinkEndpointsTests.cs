@@ -74,7 +74,7 @@ public sealed class SupportLinkEndpointsTests
     {
         HttpResponseMessage response = await Client(Guid.NewGuid(), "Child").PostAsJsonAsync(
             "/api/progress/vocabulary/reviews",
-            new { sessionId = Guid.NewGuid(), senseId = Guid.NewGuid(), exerciseType = "PictureChoice", skill = "Meaning", isCorrect = true, responseMs = 3000, hintUsed = false });
+            new { exerciseId = Guid.NewGuid(), answer = new { optionKey = "abc" }, clientResponseMs = 3000, hintUsed = false });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
