@@ -23,6 +23,7 @@ public sealed class ProgressDbContext : DbContext
 
     public DbSet<DeletedLearnerGroup> DeletedLearnerGroups => Set<DeletedLearnerGroup>();
     public DbSet<VocabularySessionIssue> VocabularySessionIssues => Set<VocabularySessionIssue>();
+    public DbSet<VocabularyExercise> VocabularyExercises => Set<VocabularyExercise>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

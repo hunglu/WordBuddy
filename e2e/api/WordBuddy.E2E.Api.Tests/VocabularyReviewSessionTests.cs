@@ -58,25 +58,24 @@ public sealed class VocabularyReviewSessionTests
             sense.GetProperty("definition").GetString().Should().Be(definitionsByWord[word]);
         }
 
-        // 3. One review per item.
+        // 3. One exercise and one right answer per item (WB-28: the server builds and checks them).
         foreach (Guid senseId in senseIds)
         {
-            IAPIResponse review = await c.Progress.PostAsync("/api/progress/vocabulary/reviews", new APIRequestContextOptions
-            {
-                Headers = Auth(token),
-                DataObject = new
-                {
-                    sessionId,
-                    senseId,
-                    exerciseType = "PictureChoice",
-                    skill = "Meaning",
-                    isCorrect = true,
-                    responseMs = 2000,
-                    hintUsed = false,
-                },
-            });
+            string word = senses.Single(s => s.GetProperty("senseId").GetGuid() == senseId).GetProperty("word").GetString()!;
+
+            JsonElement exercise = await VocabularyExercises.CreateAsync(c.Progress, token, sessionId, senseId);
+            string raw = exercise.GetRawText();
+            raw.Should().NotContain(senseId.ToString(), "options carry opaque keys, not sense ids");
+            exercise.TryGetProperty("expectedAnswer", out _).Should().BeFalse("the reply never carries the answer");
+
+            (string? optionKey, string? text) = VocabularyExercises.RightAnswer(exercise, word);
+            IAPIResponse review = await VocabularyExercises.AnswerAsync(
+                c.Progress, token, exercise.GetProperty("exerciseId").GetGuid(), optionKey, text);
             review.Status.Should().Be(200, await review.TextAsync());
-            (await review.JsonAsync())!.Value.GetProperty("status").GetString().Should().NotBe("New");
+            JsonElement result = (await review.JsonAsync())!.Value;
+            result.GetProperty("status").GetString().Should().NotBe("New");
+            result.GetProperty("isCorrect").GetBoolean().Should().BeTrue();
+            result.GetProperty("correctAnswer").GetString().Should().Be(word);
         }
 
         // 4. States changed.

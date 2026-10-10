@@ -11,4 +11,7 @@ public interface IReviewLogRepository
 
     /// <summary>Counts earlier answers for this word in this session.</summary>
     Task<Result<int>> CountAttemptsAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default);
+
+    /// <summary>Counts earlier correct answers for this word in this session.</summary>
+    Task<Result<int>> CountCorrectAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default);
 }

@@ -28,4 +28,11 @@ internal sealed class ReviewLogRepository : IReviewLogRepository
             .CountAsync(l => l.UserId == userId && l.SessionId == sessionId && l.SenseId == senseId, ct);
         return Result.Success(count);
     }
+
+    public async Task<Result<int>> CountCorrectAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default)
+    {
+        int count = await _dbContext.ReviewLogs
+            .CountAsync(l => l.UserId == userId && l.SessionId == sessionId && l.SenseId == senseId && l.IsCorrect, ct);
+        return Result.Success(count);
+    }
 }

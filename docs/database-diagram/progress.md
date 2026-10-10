@@ -1,7 +1,7 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261010142511_AddLearnerGroupProjection`
+last migration: `20261010162311_AddServerAnswerChecking`
 
 The domain tables have no foreign keys between them (one exception: `VocabularySessionIssueItems` → `VocabularySessionIssues`); every id column points to another service.
 
@@ -72,6 +72,23 @@ erDiagram
         bool IsDue "server-derived"
         int AttemptNo "server-derived"
         string Rating "Again | Hard | Good | Easy, max 10"
+        guid ExerciseId "nullable; null for rows before WB-28"
+        int ClientResponseMs "nullable; time the client reported"
+        int ServerResponseMs "nullable; time the server measured"
+        bool TimingAdjusted "default false; client time rejected"
+    }
+    VocabularyExercises {
+        guid Id PK "exercise id sent to the client"
+        guid UserId "Identity user"
+        guid SessionId "VocabularySessionIssues.SessionId (plain id)"
+        guid SenseId "Content sense"
+        string ExerciseType "max 30"
+        string Skill "max 30"
+        string ExpectedAnswer "option key or normalized word, max 200"
+        string CorrectWord "word as written, max 200"
+        string Options "JSON key to sense id, max 1000; empty for Typing"
+        datetime IssuedAtUtc "server UTC"
+        datetime AnsweredAtUtc "nullable; set once"
     }
     VocabularyLearnerSettings {
         guid UserId PK "Identity user"
@@ -126,6 +143,9 @@ erDiagram
 | `IX_ReviewLogs_UserId_OccurredAtUtc` | `UserId`, `OccurredAtUtc` | — |
 | `IX_ReviewLogs_UserId_SenseId` | `UserId`, `SenseId` | — |
 | `IX_ReviewLogs_UserId_SessionId_SenseId_AttemptNo` | `UserId`, `SessionId`, `SenseId`, `AttemptNo` | yes |
+| `IX_ReviewLogs_ExerciseId` | `ExerciseId` | yes, `ExerciseId IS NOT NULL` (one answer per exercise) |
+| `IX_VocabularyExercises_SessionId` | `SessionId` | — |
+| `IX_VocabularyExercises_UserId` | `UserId` | — |
 | `IX_SupportLinkProjections_LearnerId_IsActive` | `LearnerId`, `IsActive` | — |
 | `IX_SupportLinkProjections_SupporterId_LearnerId` | `SupporterId`, `LearnerId` | — |
 | `PK_LearnerGroupMemberProjections` | `GroupId`, `LearnerId` | yes (composite key) |
@@ -142,6 +162,8 @@ erDiagram
 - `LearnerGroupMemberProjections` (WB-27) is filled only by the Identity events `LearnerGroupMemberActivated` / `LearnerGroupMemberRemoved` / `LearnerGroupDeleted` (upsert by group + learner, older events skipped). A group has no row of its own: the owner is read from its member rows. It backs the `CanManageGroup` policy and the group dashboard. `DeletedLearnerGroups` is a tombstone written by `LearnerGroupDeleted`: member events at or before its time are ignored, so a delete that arrives first cannot leave an active member.
 - `VocabularySessionIssues` (WB-26) has one row per non-empty session the session endpoint hands out; the only update is `EndedAtUtc`. While a session is not ended and not expired, a reload resumes it (same `SessionId`). The dashboard compares `PlannedCount` with the answers in `ReviewLogs` (daily goal; unfinished = expired and answered < planned). Ids and counts only.
 - `VocabularySessionIssueItems` (WB-26) lists the planned words of a session, so a resume can return the unanswered ones in order.
+- `VocabularyExercises` (WB-28) holds each issued exercise and its expected answer, so Progress grades the learner's raw answer. It is never returned to the client. `AnsweredAtUtc` is set once; the only update. No learner free text is stored.
+- `ReviewLogs` (WB-28) gains `ExerciseId`, `ClientResponseMs`, `ServerResponseMs`, `TimingAdjusted`. `ResponseMs` keeps the value used for grading. Old rows stay valid (nullable columns).
 - A revoke clears `SupporterNewWordCap` when `SupporterCapSetBy` is the revoked supporter (same save).
 
 ## MassTransit messaging tables (WB-21)

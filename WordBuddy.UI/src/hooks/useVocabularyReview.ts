@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { getVocabularySession, postVocabularyReview } from '../api/progress'
+import { getVocabularySession, postVocabularyExercise, postVocabularyReview } from '../api/progress'
 import { getSensesByIds } from '../api/vocabulary'
 import type { ReviewPayload } from '../types'
 
@@ -13,7 +13,7 @@ export function useVocabularySession() {
   })
 }
 
-/** Visible senses for the session ids (Content filters hidden ones). */
+/** Visible senses for the given ids (Content filters hidden ones). Used by the dashboard, not by the review flow. */
 export function useSenses(ids: string[]) {
   return useQuery({
     queryKey: ['senses', ids],
@@ -23,7 +23,15 @@ export function useSenses(ids: string[]) {
   })
 }
 
-/** Records one answer in Progress. */
+/** Asks the server to build the next exercise for one session word. */
+export function useCreateExercise() {
+  return useMutation({
+    mutationFn: ({ sessionId, senseId }: { sessionId: string; senseId: string }) =>
+      postVocabularyExercise(sessionId, senseId),
+  })
+}
+
+/** Sends the raw answer to Progress, which grades it. */
 export function useRecordReview() {
   return useMutation({
     mutationFn: (payload: ReviewPayload) => postVocabularyReview(payload),

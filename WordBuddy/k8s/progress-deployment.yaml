@@ -28,6 +28,8 @@ spec:
                 secretKeyRef:
                   name: wordbuddy-secrets
                   key: Progress_ConnectionStrings__DefaultConnection
+            - name: Services__Content__BaseUrl
+              value: http://content-api:8080
             - name: Jwt__Secret
               valueFrom:
                 secretKeyRef:

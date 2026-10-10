@@ -1,35 +1,35 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
-import type { SenseReview } from '../../types'
+import type { ExerciseOption, VocabularyExercise } from '../../types'
 import { ChoiceOptions } from './ChoiceOptions'
 import type { ExerciseAnswer } from './sessionQueue'
 import { useResponseTimer } from './useResponseTimer'
 
 interface PictureChoiceExerciseProps {
-  sense: SenseReview
-  options: SenseReview[]
+  exercise: VocabularyExercise
   onAnswer: (answer: ExerciseAnswer) => void
 }
 
-/** Shows the sense picture; the learner picks the matching word. Hint = show the definition. */
-export function PictureChoiceExercise({ sense, options, onAnswer }: PictureChoiceExerciseProps): ReactElement {
+/** Shows the exercise picture; the learner picks the matching word. Hint = show the definition. */
+export function PictureChoiceExercise({ exercise, onAnswer }: PictureChoiceExerciseProps): ReactElement {
   const elapsed = useResponseTimer()
   const [hintUsed, setHintUsed] = useState(false)
   const [answered, setAnswered] = useState(false)
+  const { prompt } = exercise
 
-  function handlePick(option: SenseReview): void {
+  function handlePick(option: ExerciseOption): void {
     setAnswered(true)
-    onAnswer({ isCorrect: option.senseId === sense.senseId, responseMs: elapsed(), hintUsed })
+    onAnswer({ answer: { optionKey: option.key }, clientResponseMs: elapsed(), hintUsed })
   }
 
   return (
     <div data-testid="exercise-picture-choice">
       <p className="text-wb-ink-muted">Which word matches the picture?</p>
-      {sense.imageUrl && (
-        <img src={sense.imageUrl} alt="What is this?" className="mx-auto mt-4 max-h-56 rounded-wb-card object-contain" />
+      {prompt.imageUrl && (
+        <img src={prompt.imageUrl} alt="What is this?" className="mx-auto mt-4 max-h-56 rounded-wb-card object-contain" />
       )}
       {hintUsed ? (
-        <p className="mt-3 text-wb-ink-muted">{sense.definition}</p>
+        <p className="mt-3 text-wb-ink-muted">{prompt.definition}</p>
       ) : (
         <button
           type="button"
@@ -40,7 +40,7 @@ export function PictureChoiceExercise({ sense, options, onAnswer }: PictureChoic
           Show a hint
         </button>
       )}
-      <ChoiceOptions options={options} disabled={answered} onPick={handlePick} />
+      <ChoiceOptions options={exercise.options} disabled={answered} onPick={handlePick} />
     </div>
   )
 }

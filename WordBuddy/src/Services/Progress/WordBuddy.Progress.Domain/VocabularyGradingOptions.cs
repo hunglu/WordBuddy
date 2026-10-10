@@ -15,6 +15,12 @@ public sealed class VocabularyGradingOptions
     /// <summary>Thresholds for <see cref="ExerciseType.Typing"/>. Default 6 s / 20 s.</summary>
     public ResponseTimeThresholds Typing { get; set; } = new() { FastMs = 6000, SlowMs = 20000 };
 
+    /// <summary>
+    /// Allowed gap in milliseconds between the server-measured time and the client-reported time.
+    /// Covers network and render delay. Default 3000.
+    /// </summary>
+    public int ToleranceMs { get; set; } = 3000;
+
     /// <summary>Multiplier applied to every threshold per <see cref="AgeGroup"/>.</summary>
     public AgeGroupMultipliers AgeGroupMultiplier { get; set; } = new();
 

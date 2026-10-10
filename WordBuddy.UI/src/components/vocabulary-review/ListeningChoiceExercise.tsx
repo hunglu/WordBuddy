@@ -1,13 +1,12 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
-import type { SenseReview } from '../../types'
+import type { ExerciseOption, VocabularyExercise } from '../../types'
 import { ChoiceOptions } from './ChoiceOptions'
 import type { ExerciseAnswer } from './sessionQueue'
 import { useResponseTimer } from './useResponseTimer'
 
 interface ListeningChoiceExerciseProps {
-  sense: SenseReview
-  options: SenseReview[]
+  exercise: VocabularyExercise
   onAnswer: (answer: ExerciseAnswer) => void
 }
 
@@ -18,14 +17,15 @@ function play(url: string | null): void {
 }
 
 /** Plays the word audio; the learner picks the word they heard. Hint = show the definition. */
-export function ListeningChoiceExercise({ sense, options, onAnswer }: ListeningChoiceExerciseProps): ReactElement {
+export function ListeningChoiceExercise({ exercise, onAnswer }: ListeningChoiceExerciseProps): ReactElement {
   const elapsed = useResponseTimer()
   const [hintUsed, setHintUsed] = useState(false)
   const [answered, setAnswered] = useState(false)
+  const { prompt } = exercise
 
-  function handlePick(option: SenseReview): void {
+  function handlePick(option: ExerciseOption): void {
     setAnswered(true)
-    onAnswer({ isCorrect: option.senseId === sense.senseId, responseMs: elapsed(), hintUsed })
+    onAnswer({ answer: { optionKey: option.key }, clientResponseMs: elapsed(), hintUsed })
   }
 
   return (
@@ -33,14 +33,14 @@ export function ListeningChoiceExercise({ sense, options, onAnswer }: ListeningC
       <p className="text-wb-ink-muted">Listen and pick the word you hear.</p>
       <button
         type="button"
-        onClick={() => play(sense.audioUrl)}
+        onClick={() => play(prompt.audioUrl)}
         className="mt-4 rounded-wb-pill bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
       >
         🔊 Play
       </button>
       <div>
         {hintUsed ? (
-          <p className="mt-3 text-wb-ink-muted">{sense.definition}</p>
+          <p className="mt-3 text-wb-ink-muted">{prompt.definition}</p>
         ) : (
           <button
             type="button"
@@ -52,7 +52,7 @@ export function ListeningChoiceExercise({ sense, options, onAnswer }: ListeningC
           </button>
         )}
       </div>
-      <ChoiceOptions options={options} disabled={answered} onPick={handlePick} />
+      <ChoiceOptions options={exercise.options} disabled={answered} onPick={handlePick} />
     </div>
   )
 }
