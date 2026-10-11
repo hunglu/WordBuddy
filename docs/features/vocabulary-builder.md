@@ -3,7 +3,7 @@ feature: Vocabulary builder & check-up
 services: Content | Progress | UI
 audience: Both
 state: shipped
-last-updated-by: WB-26_supporter-dashboard
+last-updated-by: WB-28_vocabulary-answer-checking
 ---
 
 # Vocabulary builder & check-up
@@ -51,15 +51,17 @@ sequenceDiagram
     participant P as Progress
     L->>P: GET /api/progress/vocabulary/session (X-Client-CurrentDateTime)
     P-->>L: sessionId, due items, new items (up to cap)
-    L->>P: POST /api/progress/vocabulary/reviews (correct?, ms, hint)
-    P->>P: grade → rating; first due attempt → FSRS schedule; insert ReviewLog
-    P-->>L: status, dueAtUtc, rating
+    L->>P: POST /api/progress/vocabulary/exercises (sessionId, senseId)
+    P-->>L: exerciseId, type, prompt, options (opaque keys, no answer)
+    L->>P: POST /api/progress/vocabulary/reviews (exerciseId, answer, clientResponseMs, hint)
+    P->>P: check answer, server timing, grade → rating; first due attempt → FSRS schedule; insert ReviewLog
+    P-->>L: isCorrect, correctAnswer, status, dueAtUtc, rating
 ```
 
-**Daily review (UI)** — `/vocabulary/review` runs the SRS session as exercises:
+**Daily review (UI)** — `/vocabulary/review` runs the SRS session as exercises. The server builds each exercise and keeps the expected answer:
 
 ```text
-session (Progress) → senses?ids= (Content, visible only) → exercise per item → POST reviews
+session (Progress) → exercise per item (Progress; senses from Content, visible only) → POST reviews
 ```
 
 | Word state | Exercise |
@@ -68,9 +70,10 @@ session (Progress) → senses?ids= (Content, visible only) → exercise per item
 | After 1 correct recognition, or Learning | ListeningChoice → else Typing |
 | Review / Mastered / Leech | Typing |
 
-- Wrong answer → re-queued at the end (attempt logged, not scheduled). Fewer than 4 senses → Typing.
-- Typing check: trim + case-insensitive match, client-side (moves server-side in WB-28).
-- Senses missing from `senses?ids=` are skipped. The recall check is no longer linked; its endpoints stay for old data.
+- Wrong answer → re-queued at the end (attempt logged, not scheduled; a new exercise is created each time). Fewer than 4 candidate senses → Typing.
+- **Answer checking is server-side.** Choice: option key equals the stored key. Typing: trim + case-insensitive match. The UI sends the raw answer only; a forged `isCorrect` field is ignored. An exercise can be answered once (second answer → 409 `Exercise.AlreadyAnswered`).
+- **Response time.** Server time = answer time − issue time. The client value is used only when `0 ≤ client ≤ server` and the gap is ≤ `ToleranceMs` (default 3000); otherwise `server − tolerance` is used and `TimingAdjusted = true`.
+- A sense missing from Content returns 404 `Exercise.SenseUnavailable`; the UI skips it. The recall check is no longer linked; its endpoints stay for old data.
 
 Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWordRemoved` deactivates them. Re-adding keeps FSRS history.
 
@@ -86,7 +89,7 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
   - A Child cannot share (`CanShareVocabulary`: admin, or `age_group` ≠ `Child`). The UI hides the button; the server enforces it.
   - A Child sees only pool words with `VisibleToChildren = true` (default `false`, set by the admin on approval). Adults see every `Shared` word. The filter also applies to System-owned shared words.
 
-- **SRS grading** (server-side, client sends no rating): wrong → Again; correct + hint or slow → Hard; correct + fast → Easy; else Good. PictureChoice fast/slow 3 s / 10 s (ListeningChoice 4/12, Typing 6/20).
+- **SRS grading** (server-side, client sends no rating or correctness): wrong → Again; correct + hint or slow → Hard; correct + fast → Easy; else Good. PictureChoice fast/slow 3 s / 10 s (ListeningChoice 4/12, Typing 6/20).
 - **SRS scheduling.** Only the first attempt per session and sense, and only when due (or New), changes the schedule. Every attempt is logged. `ReviewLog` is insert-only.
 - **SRS status.** New → Learning → Review; stability ≥ 21 days → Mastered; lapses ≥ 4 → Leech (still scheduled).
 - **Resumable session.** `GET session` returns the open session (not ended, before `ExpiresAtUtc`) with the same `SessionId` and only its unanswered items, in stored order. `Cap` and `IntroducedToday` are recomputed. When all items are answered the session ends and the next GET builds a new one. Empty sessions are not stored.
@@ -94,7 +97,7 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
 - **Day boundary.** `X-Client-CurrentDateTime` (ISO 8601 + offset): only the offset sets "today"; due checks use server UTC. Missing → UTC. Bad format, offset outside −12…+14, or > 24 h from server time → 400.
 - **New-word cap.** Backlog ≤ 20 → 10, ≤ 40 → 8, ≤ 60 → 6, else 5. A learner may set their own cap 0–50 (`null` = rule). Due list limited to 50.
 - **SRS child vs adult:** same cap rule, same settings, same FSRS. Grading thresholds × 1.25 for Child (PictureChoice 3.75 s / 12.5 s), × 1.0 for Adult. `age_group` comes from the JWT.
-- **Review child vs adult:** a Child sees only child-visible senses (server filter); session stops at 15 min (soft notice at 10 min), unanswered items stay due. An Adult runs until the queue is empty.
+- **Review child vs adult:** a Child sees only child-visible prompts and distractors (Content filter via the forwarded JWT); session stops at 15 min (soft notice at 10 min), unanswered items stay due. An Adult runs until the queue is empty.
 - **`senses?ids=`.** 1–100 distinct ids, else 400. Hidden and unknown ids are omitted the same way. `personalContext` only from the caller's own link. Not cached.
 
 ## API
@@ -114,6 +117,7 @@ Word states are created by `LearnerWordAdded` (see `messaging.md`); `LearnerWord
 | GET | `/api/progress/vocabulary-recall` | Progress | authenticated |
 | GET | `/api/vocabulary/senses?ids=` (1–100) | Content | authenticated (child filter via `Sense.IsVisibleTo`) |
 | GET | `/api/progress/vocabulary/session` | Progress | authenticated |
+| POST | `/api/progress/vocabulary/exercises` | Progress | authenticated (rate limit `vocabulary-review`) |
 | POST | `/api/progress/vocabulary/reviews` | Progress | authenticated (rate limit `vocabulary-review`) |
 | GET | `/api/progress/vocabulary/words` | Progress | authenticated (own data) |
 | GET / PUT | `/api/progress/vocabulary/settings` | Progress | authenticated (own data) |
@@ -141,7 +145,7 @@ A plain delete that returns 409 opens the dialog. Escape or a backdrop click clo
 
 ## Pending changes
 
-- `WB-28_vocabulary-answer-checking` — server-side answer checking (#28)
+None.
 
 ## Change history
 
@@ -150,3 +154,4 @@ A plain delete that returns 409 opens the dialog. Escape or a backdrop click clo
 - `WB-22_vocabulary-srs-engine` (#22, PR #33) — FSRS scheduling, append-only ReviewLog, daily session, server-side grading with child multiplier, own new-word cap
 - `WB-23_vocabulary-review-exercises` (#23, PR #34) — daily review page with 3 exercises on the SRS session; `GET /api/vocabulary/senses?ids=`; optional sense image; child 15-minute cap; `/vocabulary/check` redirects to review
 - `WB-26_supporter-dashboard` (#26, PR #38) — `GET session` resumes the open session; session duration and expiry; sessions recorded for the dashboard
+- `WB-28_vocabulary-answer-checking` (#28, PR #40) — server builds exercises and checks answers; server-side response timing; `POST /api/progress/vocabulary/exercises`
