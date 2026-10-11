@@ -343,22 +343,58 @@ export interface SenseReview {
   personalContext: string | null
 }
 
-/** Body of `POST /api/progress/vocabulary/reviews`. */
-export interface ReviewPayload {
-  sessionId: string
-  senseId: string
+/** What the learner sees of an exercise. The server never sends the answer. */
+export interface ExercisePrompt {
+  definition: string
+  /** Set for `PictureChoice` only. */
+  imageUrl: string | null
+  /** Set for `ListeningChoice` only. */
+  audioUrl: string | null
+  personalContext: string | null
+  /** First letter of the word, for the `Typing` hint only. */
+  hintFirstLetter: string | null
+}
+
+/** One choice option. `key` is opaque; send it back as the answer. */
+export interface ExerciseOption {
+  key: string
+  text: string
+}
+
+/** An exercise issued by `POST /api/progress/vocabulary/exercises`. */
+export interface VocabularyExercise {
+  exerciseId: string
   exerciseType: ExerciseType
   skill: VocabularySkill
-  isCorrect: boolean
-  responseMs: number
+  prompt: ExercisePrompt
+  /** Empty for `Typing`. */
+  options: ExerciseOption[]
+}
+
+/** Body of `POST /api/progress/vocabulary/exercises`. */
+export interface CreateExercisePayload {
+  sessionId: string
+  senseId: string
+}
+
+/** The learner's raw answer: a picked option key or typed text. The server checks it. */
+export type ReviewAnswer = { optionKey: string } | { text: string }
+
+/** Body of `POST /api/progress/vocabulary/reviews`. */
+export interface ReviewPayload {
+  exerciseId: string
+  answer: ReviewAnswer
+  clientResponseMs: number
   hintUsed: boolean
 }
 
-/** Outcome of one recorded answer. */
+/** Outcome of one recorded answer. `isCorrect` and `correctAnswer` come from the server. */
 export interface ReviewResult {
   status: WordStatus
   dueAtUtc: string
   rating: FsrsRating
+  isCorrect: boolean
+  correctAnswer: string
 }
 
 // ── Learner dashboard (WB-26) ───────────────────────────────────────────────

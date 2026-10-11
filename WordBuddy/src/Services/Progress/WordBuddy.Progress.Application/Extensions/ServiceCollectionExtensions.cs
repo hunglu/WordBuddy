@@ -15,6 +15,7 @@ using WordBuddy.Progress.Application.Features.Progress.Commands.RecordProgress;
 using WordBuddy.Progress.Application.Features.Progress.Queries.GetUserProgress;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Commands.SubmitVocabularyRecallCheck;
 using WordBuddy.Progress.Application.Features.VocabularyRecall.Queries.GetVocabularyRecallProgress;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.CreateVocabularyExercise;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.RecordVocabularyReview;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateVocabularySettings;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerWordStates;
@@ -49,6 +50,10 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<RecordVocabularyReviewCommand, VocabularyReviewResultDto>, RecordVocabularyReviewCommandHandler>();
         services.AddScoped<IValidator<RecordVocabularyReviewCommand>, RecordVocabularyReviewCommandValidator>();
+
+        // Server-side answer checking (WB-28). ResponseTimeEvaluator is registered by the host.
+        services.AddScoped<ICommandHandler<CreateVocabularyExerciseCommand, VocabularyExerciseDto>, CreateVocabularyExerciseCommandHandler>();
+        services.AddScoped<IValidator<CreateVocabularyExerciseCommand>, CreateVocabularyExerciseCommandValidator>();
 
         services.AddScoped<IQueryHandler<GetVocabularySessionQuery, VocabularySessionDto>, GetVocabularySessionQueryHandler>();
         services.AddScoped<IQueryHandler<GetLearnerWordStatesQuery, IReadOnlyList<LearnerWordStateDto>>, GetLearnerWordStatesQueryHandler>();

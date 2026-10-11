@@ -363,6 +363,12 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.Property<int>("AttemptNo")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ClientResponseMs")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ExerciseId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ExerciseType")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -391,6 +397,9 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SenseId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("ServerResponseMs")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uniqueidentifier");
 
@@ -399,10 +408,19 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<bool>("TimingAdjusted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId")
+                        .IsUnique()
+                        .HasFilter("[ExerciseId] IS NOT NULL");
 
                     b.HasIndex("UserId", "OccurredAtUtc");
 
@@ -438,6 +456,61 @@ namespace WordBuddy.Progress.Infrastructure.Persistence.Migrations
                     b.HasIndex("SupporterId", "LearnerId");
 
                     b.ToTable("SupportLinkProjections", (string)null);
+                });
+
+            modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyExercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AnsweredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CorrectWord")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ExerciseType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ExpectedAnswer")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Options")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("SenseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Skill")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("VocabularyExercises", (string)null);
                 });
 
             modelBuilder.Entity("WordBuddy.Progress.Domain.VocabularyLearnerSettings", b =>

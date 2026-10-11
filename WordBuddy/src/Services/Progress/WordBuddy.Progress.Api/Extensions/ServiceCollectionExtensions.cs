@@ -76,6 +76,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton(newWordCap);
         services.AddSingleton<IFsrsScheduler>(new FsrsScheduler(scheduling));
         services.AddSingleton(new AnswerGrader(grading));
+        services.AddSingleton(new ResponseTimeEvaluator(grading));
         services.AddSingleton(new NewWordCapPolicy(newWordCap));
 
         return services;

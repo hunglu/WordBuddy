@@ -1,4 +1,5 @@
 import type {
+  CreateExercisePayload,
   DashboardRange,
   GroupDashboard,
   LearnerDashboard,
@@ -6,6 +7,7 @@ import type {
   ReviewPayload,
   ReviewResult,
   VocabularyRecallProgress,
+  VocabularyExercise,
   VocabularyRecallResultItem,
   VocabularySession,
 } from '../types'
@@ -59,6 +61,15 @@ function clientDateTimeHeaders(): Record<string, string> {
 
 export async function getVocabularySession(): Promise<VocabularySession> {
   const { data } = await apiClient.get<VocabularySession>('/progress/vocabulary/session', {
+    headers: clientDateTimeHeaders(),
+  })
+  return data
+}
+
+/** Asks the server for the next exercise of one session word. The reply has no answer. */
+export async function postVocabularyExercise(sessionId: string, senseId: string): Promise<VocabularyExercise> {
+  const payload: CreateExercisePayload = { sessionId, senseId }
+  const { data } = await apiClient.post<VocabularyExercise>('/progress/vocabulary/exercises', payload, {
     headers: clientDateTimeHeaders(),
   })
   return data

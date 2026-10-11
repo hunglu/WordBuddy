@@ -44,6 +44,18 @@ public sealed class ReviewLog : Entity
     /// <summary>Server-derived rating.</summary>
     public FsrsRating Rating { get; }
 
+    /// <summary>The <see cref="VocabularyExercise"/> answered; <see langword="null"/> for rows written before WB-28.</summary>
+    public Guid? ExerciseId { get; }
+
+    /// <summary>Response time the client reported; <see langword="null"/> for old rows.</summary>
+    public int? ClientResponseMs { get; }
+
+    /// <summary>Response time the server measured; <see langword="null"/> for old rows.</summary>
+    public int? ServerResponseMs { get; }
+
+    /// <summary><see langword="true"/> when the client time was rejected and the server value was used.</summary>
+    public bool TimingAdjusted { get; }
+
     private ReviewLog(
         Guid id,
         Guid userId,
@@ -57,7 +69,11 @@ public sealed class ReviewLog : Entity
         bool hintUsed,
         bool isDue,
         int attemptNo,
-        FsrsRating rating) : base(id)
+        FsrsRating rating,
+        Guid? exerciseId,
+        int? clientResponseMs,
+        int? serverResponseMs,
+        bool timingAdjusted) : base(id)
     {
         UserId = userId;
         SenseId = senseId;
@@ -71,6 +87,10 @@ public sealed class ReviewLog : Entity
         IsDue = isDue;
         AttemptNo = attemptNo;
         Rating = rating;
+        ExerciseId = exerciseId;
+        ClientResponseMs = clientResponseMs;
+        ServerResponseMs = serverResponseMs;
+        TimingAdjusted = timingAdjusted;
     }
 
     /// <summary>Creates a review log row.</summary>
@@ -87,6 +107,11 @@ public sealed class ReviewLog : Entity
         bool hintUsed,
         bool isDue,
         int attemptNo,
-        FsrsRating rating) =>
-        new(id, userId, senseId, sessionId, occurredAtUtc, exerciseType, skill, isCorrect, responseMs, hintUsed, isDue, attemptNo, rating);
+        FsrsRating rating,
+        Guid? exerciseId = null,
+        int? clientResponseMs = null,
+        int? serverResponseMs = null,
+        bool timingAdjusted = false) =>
+        new(id, userId, senseId, sessionId, occurredAtUtc, exerciseType, skill, isCorrect, responseMs, hintUsed, isDue, attemptNo, rating,
+            exerciseId, clientResponseMs, serverResponseMs, timingAdjusted);
 }

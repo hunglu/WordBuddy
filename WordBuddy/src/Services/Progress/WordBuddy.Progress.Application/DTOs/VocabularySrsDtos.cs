@@ -6,7 +6,9 @@ namespace WordBuddy.Progress.Application.DTOs;
 /// <param name="Status">The word's status after the answer.</param>
 /// <param name="DueAtUtc">Next due time (UTC).</param>
 /// <param name="Rating">Server-derived rating.</param>
-public sealed record VocabularyReviewResultDto(WordStatus Status, DateTime DueAtUtc, FsrsRating Rating);
+/// <param name="IsCorrect">Whether the server judged the answer correct.</param>
+/// <param name="CorrectAnswer">The right word, for feedback after the answer.</param>
+public sealed record VocabularyReviewResultDto(WordStatus Status, DateTime DueAtUtc, FsrsRating Rating, bool IsCorrect, string CorrectAnswer);
 
 /// <summary>One word in a session. Word text comes from Content.</summary>
 /// <param name="SenseId">Content's sense id.</param>

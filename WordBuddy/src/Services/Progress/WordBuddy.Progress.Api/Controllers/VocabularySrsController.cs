@@ -7,6 +7,7 @@ using WordBuddy.Progress.Api.Models;
 using WordBuddy.Progress.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.VocabularySrs;
+using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.CreateVocabularyExercise;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.RecordVocabularyReview;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateLearnerVocabularySettings;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateVocabularySettings;
@@ -28,6 +29,7 @@ namespace WordBuddy.Progress.Api.Controllers;
 public sealed class VocabularySrsController : ControllerBase
 {
     private readonly IQueryHandler<GetVocabularySessionQuery, VocabularySessionDto> _getSession;
+    private readonly ICommandHandler<CreateVocabularyExerciseCommand, VocabularyExerciseDto> _createExercise;
     private readonly ICommandHandler<RecordVocabularyReviewCommand, VocabularyReviewResultDto> _recordReview;
     private readonly IQueryHandler<GetLearnerWordStatesQuery, IReadOnlyList<LearnerWordStateDto>> _getWords;
     private readonly IQueryHandler<GetVocabularySettingsQuery, VocabularySettingsDto> _getSettings;
@@ -38,6 +40,7 @@ public sealed class VocabularySrsController : ControllerBase
 
     public VocabularySrsController(
         IQueryHandler<GetVocabularySessionQuery, VocabularySessionDto> getSession,
+        ICommandHandler<CreateVocabularyExerciseCommand, VocabularyExerciseDto> createExercise,
         ICommandHandler<RecordVocabularyReviewCommand, VocabularyReviewResultDto> recordReview,
         IQueryHandler<GetLearnerWordStatesQuery, IReadOnlyList<LearnerWordStateDto>> getWords,
         IQueryHandler<GetVocabularySettingsQuery, VocabularySettingsDto> getSettings,
@@ -47,6 +50,7 @@ public sealed class VocabularySrsController : ControllerBase
         ILogger<VocabularySrsController> logger)
     {
         _getSession = getSession;
+        _createExercise = createExercise;
         _recordReview = recordReview;
         _getWords = getWords;
         _getSettings = getSettings;
@@ -69,7 +73,19 @@ public sealed class VocabularySrsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Records one answer. The server derives rating, due flag and attempt number.</summary>
+    /// <summary>Builds the next exercise for one session word. The reply has the prompt and options, never the answer.</summary>
+    [HttpPost("exercises")]
+    [Authorize(Policy = SupportLinkPolicies.ChildHasSupporter)]
+    [EnableRateLimiting(RateLimitingConfiguration.VocabularyReviewPolicy)]
+    public async Task<IActionResult> CreateExercise([FromBody] CreateVocabularyExerciseRequest request, CancellationToken ct)
+    {
+        Result<VocabularyExerciseDto> result = await _createExercise.HandleAsync(
+            new CreateVocabularyExerciseCommand(User.GetUserId(), request.SessionId, request.SenseId), ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Records one answer to an issued exercise. The server checks the answer and derives correctness,
+    /// response time, rating, due flag and attempt number.</summary>
     [HttpPost("reviews")]
     [Authorize(Policy = SupportLinkPolicies.ChildHasSupporter)]
     [EnableRateLimiting(RateLimitingConfiguration.VocabularyReviewPolicy)]
@@ -81,12 +97,9 @@ public sealed class VocabularySrsController : ControllerBase
             new RecordVocabularyReviewCommand(
                 userId,
                 User.GetAgeGroup(),
-                request.SessionId,
-                request.SenseId,
-                request.ExerciseType,
-                request.Skill,
-                request.IsCorrect,
-                request.ResponseMs,
+                request.ExerciseId,
+                new ReviewAnswer(request.Answer.OptionKey, request.Answer.Text),
+                request.ClientResponseMs,
                 request.HintUsed),
             ct);
 
@@ -95,7 +108,7 @@ public sealed class VocabularySrsController : ControllerBase
             return result.ToProblemResult(this);
         }
 
-        _logger.LogInformation("RecordReview succeeded: UserId={UserId}, SenseId={SenseId}", userId, request.SenseId);
+        _logger.LogInformation("RecordReview succeeded: UserId={UserId}, ExerciseId={ExerciseId}", userId, request.ExerciseId);
         return Ok(result.Value);
     }
 

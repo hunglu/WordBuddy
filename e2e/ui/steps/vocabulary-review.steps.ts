@@ -10,23 +10,29 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'Admin@123'
 const learnerPassword = 'ChangeMe123!'
 const STATE_TIMEOUT_MS = 30_000
 
-interface SenseReview {
-  senseId: string
-  word: string
-  definition: string
-  audioUrl: string | null
-  imageUrl: string | null
-}
-
 interface SessionBody {
   newItems: { senseId: string; status: string; dueAtUtc: string }[]
+}
+
+interface ReviewRequestBody {
+  exerciseId: string
+  answer: { optionKey?: string; text?: string }
 }
 
 let definitionsByWord = new Map<string, string>()
 let hiddenWord = ''
 let hiddenSenseId = ''
 let seenExercises = new Set<string>()
-let sensesResponseIds: string[] = []
+let firstWrongWord = ''
+let exerciseStatusBySenseId = new Map<string, number>()
+
+// WB-28: the server builds the exercises and checks the answers. A real stack has no word images and
+// only autofilled words have audio, so every exercise there is Typing. The "stubbed server" scenario
+// replaces the exercise and review replies to check that the UI renders all 3 types from the server
+// exercise, sends the raw answer, and shows the server's verdict.
+const STUB_WORD = 'stubword'
+const STUB_RIGHT_KEY = 'key-right'
+const STUB_TYPES = ['PictureChoice', 'ListeningChoice', 'Typing'] as const
 
 async function register(request: APIRequestContext, ageGroup: string): Promise<{ email: string; token: string }> {
   const email = `review-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`
@@ -126,27 +132,59 @@ Given('a new {string} learner with {int} words is logged in', async ({ page, req
   await logIn(page, email)
 })
 
-// No upload endpoint for sense images yet (plan, open questions), and dev words have no audio.
-// The real Content reply is fetched and only the media URLs are added, so the page can reach
-// all 3 exercise types: 3 words with picture + audio, 1 with audio only, the rest with neither.
-Given('the review words have pictures and audio where available', async ({ page }) => {
-  await page.route('**/api/vocabulary/senses**', async (route) => {
-    const response = await route.fetch()
-    const senses = (await response.json()) as SenseReview[]
-    const withMedia: SenseReview[] = senses.map((sense, index) => ({
-      ...sense,
-      imageUrl: index < 3 ? svgImage(String(index)) : null,
-      audioUrl: index < 4 ? `/e2e-audio/${sense.senseId}.mp3` : null,
-    }))
-    await route.fulfill({ response, json: withMedia })
+Given('the exercise and review replies come from a stubbed server', async ({ page }) => {
+  let created = 0
+  await page.route('**/api/progress/vocabulary/exercises', async (route) => {
+    const exerciseType = STUB_TYPES[created % STUB_TYPES.length]
+    created += 1
+    await route.fulfill({ json: stubExercise(exerciseType, created) })
+  })
+  await page.route('**/api/progress/vocabulary/reviews', async (route) => {
+    const body = route.request().postDataJSON() as ReviewRequestBody
+    const isCorrect = body.answer.optionKey === STUB_RIGHT_KEY || body.answer.text?.trim().toLowerCase() === STUB_WORD
+    await route.fulfill({
+      json: {
+        status: 'Learning',
+        dueAtUtc: new Date().toISOString(),
+        rating: isCorrect ? 'Good' : 'Again',
+        isCorrect,
+        correctAnswer: STUB_WORD,
+      },
+    })
   })
 })
+
+function stubExercise(exerciseType: (typeof STUB_TYPES)[number], index: number) {
+  const isChoice = exerciseType !== 'Typing'
+  return {
+    exerciseId: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    exerciseType,
+    skill: exerciseType === 'PictureChoice' ? 'Meaning' : exerciseType === 'ListeningChoice' ? 'Listening' : 'Spelling',
+    prompt: {
+      definition: 'a stubbed definition',
+      imageUrl: exerciseType === 'PictureChoice' ? svgImage('stub') : null,
+      audioUrl: exerciseType === 'ListeningChoice' ? '/e2e-audio/stub.mp3' : null,
+      personalContext: null,
+      hintFirstLetter: exerciseType === 'Typing' ? STUB_WORD.charAt(0) : null,
+    },
+    options: isChoice
+      ? [
+          { key: STUB_RIGHT_KEY, text: STUB_WORD },
+          { key: 'key-2', text: 'otherone' },
+          { key: 'key-3', text: 'othertwo' },
+          { key: 'key-4', text: 'otherthree' },
+        ]
+      : [],
+  }
+}
 
 When('they open the review page', async ({ page }) => {
   await page.goto('/vocabulary/review')
   await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
 })
 
+// Real server: the words have no picture, so every exercise is Typing. The answer comes from the
+// definition the learner sees; the browser never knows the right word before the server replies.
 When('they answer every exercise correctly', async ({ page }) => {
   seenExercises = new Set()
   const summary = page.getByTestId('session-summary')
@@ -191,6 +229,62 @@ When('they answer every exercise correctly', async ({ page }) => {
   throw new Error('The review session did not end within 40 exercises.')
 })
 
+When('they answer every stubbed exercise correctly', async ({ page }) => {
+  seenExercises = new Set()
+  const summary = page.getByTestId('session-summary')
+
+  for (let step = 0; step < 40; step += 1) {
+    await expect(freshExercise(page).or(summary)).toBeVisible()
+    if (await summary.isVisible()) {
+      return
+    }
+
+    const testId = (await freshExercise(page).getAttribute('data-testid')) ?? ''
+    seenExercises.add(testId)
+    const exercise = page.getByTestId(testId)
+
+    if (testId === 'exercise-typing') {
+      // Other case and spaces: the server trims and ignores case, the browser does not judge.
+      await exercise.getByLabel('Your answer').fill(`  ${STUB_WORD.toUpperCase()} `)
+      await exercise.getByRole('button', { name: 'Check' }).click()
+    } else {
+      await exercise.getByRole('button', { name: STUB_WORD, exact: true }).click()
+    }
+
+    const feedback = page.getByTestId('answer-feedback')
+    await expect(feedback.getByText('Correct!')).toBeVisible()
+    await feedback.getByRole('button', { name: 'Next' }).click()
+    await expect(feedback).toHaveCount(0)
+  }
+
+  throw new Error('The stubbed review session did not end within 40 exercises.')
+})
+
+When('they answer the first exercise wrongly', async ({ page }) => {
+  const exercise = page.getByTestId('exercise-typing')
+  await expect(exercise).toBeVisible()
+  for (const [word, definition] of definitionsByWord) {
+    if (await exercise.getByText(definition, { exact: true }).isVisible()) {
+      firstWrongWord = word
+    }
+  }
+  expect(firstWrongWord, 'the shown definition belongs to one of the learner words').not.toBe('')
+
+  await exercise.getByLabel('Your answer').fill('definitely-not-the-word')
+  await exercise.getByRole('button', { name: 'Check' }).click()
+})
+
+Then('the server says the answer was wrong and shows the right word', async ({ page }) => {
+  const feedback = page.getByTestId('answer-feedback')
+  await expect(feedback.getByText(`The answer was "${firstWrongWord}".`)).toBeVisible()
+  await feedback.getByRole('button', { name: 'Next' }).click()
+})
+
+Then('the same number of words is still left and none is counted correct', async ({ page }) => {
+  // The wrong word goes to the end of the queue, so the queue did not shrink.
+  await expect(page.getByText(`${definitionsByWord.size} left · 0 correct`)).toBeVisible()
+})
+
 Then('they saw picture, listening and typing exercises', async () => {
   expect([...seenExercises].sort()).toEqual(['exercise-listening-choice', 'exercise-picture-choice', 'exercise-typing'])
 })
@@ -225,31 +319,35 @@ Given('a word shared by an adult and approved as not visible to children', async
   expect(approve.status()).toBe(204)
 })
 
-// The child cannot add a hidden word to their own list, so the hidden sense id is appended to the
-// real session reply. Content must drop it: the server filter is what is under test.
+// The child cannot add a hidden word to their own list, so the hidden sense id is put first in the
+// real session reply. The server has no exercise for it (404), so the page must skip it and never show it.
 Given('the review session also lists the hidden shared word', async ({ page }) => {
+  exerciseStatusBySenseId = new Map()
   await page.route('**/api/progress/vocabulary/session', async (route) => {
     const response = await route.fetch()
     const session = (await response.json()) as SessionBody
-    session.newItems.push({ senseId: hiddenSenseId, status: 'New', dueAtUtc: new Date().toISOString() })
+    session.newItems.unshift({ senseId: hiddenSenseId, status: 'New', dueAtUtc: new Date().toISOString() })
     await route.fulfill({ response, json: session })
+  })
+  page.on('response', (response) => {
+    if (response.url().includes('/api/progress/vocabulary/exercises') && response.request().method() === 'POST') {
+      const body = response.request().postDataJSON() as { senseId: string }
+      exerciseStatusBySenseId.set(body.senseId, response.status())
+    }
   })
 })
 
 When('they open the review page with a controlled clock', async ({ page }) => {
   await page.clock.install()
-  const sensesReply = page.waitForResponse((r) => r.url().includes('/api/vocabulary/senses'))
   await page.goto('/vocabulary/review')
-  const response = await sensesReply
-  expect(response.ok()).toBeTruthy()
-  sensesResponseIds = ((await response.json()) as SenseReview[]).map((s) => s.senseId)
   await expect(page.locator('[data-testid^="exercise-"]')).toBeVisible()
 })
 
 Then('the hidden shared word is never shown', async ({ page }) => {
-  expect(sensesResponseIds).toHaveLength(definitionsByWord.size)
-  expect(sensesResponseIds).not.toContain(hiddenSenseId)
+  // The first queue item is the hidden word. The server refuses it; the page moved on to a real word.
+  expect(exerciseStatusBySenseId.get(hiddenSenseId)).toBe(404)
   await expect(page.getByText(hiddenWord)).toHaveCount(0)
+  await expect(page.getByText(`${definitionsByWord.size} left`)).toBeVisible()
 })
 
 When('10 minutes pass', async ({ page }) => {

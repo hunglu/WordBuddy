@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Application.Interfaces;
+using WordBuddy.Progress.Infrastructure.ContentClient;
 using WordBuddy.Progress.Infrastructure.Messaging;
 using WordBuddy.Progress.Infrastructure.Persistence;
 using WordBuddy.Progress.Infrastructure.Repositories;
@@ -30,6 +31,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVocabularySessionIssueRepository, VocabularySessionIssueRepository>();
         services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
 
+        services.AddScoped<IVocabularyExerciseRepository, VocabularyExerciseRepository>();
+
+        AddContentClient(services, configuration);
+
         // No Redis instance exists in this repo yet; the in-memory IDistributedCache satisfies the
         // caching convention (dashboard). Swapping in Redis later is a DI-only change.
         services.AddDistributedMemoryCache();
@@ -47,5 +52,33 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers the Content sense client (caller's bearer token forwarded, standard resilience) and the
+    /// named client used by <see cref="ContentHealthCheck"/>. Base URL: <c>Services:Content:BaseUrl</c>.
+    /// </summary>
+    private static void AddContentClient(IServiceCollection services, IConfiguration configuration)
+    {
+        string baseUrl = configuration[$"{ContentOptions.SectionName}:BaseUrl"] ?? ContentOptions.DefaultBaseUrl;
+        Uri baseAddress = new(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
+
+        services.AddHttpContextAccessor();
+        services.AddTransient<ForwardBearerTokenHandler>();
+
+        services.AddHttpClient<IContentSenseClient, ContentSenseClient>(client => client.BaseAddress = baseAddress)
+            .AddHttpMessageHandler<ForwardBearerTokenHandler>()
+            .AddStandardResilienceHandler(options =>
+            {
+                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(12);
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+            });
+
+        services.AddHttpClient(ContentHealthCheck.HttpClientName, client =>
+        {
+            client.BaseAddress = baseAddress;
+            client.Timeout = TimeSpan.FromSeconds(3);
+        });
     }
 }

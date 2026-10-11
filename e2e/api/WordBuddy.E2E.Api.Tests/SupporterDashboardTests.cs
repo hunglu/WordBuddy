@@ -42,23 +42,11 @@ public sealed class SupporterDashboardTests
             .ToList();
         senseIds.Should().HaveCount(WordCount);
 
+        // WB-28: the server builds each exercise and checks each answer. The dashboard counts any answer,
+        // so the test answers without knowing the word.
         foreach (Guid senseId in senseIds)
         {
-            IAPIResponse review = await c.Progress.PostAsync("/api/progress/vocabulary/reviews", new APIRequestContextOptions
-            {
-                Headers = Auth(learnerToken),
-                DataObject = new
-                {
-                    sessionId,
-                    senseId,
-                    exerciseType = "PictureChoice",
-                    skill = "Meaning",
-                    isCorrect = true,
-                    responseMs = 2000,
-                    hintUsed = false,
-                },
-            });
-            review.Status.Should().Be(200, await review.TextAsync());
+            await VocabularyExercises.AnswerWrongAsync(c.Progress, learnerToken, sessionId, senseId);
         }
 
         // The supporter link reaches Progress through RabbitMQ.

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Api;
+using WordBuddy.Progress.Application.Interfaces;
+using WordBuddy.Progress.Infrastructure.ContentClient;
 using WordBuddy.Progress.Infrastructure.Persistence;
 
 namespace WordBuddy.Progress.IntegrationTests;
@@ -36,9 +38,21 @@ public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncL
         Environment.SetEnvironmentVariable("Messaging__Transport", "InMemory");
     }
 
+    /// <summary>Stand-in for the Content service; tests register the senses it returns.</summary>
+    public StubContentHandler Content { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+
+        // The typed client of IContentSenseClient is named after the interface. Its primary handler is
+        // replaced by the stub; the real ContentSenseClient, token forwarding and cache still run.
+        // The readiness check calls Content's /health through its own named client; the stub answers 200.
+        builder.ConfigureServices(services =>
+        {
+            services.AddHttpClient(nameof(IContentSenseClient)).ConfigurePrimaryHttpMessageHandler(() => Content);
+            services.AddHttpClient(ContentHealthCheck.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => Content);
+        });
     }
 
     public async Task InitializeAsync()

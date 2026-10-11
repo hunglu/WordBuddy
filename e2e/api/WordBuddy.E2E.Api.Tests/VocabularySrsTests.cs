@@ -43,7 +43,7 @@ public sealed class VocabularySrsTests
     {
         await using Contexts c = await Contexts.CreateAsync(_fixture);
         string token = await RegisterAsync(c.Identity, ageGroup);
-        Guid senseId = await AddWordAndWaitForStateAsync(c, token);
+        (Guid senseId, _) = await AddWordAndWaitForStateAsync(c, token);
 
         IAPIResponse session = await c.Progress.GetAsync("/api/progress/vocabulary/session", Options(token,
             new() { [ClientDateHeader] = DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:sszzz") }));
@@ -57,18 +57,31 @@ public sealed class VocabularySrsTests
     }
 
     [Theory]
-    [InlineData("Adult", "Good")]
-    [InlineData("Child", "Easy")]
-    public async Task RecordReview_CorrectIn3500Ms_RatingFollowsAgeGroup(string ageGroup, string expectedRating)
+    [InlineData("Adult")]
+    [InlineData("Child")]
+    public async Task RecordReview_RightAnswerSentAtOnce_IsCorrectAndRatedEasy(string ageGroup)
     {
-        // PictureChoice fast threshold: adult 3000 ms, child 3750 ms (×1.25, D-7).
+        // One word in the session means fewer than 4 senses, so the server picks a Typing exercise.
+        // The server clock is the reference: an answer sent at once has a tiny server time, so the client
+        // time (0 ms) is plausible and the rating is Easy for both age groups.
         await using Contexts c = await Contexts.CreateAsync(_fixture);
         string token = await RegisterAsync(c.Identity, ageGroup);
-        Guid senseId = await AddWordAndWaitForStateAsync(c, token);
+        (Guid senseId, string word) = await AddWordAndWaitForStateAsync(c, token);
+        (Guid sessionId, _) = await GetSessionAsync(c.Progress, token);
 
-        JsonElement result = await PostReviewAsync(c.Progress, token, Guid.NewGuid(), senseId, isCorrect: true, responseMs: 3500);
+        JsonElement exercise = await VocabularyExercises.CreateAsync(c.Progress, token, sessionId, senseId);
+        exercise.GetProperty("exerciseType").GetString().Should().Be("Typing");
+        exercise.GetRawText().Should().NotContain(word, "the Typing prompt never contains the word");
 
-        result.GetProperty("rating").GetString().Should().Be(expectedRating);
+        // The word, in other case and with spaces: the server trims and ignores case.
+        IAPIResponse response = await VocabularyExercises.AnswerAsync(
+            c.Progress, token, exercise.GetProperty("exerciseId").GetGuid(), null, $"  {word.ToUpperInvariant()} ");
+        response.Status.Should().Be(200, await response.TextAsync());
+        JsonElement result = (await response.JsonAsync())!.Value;
+
+        result.GetProperty("isCorrect").GetBoolean().Should().BeTrue();
+        result.GetProperty("correctAnswer").GetString().Should().Be(word);
+        result.GetProperty("rating").GetString().Should().Be("Easy");
         result.GetProperty("status").GetString().Should().NotBe("New");
 
         JsonElement state = (await GetWordsAsync(c.Progress, token)).Single(s => s.GetProperty("senseId").GetGuid() == senseId);
@@ -76,39 +89,114 @@ public sealed class VocabularySrsTests
     }
 
     [Fact]
-    public async Task RecordReview_SecondAttemptSameSession_DoesNotReschedule()
+    public async Task RecordReview_WrongThenRightAnswerSameSession_OnlyFirstReschedules()
     {
         await using Contexts c = await Contexts.CreateAsync(_fixture);
         string token = await RegisterAsync(c.Identity, "Adult");
-        Guid senseId = await AddWordAndWaitForStateAsync(c, token);
-        Guid sessionId = Guid.NewGuid();
+        (Guid senseId, string word) = await AddWordAndWaitForStateAsync(c, token);
+        (Guid sessionId, _) = await GetSessionAsync(c.Progress, token);
 
-        await PostReviewAsync(c.Progress, token, sessionId, senseId, isCorrect: false, responseMs: 2000);
-        await PostReviewAsync(c.Progress, token, sessionId, senseId, isCorrect: true, responseMs: 2000);
+        JsonElement wrong = await VocabularyExercises.AnswerWrongAsync(c.Progress, token, sessionId, senseId, word);
+        wrong.GetProperty("isCorrect").GetBoolean().Should().BeFalse();
+        wrong.GetProperty("rating").GetString().Should().Be("Again");
+        wrong.GetProperty("correctAnswer").GetString().Should().Be(word);
+
+        JsonElement right = await VocabularyExercises.AnswerRightAsync(c.Progress, token, sessionId, senseId, word);
+        right.GetProperty("isCorrect").GetBoolean().Should().BeTrue();
 
         JsonElement state = (await GetWordsAsync(c.Progress, token)).Single(s => s.GetProperty("senseId").GetGuid() == senseId);
         state.GetProperty("reps").GetInt32().Should().Be(1, "only the first due attempt in a session schedules");
     }
 
     [Fact]
-    public async Task RecordReview_WordNotInList_Returns404()
+    public async Task RecordReview_ForgedIsCorrectWithWrongAnswer_IsRatedAgain()
+    {
+        await using Contexts c = await Contexts.CreateAsync(_fixture);
+        string token = await RegisterAsync(c.Identity, "Adult");
+        (Guid senseId, _) = await AddWordAndWaitForStateAsync(c, token);
+        (Guid sessionId, _) = await GetSessionAsync(c.Progress, token);
+        JsonElement exercise = await VocabularyExercises.CreateAsync(c.Progress, token, sessionId, senseId);
+
+        // The old contract carried the verdict. A tampered client still sends it; the server must ignore it.
+        IAPIResponse response = await c.Progress.PostAsync("/api/progress/vocabulary/reviews", new APIRequestContextOptions
+        {
+            Headers = Auth(token),
+            DataObject = new
+            {
+                exerciseId = exercise.GetProperty("exerciseId").GetGuid(),
+                answer = new { text = "e2e-definitely-wrong" },
+                clientResponseMs = 0,
+                hintUsed = false,
+                isCorrect = true,
+                exerciseType = "PictureChoice",
+                skill = "Meaning",
+                sessionId = Guid.NewGuid(),
+                senseId = Guid.NewGuid(),
+            },
+        });
+
+        response.Status.Should().Be(200, await response.TextAsync());
+        JsonElement result = (await response.JsonAsync())!.Value;
+        result.GetProperty("isCorrect").GetBoolean().Should().BeFalse();
+        result.GetProperty("rating").GetString().Should().Be("Again");
+    }
+
+    [Fact]
+    public async Task RecordReview_ReplayOfAnsweredExercise_Returns409()
+    {
+        await using Contexts c = await Contexts.CreateAsync(_fixture);
+        string token = await RegisterAsync(c.Identity, "Adult");
+        (Guid senseId, string word) = await AddWordAndWaitForStateAsync(c, token);
+        (Guid sessionId, _) = await GetSessionAsync(c.Progress, token);
+        JsonElement exercise = await VocabularyExercises.CreateAsync(c.Progress, token, sessionId, senseId);
+        Guid exerciseId = exercise.GetProperty("exerciseId").GetGuid();
+
+        (await VocabularyExercises.AnswerAsync(c.Progress, token, exerciseId, null, word)).Status.Should().Be(200);
+        IAPIResponse replay = await VocabularyExercises.AnswerAsync(c.Progress, token, exerciseId, null, word);
+
+        replay.Status.Should().Be(409, await replay.TextAsync());
+    }
+
+    [Fact]
+    public async Task CreateExercise_ForeignSessionOrWithoutToken_IsRejected()
+    {
+        await using Contexts c = await Contexts.CreateAsync(_fixture);
+        string token = await RegisterAsync(c.Identity, "Adult");
+        string otherToken = await RegisterAsync(c.Identity, "Adult");
+        (Guid senseId, _) = await AddWordAndWaitForStateAsync(c, token);
+        (Guid sessionId, _) = await GetSessionAsync(c.Progress, token);
+
+        IAPIResponse foreign = await c.Progress.PostAsync("/api/progress/vocabulary/exercises", new APIRequestContextOptions
+        {
+            Headers = Auth(otherToken),
+            DataObject = new { sessionId, senseId },
+        });
+        IAPIResponse anonymous = await c.Progress.PostAsync("/api/progress/vocabulary/exercises", new APIRequestContextOptions
+        {
+            DataObject = new { sessionId, senseId },
+        });
+
+        foreign.Status.Should().Be(404, await foreign.TextAsync());
+        anonymous.Status.Should().Be(401);
+    }
+
+    [Fact]
+    public async Task RecordReview_UnknownExercise_Returns404()
     {
         await using Contexts c = await Contexts.CreateAsync(_fixture);
         string token = await RegisterAsync(c.Identity, "Adult");
 
-        IAPIResponse response = await c.Progress.PostAsync("/api/progress/vocabulary/reviews",
-            ReviewOptions(token, Guid.NewGuid(), Guid.NewGuid(), true, 2000));
+        IAPIResponse response = await VocabularyExercises.AnswerAsync(c.Progress, token, Guid.NewGuid(), "abc", null);
         response.Status.Should().Be(404, await response.TextAsync());
     }
 
     [Fact]
-    public async Task RecordReview_ResponseMsOutOfRange_Returns400()
+    public async Task RecordReview_ClientResponseMsOutOfRange_Returns400()
     {
         await using Contexts c = await Contexts.CreateAsync(_fixture);
         string token = await RegisterAsync(c.Identity, "Adult");
 
-        IAPIResponse response = await c.Progress.PostAsync("/api/progress/vocabulary/reviews",
-            ReviewOptions(token, Guid.NewGuid(), Guid.NewGuid(), true, 600_001));
+        IAPIResponse response = await VocabularyExercises.AnswerAsync(c.Progress, token, Guid.NewGuid(), "abc", null, clientResponseMs: 600_001);
         response.Status.Should().Be(400, await response.TextAsync());
     }
 
@@ -164,29 +252,15 @@ public sealed class VocabularySrsTests
         response.Status.Should().Be(403);
     }
 
-    private static async Task<JsonElement> PostReviewAsync(
-        IAPIRequestContext progress, string token, Guid sessionId, Guid senseId, bool isCorrect, int responseMs)
+    /// <summary>Opens today's session. Returns its id and the full reply.</summary>
+    private static async Task<(Guid SessionId, JsonElement Body)> GetSessionAsync(IAPIRequestContext progress, string token)
     {
-        IAPIResponse response = await progress.PostAsync("/api/progress/vocabulary/reviews",
-            ReviewOptions(token, sessionId, senseId, isCorrect, responseMs));
+        IAPIResponse response = await progress.GetAsync("/api/progress/vocabulary/session", Options(token,
+            new() { [ClientDateHeader] = DateTimeOffset.Now.ToString("yyyy-MM-ddTHH:mm:sszzz") }));
         response.Status.Should().Be(200, await response.TextAsync());
-        return (await response.JsonAsync())!.Value;
+        JsonElement body = (await response.JsonAsync())!.Value;
+        return (body.GetProperty("sessionId").GetGuid(), body);
     }
-
-    private static APIRequestContextOptions ReviewOptions(string token, Guid sessionId, Guid senseId, bool isCorrect, int responseMs) => new()
-    {
-        Headers = Auth(token),
-        DataObject = new
-        {
-            sessionId,
-            senseId,
-            exerciseType = "PictureChoice",
-            skill = "Meaning",
-            isCorrect,
-            responseMs,
-            hintUsed = false,
-        },
-    };
 
     private static async Task<List<JsonElement>> GetWordsAsync(IAPIRequestContext progress, string token)
     {
@@ -196,12 +270,13 @@ public sealed class VocabularySrsTests
     }
 
     /// <summary>Adds a word in Content and waits for its state to reach Progress (via RabbitMQ).</summary>
-    private static async Task<Guid> AddWordAndWaitForStateAsync(Contexts c, string token)
+    private static async Task<(Guid SenseId, string Word)> AddWordAndWaitForStateAsync(Contexts c, string token)
     {
+        string word = $"srs-{Guid.NewGuid():N}";
         IAPIResponse add = await c.Content.PostAsync("/api/vocabulary", new APIRequestContextOptions
         {
             Headers = Auth(token),
-            DataObject = new { word = $"srs-{Guid.NewGuid():N}", definition = "an e2e definition", example = (string?)null },
+            DataObject = new { word, definition = "an e2e definition", example = (string?)null },
         });
         add.Ok.Should().BeTrue($"adding a word should succeed, got {add.Status}: {await add.TextAsync()}");
 
@@ -212,7 +287,7 @@ public sealed class VocabularySrsTests
             if (words.Count == 1)
             {
                 words[0].GetProperty("status").GetString().Should().Be("New");
-                return words[0].GetProperty("senseId").GetGuid();
+                return (words[0].GetProperty("senseId").GetGuid(), word);
             }
 
             await Task.Delay(500);
