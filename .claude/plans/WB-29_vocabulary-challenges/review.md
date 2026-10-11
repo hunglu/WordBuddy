@@ -1,11 +1,41 @@
 # Review: WB-29 Vocabulary challenges
 
-PR: #42 · Round 1 · Reviewed commit: bf050d3 · 2026-10-11T22:55:58+07:00
+PR: #42 · Round 2 · Reviewed commit: cf09edc · 2026-10-11T23:07:56+07:00
 
 ## Verdict
-Changes requested — revoke cleanup can be lost on retry, and a join deadlock is reported as "already joined".
+Approve — all three majors are fixed; no new blockers or majors.
+
+## Round-1 findings
+
+| # | Round-1 severity | Status | Evidence |
+|---|---|---|---|
+| 1 | major | Fixed | `ApplySupportLinkEventCommandHandler.cs:53-103`: cleanup now runs whenever the stored link is inactive, also on replay. Cleaner is idempotent (no consents → success). A failure returns `Result.Failure` → consumer throws → MassTransit retries → cleanup runs again. A stale revoke after re-activation does not clean (stored link active) — correct. |
+| 2 | major | Fixed | `ChallengeRepository.cs:92-124`: count uses `WITH (UPDLOCK, HOLDLOCK)`, so joins queue instead of deadlocking. SQL is an interpolated `FormattableString` → `ChallengeId` is sent as a parameter (no injection). Table `ChallengeParticipants` and column `ChallengeId` match the EF config. Only 2601/2627 map to `Challenge.AlreadyJoined`; other `DbUpdateException`/`SqlException` map to retryable `Challenge.Conflict`. |
+| 3 | major | Fixed | `ReviewLogRepository.cs:25-33`: loads logs before `EndsAtUtc` only, and earlier logs only for senses answered in the window. Indexes `(UserId, OccurredAtUtc)` and `(UserId, SenseId)` cover the query and the correlated `EXISTS`. Scorer doc updated. |
+| 4 | nit | Fixed | `ChallengeScorer.cs:94`: Listening count no longer capped; documented. |
+| 5 | nit | Accepted | Noted in living spec. |
+| 6 | nit | Accepted | Noted in living spec. |
 
 ## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `ChallengeRepository.cs:117-123` | `Challenge.Conflict` and `Challenge.AlreadyJoined` both return 409; the client must read the error code to know a retry is safe. | Optional: document the code in the spec / UI retry message. |
+
+## Plan conformance
+All tasks still covered. Fix round touched only the files of findings 1-4, their tests, and the living spec. No out-of-scope changes. No migration change.
+
+## Previous rounds
+
+### Round 1
+### Review: WB-29 Vocabulary challenges
+
+PR: #42 · Round 1 · Reviewed commit: bf050d3 · 2026-10-11T22:55:58+07:00
+
+#### Verdict
+Changes requested — revoke cleanup can be lost on retry, and a join deadlock is reported as "already joined".
+
+#### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
@@ -21,7 +51,7 @@ Verified fine:
 - Scoring: +10 / +5 hint / +5 recall upgrade / daily goal / 200 cap per local day; non-due, wrong, timing-adjusted, < 800 ms, first-review and pre-join rows ignored.
 - `GuardianOnly` policy plus local `IsGuardian` re-check plus active link.
 
-## Deviations
+#### Deviations
 
 | Deviation | Judgment |
 |---|---|
@@ -29,5 +59,5 @@ Verified fine:
 | (b) Switch-off removes all guardians' consent | Accept with note (finding 5). |
 | (c) Revoke cleanup in `ApplySupportLinkEventCommandHandler` | Right place; atomicity broken (finding 1). |
 
-## Plan conformance
+#### Plan conformance
 All tasks in `tasks.md` have code in the diff. EF migrations come with `docs/database-diagram/identity.md` and `progress.md`. E2E API/UI tests are built but not run (need full stack). No out-of-scope changes found.
