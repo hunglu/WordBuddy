@@ -20,6 +20,10 @@
     <PackageReference Include="WordBuddy.Shared.Infrastructure" Version="1.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="WordBuddy.Progress.UnitTests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

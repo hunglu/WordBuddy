@@ -9,6 +9,11 @@ public interface IVocabularyExerciseRepository
     /// <summary>Stages a new exercise. Committed by <see cref="ILearnerWordStateRepository.SaveChangesAsync"/>.</summary>
     Task<Result> AddAsync(VocabularyExercise exercise, CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns the newest unanswered exercise for the user, session and sense, or <see cref="ErrorType.NotFound"/>.
+    /// </summary>
+    Task<Result<VocabularyExercise>> GetOpenAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default);
+
     /// <summary>Returns the change-tracked exercise, or <see cref="ErrorType.NotFound"/>.</summary>
     Task<Result<VocabularyExercise>> GetTrackedAsync(Guid exerciseId, CancellationToken ct = default);
 }

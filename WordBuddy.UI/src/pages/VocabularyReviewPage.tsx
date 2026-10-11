@@ -195,7 +195,14 @@ function ExerciseCard({ sessionId, senseId, onNext, onSkip }: ExerciseCardProps)
       { exerciseId: exercise.exerciseId, ...answer },
       {
         onSuccess: (data) => setResult(data),
-        onError: () => setSaveFailed(true),
+        onError: (error) => {
+          // The first POST was saved but its reply was lost: the answer is stored, so move on.
+          if (problemCode(error) === 'Exercise.AlreadyAnswered') {
+            onSkip()
+          } else {
+            setSaveFailed(true)
+          }
+        },
       },
     )
   }

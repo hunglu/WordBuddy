@@ -80,7 +80,8 @@ internal sealed class ContentSenseClient : IContentSenseClient
                 }
             }
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+        catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException
+            or Polly.Timeout.TimeoutRejectedException or Polly.CircuitBreaker.BrokenCircuitException) && !ct.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Content senses call failed: SessionId={SessionId}", sessionId);
             return Unavailable();

@@ -45,3 +45,9 @@
 - [x] Integration: migration applies on real SQL Server; old ReviewLog rows readable — `IntegrationTests/VocabularySrsEndpointsTests.cs` (`Migration_OldReviewLogRows_StayReadable`; the factory migrates the test database on start)
 - [x] E2E API (`e2e/api`): session → exercise → wrong + right answers; forged correct flag rejected in effect — `e2e/api/.../VocabularySrsTests.cs`, `VocabularyReviewSessionTests.cs`, `SupporterDashboardTests.cs`, `VocabularyExercises.cs` (builds; not run, needs the full stack)
 - [x] E2E UI (`e2e/ui`): daily review flow unchanged for adult and child, all 3 exercise types, wrong answer re-queued — `e2e/ui/features/vocabulary-review.feature`, `steps/vocabulary-review.steps.ts` (not run, needs the full stack; the 3-type scenario uses a stubbed server, see report)
+
+## Fix round 1
+- [x] 1 (blocker) One open exercise per (user, session, sense): create returns the open one unchanged — `IVocabularyExerciseRepository.cs`, `VocabularyExerciseRepository.cs` (`GetOpenAsync`), `CreateVocabularyExerciseCommandHandler.cs`, unit + integration test; no schema change
+- [x] 2 (major) `ContentSenseClient` also catches `TimeoutRejectedException` / `BrokenCircuitException` → 503 — `ContentSenseClient.cs`, `ContentSenseClientTests.cs`, Infrastructure + UnitTests csproj (InternalsVisibleTo, project reference)
+- [x] 3 (nit) Review POST 409 `Exercise.AlreadyAnswered` treated as saved, moves on — `VocabularyReviewPage.tsx`
+- [x] 4 (nit) Content health check reports `Degraded` — `Progress.Api/Program.cs`

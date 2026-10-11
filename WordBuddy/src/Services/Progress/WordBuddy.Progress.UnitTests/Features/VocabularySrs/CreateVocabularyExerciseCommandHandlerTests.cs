@@ -31,6 +31,9 @@ public class CreateVocabularyExerciseCommandHandlerTests
             .Setup(r => r.AddAsync(It.IsAny<VocabularyExercise>(), It.IsAny<CancellationToken>()))
             .Callback<VocabularyExercise, CancellationToken>((e, _) => _added.Add(e))
             .ReturnsAsync(Result.Success());
+        _exercises
+            .Setup(r => r.GetOpenAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<VocabularyExercise>(Error.NotFound("Exercise.NoOpen", "none")));
         _states.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
         _reviewLogs
             .Setup(r => r.CountCorrectAsync(_userId, _sessionId, It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -313,6 +316,26 @@ public class CreateVocabularyExerciseCommandHandlerTests
 
         result.Error.Code.Should().Be("Review.WordNotInList");
         _added.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateVocabularyExerciseCommandHandler_HandleAsync_OpenExerciseExists_ReturnsItUnchanged()
+    {
+        GivenOpenSession(5);
+        Result<VocabularyExerciseDto> first = await CreateHandler().HandleAsync(Command());
+        VocabularyExercise stored = _added.Single();
+        _exercises
+            .Setup(r => r.GetOpenAsync(_userId, _sessionId, _senses[0].SenseId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(stored));
+
+        Result<VocabularyExerciseDto> second = await CreateHandler().HandleAsync(Command());
+
+        second.IsSuccess.Should().BeTrue();
+        second.Value.ExerciseId.Should().Be(first.Value.ExerciseId);
+        second.Value.ExerciseType.Should().Be(first.Value.ExerciseType);
+        second.Value.Options.Should().BeEquivalentTo(first.Value.Options, o => o.WithStrictOrdering());
+        _added.Should().ContainSingle("no second exercise is stored");
+        _states.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

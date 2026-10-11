@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 using WordBuddy.Progress.Api.Extensions;
 using WordBuddy.Progress.Infrastructure.ContentClient;
@@ -30,7 +31,7 @@ public sealed class Program
 
         builder.Services.AddWordBuddyHealthChecks()
             .AddDbContextCheck<ProgressDbContext>(tags: [HealthCheckExtensions.ReadyTag])
-            .AddCheck<ContentHealthCheck>("content", tags: [HealthCheckExtensions.ReadyTag]);
+            .AddCheck<ContentHealthCheck>("content", failureStatus: HealthStatus.Degraded, tags: [HealthCheckExtensions.ReadyTag]);
 
         WebApplication app = builder.Build();
 

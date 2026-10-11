@@ -132,6 +132,36 @@ public sealed class CreateVocabularyExerciseCommandHandler : ICommandHandler<Cre
                 Error.NotFound("Exercise.SenseUnavailable", "The word is not available right now."));
         }
 
+        // One open exercise per (user, session, sense): return it unchanged so repeated calls cannot
+        // be intersected to find the target word among the options.
+        Result<VocabularyExercise> existing = await _exercises.GetOpenAsync(command.UserId, command.SessionId, command.SenseId, ct);
+        if (existing.IsSuccess)
+        {
+            VocabularyExercise openExercise = existing.Value;
+            List<ExerciseOptionDto> existingOptions = [];
+            foreach (KeyValuePair<string, Guid> pair in openExercise.Options)
+            {
+                ContentSenseDto? optionSense = senses.FirstOrDefault(s => s.SenseId == pair.Value);
+                if (optionSense is not null)
+                {
+                    existingOptions.Add(new ExerciseOptionDto(pair.Key, optionSense.Word));
+                }
+            }
+
+            if (existingOptions.Count == openExercise.Options.Count)
+            {
+                _logger.LogInformation(
+                    "CreateVocabularyExerciseCommand returned open exercise: ExerciseId={ExerciseId}, SenseId={SenseId}",
+                    openExercise.ExerciseId, command.SenseId);
+                return Result.Success(new VocabularyExerciseDto(
+                    openExercise.ExerciseId, openExercise.ExerciseType, openExercise.Skill, BuildPrompt(target, openExercise.ExerciseType), existingOptions));
+            }
+        }
+        else if (existing.Error.Type != ErrorType.NotFound)
+        {
+            return Result.Failure<VocabularyExerciseDto>(existing.Error);
+        }
+
         WordStatus status = stateResult.Value.Status;
         ExerciseLevel level = ExerciseSelector.LevelFor(status, correctResult.Value);
         ExerciseChoice choice = ExerciseSelector.Select(
@@ -193,12 +223,7 @@ public sealed class CreateVocabularyExerciseCommandHandler : ICommandHandler<Cre
             return Result.Failure<VocabularyExerciseDto>(saveResult.Error);
         }
 
-        ExercisePromptDto prompt = new(
-            target.Definition,
-            choice.ExerciseType == ExerciseType.PictureChoice ? target.ImageUrl : null,
-            choice.ExerciseType == ExerciseType.ListeningChoice ? target.AudioUrl : null,
-            target.PersonalContext,
-            choice.ExerciseType == ExerciseType.Typing ? FirstLetter(target.Word) : null);
+        ExercisePromptDto prompt = BuildPrompt(target, choice.ExerciseType);
 
         _logger.LogInformation(
             "CreateVocabularyExerciseCommand succeeded: ExerciseId={ExerciseId}, SenseId={SenseId}, ExerciseType={ExerciseType}",
@@ -206,6 +231,13 @@ public sealed class CreateVocabularyExerciseCommandHandler : ICommandHandler<Cre
 
         return Result.Success(new VocabularyExerciseDto(exerciseId, choice.ExerciseType, choice.Skill, prompt, optionDtos));
     }
+
+    private static ExercisePromptDto BuildPrompt(ContentSenseDto target, ExerciseType exerciseType) => new(
+        target.Definition,
+        exerciseType == ExerciseType.PictureChoice ? target.ImageUrl : null,
+        exerciseType == ExerciseType.ListeningChoice ? target.AudioUrl : null,
+        target.PersonalContext,
+        exerciseType == ExerciseType.Typing ? FirstLetter(target.Word) : null);
 
     private static bool HasValue(string? value) => !string.IsNullOrWhiteSpace(value);
 

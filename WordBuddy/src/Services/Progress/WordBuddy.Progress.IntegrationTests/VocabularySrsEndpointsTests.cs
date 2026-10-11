@@ -171,6 +171,22 @@ public sealed class VocabularySrsEndpointsTests
     }
 
     [Fact]
+    public async Task PostExercises_SecondCreateWhileOpen_ReturnsTheSameExercise()
+    {
+        Guid userId = Guid.NewGuid();
+        (HttpClient client, VocabularySessionDto session, List<Guid> senseIds) = await StartSessionAsync(userId, 5);
+
+        VocabularyExerciseDto first = await CreateExerciseAsync(client, session.SessionId, senseIds[0]);
+        VocabularyExerciseDto second = await CreateExerciseAsync(client, session.SessionId, senseIds[0]);
+
+        second.ExerciseId.Should().Be(first.ExerciseId);
+        second.Options.Should().BeEquivalentTo(first.Options, o => o.WithStrictOrdering());
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext dbContext = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        (await dbContext.VocabularyExercises.CountAsync(e => e.UserId == userId)).Should().Be(1);
+    }
+
+    [Fact]
     public async Task PostExercises_FewerThanFourWords_ReturnsTypingWithoutTheWord()
     {
         (HttpClient client, VocabularySessionDto session, List<Guid> senseIds) = await StartSessionAsync(Guid.NewGuid(), 3);
