@@ -1,11 +1,38 @@
 # Review: WB-28 Vocabulary answer checking
 
-PR: #40 · Round 1 · Reviewed commit: fad93d5 · 2026-10-10T23:47:48+0700
+PR: #40 · Round 2 · Reviewed commit: 315c22c · 2026-10-11T08:34:46+07:00
 
 ## Verdict
-Changes requested — open exercises can be farmed to find the right option, so a forged answer can still earn a correct first-attempt rating.
+Approve — all round 1 findings are fixed with tests; no new blocker or major.
+
+## Round 1 fixes
+
+| # | Round 1 finding | Fix | Status |
+|---|---|---|---|
+| 1 | blocker: open-exercise farming | `GetOpenAsync` returns the open exercise unchanged (same id, options, `IssuedAtUtc`); unit + integration tests | Fixed |
+| 2 | major: Polly exceptions → 500 | `TimeoutRejectedException`, `BrokenCircuitException` in the catch filter; theory test | Fixed |
+| 3 | nit: UI 409 AlreadyAnswered | `onError` moves on for `Exercise.AlreadyAnswered` | Fixed |
+| 4 | nit: Content health | `failureStatus: HealthStatus.Degraded` | Fixed |
 
 ## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `CreateVocabularyExerciseCommandHandler.cs:151` | If an option sense left the session, the open exercise is skipped and a new one is issued, so two stay open. Only possible when the session's sense set changes; low value for farming. | Optionally mark the old exercise answered/expired before issuing a new one. |
+| 2 | nit | `WordBuddy.Progress.UnitTests.csproj:25` | UnitTests now reference Infrastructure (+ `InternalsVisibleTo`). Stays inside the Progress service, so the independence model holds. | None; accepted. |
+
+## Plan conformance
+All tasks covered. Fix commit only touches round 1 findings. No migration change.
+
+## Previous rounds
+
+### Round 1
+
+PR: #40 · Round 1 · Reviewed commit: fad93d5 · 2026-10-10T23:47:48+0700
+
+### Verdict
+Changes requested — open exercises can be farmed to find the right option, so a forged answer can still earn a correct first-attempt rating.
+
+### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | blocker | `Progress.Application/.../CreateVocabularyExercise/CreateVocabularyExerciseCommandHandler.cs:150` (`PickDistractors` at :219) | Every call issues a new exercise with fresh random distractors. The target word is the only option present in all of them. Scenario: a script calls `POST /exercises` 3 times for one sense (none answered), intersects the option texts → the right word. It then answers the last-issued exercise at once → attempt 1, correct, fast → `Good`/`Easy` and reschedule. This breaks the success criterion "a forged answer cannot earn a correct rating". | Allow one open exercise per (user, session, sense): if an unanswered one exists, return it unchanged (same options, same `IssuedAtUtc`). Add a unit test and an integration test "second create returns the same exercise". |
@@ -33,7 +60,7 @@ Changes requested — open exercises can be farmed to find the right option, so 
 - Migration and `docs/database-diagram/progress.md` match the snapshot.
 - UI: TanStack mutations, `isError` / load-failed handled, `wb-` tokens, no `any`/`enum`.
 
-## Plan conformance
+### Plan conformance
 - All tasks in `tasks.md` are reflected in the diff.
 - Out of scope: none beyond the deviations above.
 - Tests: unit, integration and E2E exist; E2E not run yet (needs full stack, `/test`).

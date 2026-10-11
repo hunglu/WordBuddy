@@ -1,14 +1,14 @@
 ---
 title: WB-28_Vocabulary answer checking
-status: implemented
+status: reviewed
 type: change
 issue: 28
 pr: 40
 affects: docs/features/vocabulary-builder.md
 supersedes: none
-version: 1.4
+version: 1.5
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-11T00:30:00+07:00
+updated: 2026-10-11T08:43:11+07:00
 ---
 
 ## Problem
