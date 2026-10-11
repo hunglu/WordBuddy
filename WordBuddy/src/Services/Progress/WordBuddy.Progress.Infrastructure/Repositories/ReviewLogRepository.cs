@@ -22,8 +22,15 @@ internal sealed class ReviewLogRepository : IReviewLogRepository
         return Result.Success();
     }
 
-    public async Task<IReadOnlyList<ReviewLog>> GetByUsersAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct = default) =>
-        await _dbContext.ReviewLogs.Where(l => userIds.Contains(l.UserId)).ToListAsync(ct);
+    public async Task<IReadOnlyList<ReviewLog>> GetForChallengeAsync(
+        IReadOnlyCollection<Guid> userIds, DateTime startsAtUtc, DateTime endsAtUtc, CancellationToken ct = default) =>
+        await _dbContext.ReviewLogs
+            .Where(l => userIds.Contains(l.UserId)
+                && l.OccurredAtUtc < endsAtUtc
+                && (l.OccurredAtUtc >= startsAtUtc
+                    || _dbContext.ReviewLogs.Any(w => w.UserId == l.UserId && w.SenseId == l.SenseId
+                        && w.OccurredAtUtc >= startsAtUtc && w.OccurredAtUtc < endsAtUtc)))
+            .ToListAsync(ct);
 
     public async Task<Result<int>> CountAttemptsAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default)
     {

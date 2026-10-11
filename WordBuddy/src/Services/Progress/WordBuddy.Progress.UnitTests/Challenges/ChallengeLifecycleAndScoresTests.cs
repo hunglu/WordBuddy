@@ -29,8 +29,8 @@ public class ChallengeLifecycleAndScoresTests
 
     public ChallengeLifecycleAndScoresTests()
     {
-        _reviewLogs.Setup(r => r.GetByUsersAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyCollection<Guid> ids, CancellationToken _) => (IReadOnlyList<ReviewLog>)[.. _logs.Where(l => ids.Contains(l.UserId))]);
+        _reviewLogs.Setup(r => r.GetForChallengeAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<Guid> ids, DateTime _, DateTime _, CancellationToken _) => (IReadOnlyList<ReviewLog>)[.. _logs.Where(l => ids.Contains(l.UserId))]);
     }
 
     private ChallengeScoreProjector Projector() =>

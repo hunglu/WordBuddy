@@ -1,4 +1,4 @@
-using System.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -89,10 +89,14 @@ internal sealed class ChallengeRepository : IChallengeRepository
 
     public async Task<Result> AddParticipantIfRoomAsync(ChallengeParticipant participant, int capacity, CancellationToken ct = default)
     {
-        await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
         try
         {
-            int count = await _dbContext.ChallengeParticipants.CountAsync(p => p.ChallengeId == participant.ChallengeId, ct);
+            // UPDLOCK + HOLDLOCK takes an exclusive key-range lock: concurrent joins of one challenge queue up
+            // here instead of both holding shared locks and deadlocking on the insert.
+            int count = await _dbContext.Database
+                .SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM [ChallengeParticipants] WITH (UPDLOCK, HOLDLOCK) WHERE [ChallengeId] = {participant.ChallengeId}")
+                .SingleAsync(ct);
             if (count >= capacity)
             {
                 return Result.Failure(ChallengeErrors.Full);
@@ -103,12 +107,19 @@ internal sealed class ChallengeRepository : IChallengeRepository
             await transaction.CommitAsync(ct);
             return Result.Success();
         }
-        catch (DbUpdateException ex)
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
             // The unique (ChallengeId, UserId) index: the learner joined twice at once.
-            _logger.LogWarning(ex, "ChallengeParticipant insert failed with a database conflict");
+            _logger.LogWarning(ex, "ChallengeParticipant insert hit the unique index");
             _dbContext.Entry(participant).State = EntityState.Detached;
             return Result.Failure(Error.Conflict("Challenge.AlreadyJoined", "The learner has already joined this challenge."));
+        }
+        catch (Exception ex) when (ex is DbUpdateException or SqlException)
+        {
+            // Deadlock victim, timeout or similar: the learner is NOT joined and may retry.
+            _logger.LogWarning(ex, "ChallengeParticipant join failed with a retryable database error");
+            _dbContext.Entry(participant).State = EntityState.Detached;
+            return Result.Failure(Error.Conflict("Challenge.Conflict", "A concurrent challenge update conflicted. Try again."));
         }
     }
 

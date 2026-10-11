@@ -15,7 +15,7 @@ public sealed record ChallengeScoringWindow(DateTime StartsAtUtc, DateTime EndsA
 /// log of its word (new word). Choice exercises are "recognise", typing is "recall".
 /// MemoryPoints: +10 for a counted first try without hint, +5 with hint, +5 for a recall upgrade
 /// (first correct typing after only correct choice answers), +bonus once per local day at the goal;
-/// the sum per local day is capped. Counts per local day use the learner time zone.
+/// the sum per local day is capped (MemoryPoints only; Listening Sprint counts answers uncapped). Counts per local day use the learner time zone.
 /// </remarks>
 public static class ChallengeScorer
 {
@@ -23,7 +23,7 @@ public static class ChallengeScorer
     private const int HintedFirstTryPoints = 5;
     private const int RecallUpgradePoints = 5;
 
-    /// <summary>Scores one learner. <paramref name="logs"/> must hold ALL logs of the learner (history is needed).</summary>
+    /// <summary>Scores one learner. <paramref name="logs"/> must hold the window logs plus the earlier logs of the same words (history flags).</summary>
     public static int Score(
         IEnumerable<ReviewLog> logs,
         ChallengeMetric metric,
@@ -91,7 +91,7 @@ public static class ChallengeScorer
                     options.DailyPointCap)),
             ChallengeMetric.DueReviewsCorrect => correctDue.Count,
             ChallengeMetric.RecallUpgrades => recallUpgrades,
-            ChallengeMetric.ListeningCorrect => listening.Values.Sum(count => Math.Min(count, options.DailyPointCap)),
+            ChallengeMetric.ListeningCorrect => listening.Values.Sum(),
             _ => 0,
         };
     }

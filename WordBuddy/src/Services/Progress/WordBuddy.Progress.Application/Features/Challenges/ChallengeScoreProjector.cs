@@ -43,7 +43,7 @@ public sealed class ChallengeScoreProjector
 
         List<Guid> userIds = [.. participants.Select(p => p.UserId)];
         Dictionary<Guid, ChallengeProfile> profiles = (await _profiles.GetByIdsAsync(userIds, ct)).ToDictionary(p => p.UserId);
-        ILookup<Guid, ReviewLog> logs = (await _reviewLogs.GetByUsersAsync(userIds, ct)).ToLookup(l => l.UserId);
+        ILookup<Guid, ReviewLog> logs = (await _reviewLogs.GetForChallengeAsync(userIds, challenge.StartsAtUtc, challenge.EndsAtUtc, ct)).ToLookup(l => l.UserId);
 
         Dictionary<Guid, int> scores = [];
         foreach (ChallengeParticipant participant in participants)

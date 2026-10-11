@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
+using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.RecomputeChallengeScores;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Domain.Challenges;
@@ -169,6 +170,72 @@ public sealed class ChallengeEndpointsTests
         using IServiceScope scope = _factory.Services.CreateScope();
         ProgressDbContext db = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
         (await db.ChallengeParticipants.CountAsync(p => p.ChallengeId == challenge.Id)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Challenges_ParallelJoinsAroundCapacity_AdmitExactlyCapacityAndNeverFail()
+    {
+        Challenge challenge = await SeedChallengeAsync(ChallengeAudience.Adult, capacity: 3);
+
+        HttpResponseMessage[] responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
+            Client(Guid.NewGuid(), "Adult").PostAsync($"/api/progress/challenges/{challenge.Id}/join", null)));
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.NoContent).Should().Be(3);
+        responses.Where(r => r.StatusCode != HttpStatusCode.NoContent).Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Conflict);
+        foreach (HttpResponseMessage rejected in responses.Where(r => r.StatusCode == HttpStatusCode.Conflict))
+        {
+            (await ProblemTitleAsync(rejected)).Should().Be("Challenge.Full");
+        }
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext db = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        (await db.ChallengeParticipants.CountAsync(p => p.ChallengeId == challenge.Id)).Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Challenges_ParallelJoinsOfOneLearner_JoinOnceAndReportAlreadyJoined()
+    {
+        Challenge challenge = await SeedChallengeAsync(ChallengeAudience.Adult);
+        Guid adult = Guid.NewGuid();
+
+        HttpResponseMessage[] responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
+            Client(adult, "Adult").PostAsync($"/api/progress/challenges/{challenge.Id}/join", null)));
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.NoContent).Should().Be(1);
+        responses.Where(r => r.StatusCode != HttpStatusCode.NoContent).Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Conflict);
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext db = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        (await db.ChallengeParticipants.CountAsync(p => p.ChallengeId == challenge.Id && p.UserId == adult)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ReviewLogRepository_GetForChallenge_LoadsWindowLogsAndEarlierLogsOfThoseWordsOnly()
+    {
+        Guid user = Guid.NewGuid();
+        Guid seenInWindow = Guid.NewGuid();
+        Guid onlyOld = Guid.NewGuid();
+        DateTime start = DateTime.UtcNow.Date.AddDays(-1);
+        DateTime end = start.AddDays(6);
+        ReviewLog Log(Guid sense, DateTime at) => ReviewLog.Create(
+            Guid.NewGuid(), user, sense, Guid.NewGuid(), at, ExerciseType.Typing, VocabularySkill.Spelling,
+            isCorrect: true, responseMs: 3000, hintUsed: false, isDue: true, attemptNo: 1, FsrsRating.Good);
+        ReviewLog oldOfSeen = Log(seenInWindow, start.AddDays(-30));
+        ReviewLog inWindow = Log(seenInWindow, start.AddHours(2));
+        ReviewLog oldOnly = Log(onlyOld, start.AddDays(-30));
+        ReviewLog afterEnd = Log(seenInWindow, end.AddHours(1));
+        using (IServiceScope seed = _factory.Services.CreateScope())
+        {
+            ProgressDbContext db = seed.ServiceProvider.GetRequiredService<ProgressDbContext>();
+            db.ReviewLogs.AddRange(oldOfSeen, inWindow, oldOnly, afterEnd);
+            await db.SaveChangesAsync();
+        }
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IReadOnlyList<ReviewLog> loaded = await scope.ServiceProvider.GetRequiredService<IReviewLogRepository>()
+            .GetForChallengeAsync([user], start, end);
+
+        loaded.Select(l => l.Id).Should().BeEquivalentTo([oldOfSeen.Id, inWindow.Id]);
     }
 
     [Fact]
