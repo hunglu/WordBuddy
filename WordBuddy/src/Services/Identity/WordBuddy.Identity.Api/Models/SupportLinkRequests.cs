@@ -19,3 +19,11 @@ public sealed record HandoverPrimaryRequest(Guid LearnerId, Guid NewPrimaryLinkI
 
 /// <summary>Body of <c>PUT /api/auth/profile</c>. Null clears the value.</summary>
 public sealed record UpdateProfileRequest(string? Alias, string? AvatarId);
+
+/// <summary>Body of <c>PUT /api/auth/profile/time-zone</c>.</summary>
+/// <param name="TimeZoneId">IANA id, for example <c>Asia/Ho_Chi_Minh</c>; null clears.</param>
+public sealed record UpdateTimeZoneRequest(string? TimeZoneId);
+
+/// <summary>Body of <c>PUT /api/auth/admin/users/{id}/guardian</c>.</summary>
+/// <param name="IsGuardian">True grants the Guardian role (adults only); false removes it.</param>
+public sealed record SetGuardianRequest(bool IsGuardian);

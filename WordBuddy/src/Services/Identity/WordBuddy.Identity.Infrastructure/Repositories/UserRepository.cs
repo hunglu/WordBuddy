@@ -62,6 +62,9 @@ internal sealed class UserRepository : IUserRepository
     public async Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct = default) =>
         await _dbContext.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<User>> GetPageAsync(int skip, int take, CancellationToken ct = default) =>
+        await _dbContext.Users.AsNoTracking().OrderBy(u => u.Id).Skip(skip).Take(take).ToListAsync(ct);
+
     public Task<bool> AliasTakenAsync(string alias, Guid exceptUserId, CancellationToken ct = default) =>
         _dbContext.Users.AsNoTracking().AnyAsync(u => u.Alias == alias && u.Id != exceptUserId, ct);
 

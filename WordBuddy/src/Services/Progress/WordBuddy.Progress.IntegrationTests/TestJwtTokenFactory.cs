@@ -11,7 +11,7 @@ namespace WordBuddy.Progress.IntegrationTests;
 /// host to validate against.</summary>
 public static class TestJwtTokenFactory
 {
-    public static string CreateToken(Guid userId, string? ageGroup = null)
+    public static string CreateToken(Guid userId, string? ageGroup = null, bool guardian = false)
     {
         List<Claim> claims =
         [
@@ -22,6 +22,11 @@ public static class TestJwtTokenFactory
         if (ageGroup is not null)
         {
             claims.Add(new Claim("age_group", ageGroup));
+        }
+
+        if (guardian)
+        {
+            claims.Add(new Claim("guardian", "true"));
         }
 
         SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(ProgressApiFactory.JwtSecret));

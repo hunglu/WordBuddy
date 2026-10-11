@@ -14,6 +14,8 @@ public sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCom
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly ILearnerProfileEventPublisher _profileEvents;
+    private readonly TimeProvider _time;
     private readonly IValidator<RegisterUserCommand> _validator;
     private readonly ILogger<RegisterUserCommandHandler> _logger;
 
@@ -21,12 +23,16 @@ public sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCom
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
+        ILearnerProfileEventPublisher profileEvents,
+        TimeProvider time,
         IValidator<RegisterUserCommand> validator,
         ILogger<RegisterUserCommandHandler> logger)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _profileEvents = profileEvents;
+        _time = time;
         _validator = validator;
         _logger = logger;
     }
@@ -57,6 +63,16 @@ public sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCom
             _passwordHasher.Hash(command.Password),
             command.AgeGroup,
             isAdmin: false);
+
+        Result zone = user.SetTimeZone(command.TimeZoneId);
+        if (zone.IsFailure)
+        {
+            _logger.LogWarning("RegisterUserCommand rejected: ErrorCode={ErrorCode}", zone.Error.Code);
+            return Result.Failure<AuthTokenDto>(zone.Error);
+        }
+
+        // Staged in the outbox: the event commits together with the new user.
+        await _profileEvents.PublishAsync(user, _time.GetUtcNow().UtcDateTime, ct);
 
         Result addResult = await _userRepository.AddAsync(user, ct);
         if (addResult.IsFailure)

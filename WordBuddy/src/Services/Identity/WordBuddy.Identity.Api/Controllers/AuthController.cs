@@ -35,7 +35,7 @@ public sealed class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterUserRequest request, CancellationToken ct)
     {
         Result<AuthTokenDto> result = await _registerUser.HandleAsync(
-            new RegisterUserCommand(request.Email, request.Password, request.DisplayName, request.AgeGroup), ct);
+            new RegisterUserCommand(request.Email, request.Password, request.DisplayName, request.AgeGroup, request.TimeZoneId), ct);
 
         if (result.IsFailure)
         {

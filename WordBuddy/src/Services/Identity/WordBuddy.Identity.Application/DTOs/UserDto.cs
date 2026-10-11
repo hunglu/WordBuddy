@@ -10,6 +10,8 @@ namespace WordBuddy.Identity.Application.DTOs;
 /// <param name="IsAdmin">Admin flag.</param>
 /// <param name="Alias">Optional public alias.</param>
 /// <param name="AvatarId">Optional avatar id from the fixed catalog.</param>
+/// <param name="TimeZoneId">IANA time zone id, or null when unset.</param>
+/// <param name="IsGuardian">Whether the account holds the Guardian role.</param>
 /// <param name="HasActiveSupporter">Whether the user has at least one active supporter. Child learning features need this.</param>
 public sealed record UserDto(
     Guid Id,
@@ -19,9 +21,11 @@ public sealed record UserDto(
     bool IsAdmin,
     string? Alias,
     string? AvatarId,
-    bool HasActiveSupporter)
+    bool HasActiveSupporter,
+    string? TimeZoneId = null,
+    bool IsGuardian = false)
 {
     /// <summary>Maps a user and its supporter state to the DTO.</summary>
     public static UserDto From(User user, bool hasActiveSupporter) =>
-        new(user.Id, user.Email, user.DisplayName, user.AgeGroup, user.IsAdmin, user.Alias, user.AvatarId, hasActiveSupporter);
+        new(user.Id, user.Email, user.DisplayName, user.AgeGroup, user.IsAdmin, user.Alias, user.AvatarId, hasActiveSupporter, user.TimeZoneId, user.IsGuardian);
 }

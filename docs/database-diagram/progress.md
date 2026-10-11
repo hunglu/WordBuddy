@@ -1,7 +1,7 @@
 # Progress — database diagram
 
 Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
-last migration: `20261010162311_AddServerAnswerChecking`
+last migration: `20261011130627_AddChallenges`
 
 The domain tables have no foreign keys between them (one exception: `VocabularySessionIssueItems` → `VocabularySessionIssues`); every id column points to another service.
 
@@ -130,6 +130,43 @@ erDiagram
         int Position "order in the session"
     }
     VocabularySessionIssues ||--o{ VocabularySessionIssueItems : plans
+    Challenges {
+        guid Id PK
+        string TemplateKey "max 40; launch template key"
+        string Audience "Adult | Child, max 10; never mixed"
+        string Kind "Ranked | Target, max 10"
+        string Metric "MemoryPoints | DueReviewsCorrect | RecallUpgrades | ListeningCorrect, max 30"
+        int Target "nullable; target challenges only"
+        datetime OpensAtUtc
+        datetime StartsAtUtc
+        datetime EndsAtUtc "exclusive"
+        int Capacity "default 30 from config; no overflow"
+        string Status "Scheduled | Open | Running | Finished, max 10; forward only"
+    }
+    ChallengeParticipants {
+        guid Id PK
+        guid ChallengeId "Challenges.Id, no FK"
+        guid UserId "Identity user"
+        datetime JoinedAtUtc "only answers after this count"
+        int Score "projection of ReviewLogs"
+        int Rank "nullable; dense rank, 1 is best"
+        bool TargetReached
+    }
+    ChallengeProfiles {
+        guid UserId PK "Identity user"
+        string AgeGroup "Child | Adult, max 10"
+        string Alias "nullable, max 20"
+        string AvatarId "nullable, max 30"
+        string DisplayName "nullable, max 100; always null for a child"
+        string TimeZoneId "nullable, max 64; IANA id"
+        bool IsGuardian
+        datetime UpdatedAtUtc "time of last applied event"
+    }
+    ChallengeConsents {
+        guid ChildId PK "Identity user (child)"
+        guid EnabledBy PK "Identity user (guardian)"
+        datetime EnabledAtUtc
+    }
 ```
 
 | Index | Columns | Unique |
@@ -152,6 +189,12 @@ erDiagram
 | `PK_DeletedLearnerGroups` | `GroupId` | yes (key) |
 | `IX_LearnerGroupMemberProjections_OwnerId` | `OwnerId` | — |
 | `IX_VocabularySessionIssues_UserId_IssuedAtUtc` | `UserId`, `IssuedAtUtc` | — |
+| `IX_Challenges_Audience_Status` | `Audience`, `Status` | — |
+| `IX_Challenges_TemplateKey_Audience_StartsAtUtc` | `TemplateKey`, `Audience`, `StartsAtUtc` | — |
+| `IX_ChallengeParticipants_ChallengeId_UserId` | `ChallengeId`, `UserId` | yes (one row per learner and challenge) |
+| `IX_ChallengeParticipants_UserId` | `UserId` | — |
+| `PK_ChallengeConsents` | `ChildId`, `EnabledBy` | yes (composite key) |
+| `IX_ChallengeConsents_EnabledBy` | `EnabledBy` | — |
 
 - `Word` is copied from Content at submit time, so recall history survives a deleted word.
 - `LearnerWordMemberships` is filled only by Content events (WB-21). No public endpoint reads it yet.
@@ -164,6 +207,9 @@ erDiagram
 - `VocabularySessionIssueItems` (WB-26) lists the planned words of a session, so a resume can return the unanswered ones in order.
 - `VocabularyExercises` (WB-28) holds each issued exercise and its expected answer, so Progress grades the learner's raw answer. It is never returned to the client. `AnsweredAtUtc` is set once; the only update. No learner free text is stored.
 - `ReviewLogs` (WB-28) gains `ExerciseId`, `ClientResponseMs`, `ServerResponseMs`, `TimingAdjusted`. `ResponseMs` keeps the value used for grading. Old rows stay valid (nullable columns).
+- `Challenges`, `ChallengeParticipants` (WB-29): `Challenges` rows are made only by the scheduler from the launch templates. `Score` and `Rank` are a projection of `ReviewLogs`, rewritten every 5 minutes and at finish; they can be rebuilt at any time.
+- `ChallengeProfiles` (WB-29) is filled only by the Identity event `LearnerProfileUpdated` (upsert, older events skipped). No email. A child has no display name here.
+- `ChallengeConsents` (WB-29) holds a Guardian's consent for one child. It is deleted when the support link is revoked or the Guardian role is removed.
 - A revoke clears `SupporterNewWordCap` when `SupporterCapSetBy` is the revoked supporter (same save).
 
 ## MassTransit messaging tables (WB-21)

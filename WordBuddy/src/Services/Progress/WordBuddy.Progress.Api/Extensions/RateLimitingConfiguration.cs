@@ -24,6 +24,14 @@ internal static class RateLimitingConfiguration
 
     private static readonly TimeSpan DashboardWindow = TimeSpan.FromMinutes(1);
 
+    /// <summary>Policy for <c>POST /api/progress/challenges/{id}/join</c>.</summary>
+    public const string ChallengeJoinPolicy = "challenge-join";
+
+    /// <summary>Joins per user per window.</summary>
+    private const int ChallengeJoinPermitLimit = 10;
+
+    private static readonly TimeSpan ChallengeJoinWindow = TimeSpan.FromMinutes(1);
+
     /// <summary>Registers the rate limiter and its policies.</summary>
     public static IServiceCollection AddWordBuddyRateLimiting(this IServiceCollection services)
     {
@@ -53,6 +61,18 @@ internal static class RateLimitingConfiguration
                     {
                         PermitLimit = DashboardPermitLimit,
                         Window = DashboardWindow,
+                        QueueLimit = 0,
+                    }));
+
+            options.AddPolicy(ChallengeJoinPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "anonymous",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = ChallengeJoinPermitLimit,
+                        Window = ChallengeJoinWindow,
                         QueueLimit = 0,
                     }));
 

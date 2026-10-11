@@ -7,6 +7,7 @@ using WordBuddy.Progress.Api.Authorization;
 using WordBuddy.Progress.Application.Extensions;
 using WordBuddy.Progress.Application.Features.Dashboard;
 using WordBuddy.Progress.Domain;
+using WordBuddy.Progress.Domain.Challenges;
 using WordBuddy.Progress.Infrastructure.Extensions;
 
 namespace WordBuddy.Progress.Api.Extensions;
@@ -44,6 +45,7 @@ internal static class ServiceCollectionExtensions
         {
             options.AddSupportLinkPolicies();
             options.AddGroupPolicies();
+            options.AddChallengePolicies();
         });
         services.AddSupportLinkAuthorizationHandlers();
         services.AddGroupAuthorizationHandlers();
@@ -90,6 +92,14 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton(options);
         services.AddSingleton(new DashboardCalculator(options));
 
+        return services;
+    }
+
+    /// <summary>Binds <c>Challenges</c> options (WB-29) and registers them for the handlers and the scheduler.</summary>
+    public static IServiceCollection AddChallenges(this IServiceCollection services, IConfiguration configuration)
+    {
+        ChallengeOptions options = configuration.GetSection(ChallengeOptions.SectionName).Get<ChallengeOptions>() ?? new();
+        services.AddSingleton(options);
         return services;
     }
 

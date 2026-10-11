@@ -22,6 +22,9 @@ internal sealed class ReviewLogRepository : IReviewLogRepository
         return Result.Success();
     }
 
+    public async Task<IReadOnlyList<ReviewLog>> GetByUsersAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct = default) =>
+        await _dbContext.ReviewLogs.Where(l => userIds.Contains(l.UserId)).ToListAsync(ct);
+
     public async Task<Result<int>> CountAttemptsAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default)
     {
         int count = await _dbContext.ReviewLogs

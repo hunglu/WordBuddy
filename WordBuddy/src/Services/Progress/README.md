@@ -19,6 +19,11 @@ model this follows.
 - A failed command throws so the retry policy runs. Logs carry ids only.
 - Membership and state change in the same save.
 
+| Event (from Identity) | Consumer | Effect |
+| --- | --- | --- |
+| `LearnerProfileUpdated` | `LearnerProfileUpdatedConsumer` | Upsert `ChallengeProfiles`; older events ignored; Guardian role removed → that guardian consents deleted (WB-29) |
+| `SupportLinkRevoked` | `SupportLinkRevokedConsumer` | Also deletes the challenge consent that supporter gave for the learner (WB-29) |
+
 ## Endpoints
 
 | Method | Path | Auth | Description |
@@ -33,6 +38,11 @@ model this follows.
 | GET | `/api/progress/dashboard/me?days=7\|30\|90` | Bearer, `ChildHasSupporter`, rate limit `dashboard` | The caller's own dashboard (WB-26) |
 | GET | `/api/progress/dashboard/learners/{learnerId}?days=…` | Bearer, `CanSupportLearner`, rate limit `dashboard` | A learner's dashboard for an active supporter; no link or revoked link → 403 |
 | POST / GET | `/api/progress/vocabulary-recall` | Bearer | Old self-rated recall check; kept until WB-23 ships |
+| GET | `/api/progress/challenges` | Bearer | Open and Running challenges of the caller audience (from `age_group`). A child without Guardian consent gets `[]` |
+| GET | `/api/progress/challenges/{id}/board` | Bearer, same audience | Adult: full ranking. Child: own rank and top 5, alias and avatar only |
+| POST | `/api/progress/challenges/{id}/join` | Bearer, rate limit `challenge-join` | Opt in. `409 Challenge.Full` at capacity; `403 Challenge.NoConsent` for a child without consent |
+| DELETE | `/api/progress/challenges/{id}/join` | Bearer | Opt out |
+| PUT | `/api/progress/challenges/consent/{childId}` | `GuardianOnly` (`guardian` claim) | `{ "enabled": true }`. Needs the Guardian role and an active support link, else `403 Challenge.NotGuardian` / `Challenge.NoActiveLink` |
 
 ### Vocabulary SRS (WB-22)
 
@@ -115,6 +125,39 @@ ReviewLogs + LearnerWordStates + LearnerWordMemberships + VocabularySessionIssue
 | `MinSample` (answers needed before a retention figure shows) | `10` |
 | `FastWrongMs` (wrong and faster = "quick wrong") | `1500` |
 | `HintRateFlag` | `0.3` |
+
+### Vocabulary challenges (WB-29)
+
+```text
+Identity LearnerProfileUpdated → ChallengeProfiles (alias, avatar, time zone, guardian)
+Scheduler (1 min)  → creates next instances, moves Scheduled → Open → Running → Finished
+Scheduler (5 min)  → ChallengeScorer(ReviewLogs) → ChallengeParticipants.Score / Rank (dense)
+```
+
+- Challenges are made by the system from four templates: Weekly League (ranked, Mon-Sun UTC), 7-Day Memory
+  (target 7 days), Word Climber (target 20 recall upgrades, 14 days), Listening Sprint (ranked, adults only).
+  Adult and child instances are separate and never mixed. Capacity 30, no overflow instance.
+- Scores are a pure projection of `ReviewLogs`; a rebuild is safe at any time. Windows are global UTC instants;
+  only the daily cap and the daily goal use the learner local day (IANA zone from Identity, UTC if unset).
+- Points: due, correct, first try, no hint +10; with hint +5; first correct typing after only correct choice answers +5;
+  daily goal bonus once per local day; per-day cap. Ignored: not due, wrong, adjusted timing or faster than the floor,
+  first review of a word, answers before joining.
+- Child: needs Guardian consent (Guardian role and active support link). Consent is deleted when the link is revoked
+  or the role is removed; the child is then taken out of unfinished challenges. Board cache key
+  `progress:challenge-board:{id}`, absolute 5 min, deleted after recompute, join, leave and consent change.
+- A revoked support link is handled in `ApplySupportLinkEventCommandHandler` (called by `SupportLinkRevokedConsumer`).
+- Logs carry ids and counts only.
+
+| Option (`Challenges:`) | Default |
+| --- | --- |
+| `DailyGoalCorrectDue` | `10` |
+| `DailyGoalBonus` | `10` |
+| `DailyPointCap` | `200` |
+| `FastAnswerFloorMs` | `800` |
+| `Capacity` | `30` |
+| `OpenLeadHours` | `24` |
+| `LifecycleTickSeconds` / `RecomputeIntervalMinutes` | `60` / `5` |
+| `SchedulerEnabled` | `true` |
 
 ### Vocabulary options
 

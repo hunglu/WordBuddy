@@ -27,6 +27,9 @@ public interface IUserRepository
     /// <summary>Whether another user already has <paramref name="alias"/> (case-insensitive).</summary>
     Task<bool> AliasTakenAsync(string alias, Guid exceptUserId, CancellationToken ct = default);
 
+    /// <summary>Returns one page of users (read-only), ordered by id. Used by the profile backfill.</summary>
+    Task<IReadOnlyList<User>> GetPageAsync(int skip, int take, CancellationToken ct = default);
+
     /// <summary>Saves changes to tracked users.</summary>
     Task<Result> SaveChangesAsync(CancellationToken ct = default);
 }

@@ -15,7 +15,10 @@ using WordBuddy.Identity.Application.Features.Groups.Queries.GetMyGroups;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetPendingGroupApprovals;
 using WordBuddy.Identity.Application.Features.Auth.Commands.Login;
 using WordBuddy.Identity.Application.Features.Auth.Commands.RegisterUser;
+using WordBuddy.Identity.Application.Features.Profile.Commands.RepublishLearnerProfiles;
+using WordBuddy.Identity.Application.Features.Profile.Commands.SetGuardianRole;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileAliasAvatar;
+using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileTimeZone;
 using WordBuddy.Identity.Application.Features.Profile.Queries.GetCurrentUser;
 using WordBuddy.Identity.Application.Features.SupportLinks;
 using WordBuddy.Identity.Application.Features.SupportLinks.Commands.AcceptInvitation;
@@ -50,6 +53,11 @@ public static class ServiceCollectionExtensions
         // Profile
         services.AddScoped<ICommandHandler<UpdateProfileAliasAvatarCommand, UserDto>, UpdateProfileAliasAvatarCommandHandler>();
         services.AddScoped<IValidator<UpdateProfileAliasAvatarCommand>, UpdateProfileAliasAvatarCommandValidator>();
+        services.AddScoped<ICommandHandler<UpdateProfileTimeZoneCommand, UserDto>, UpdateProfileTimeZoneCommandHandler>();
+        services.AddScoped<IValidator<UpdateProfileTimeZoneCommand>, UpdateProfileTimeZoneCommandValidator>();
+        services.AddScoped<ICommandHandler<SetGuardianRoleCommand>, SetGuardianRoleCommandHandler>();
+        services.AddScoped<IValidator<SetGuardianRoleCommand>, SetGuardianRoleCommandValidator>();
+        services.AddScoped<ICommandHandler<RepublishLearnerProfilesCommand, int>, RepublishLearnerProfilesCommandHandler>();
         services.AddScoped<IQueryHandler<GetCurrentUserQuery, UserDto>, GetCurrentUserQueryHandler>();
 
         // Support links

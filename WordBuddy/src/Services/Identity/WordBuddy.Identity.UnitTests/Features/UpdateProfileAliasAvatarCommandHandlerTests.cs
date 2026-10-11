@@ -15,6 +15,7 @@ public class UpdateProfileAliasAvatarCommandHandlerTests
 {
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<ISupportLinkRepository> _links = new();
+    private readonly Mock<ILearnerProfileEventPublisher> _profileEvents = new();
 
     public UpdateProfileAliasAvatarCommandHandlerTests()
     {
@@ -23,7 +24,7 @@ public class UpdateProfileAliasAvatarCommandHandlerTests
     }
 
     private UpdateProfileAliasAvatarCommandHandler CreateHandler() =>
-        new(_users.Object, _links.Object, Mock.Of<IDistributedCache>(), new UpdateProfileAliasAvatarCommandValidator(),
+        new(_users.Object, _links.Object, Mock.Of<IDistributedCache>(), _profileEvents.Object, TimeProvider.System, new UpdateProfileAliasAvatarCommandValidator(),
             Mock.Of<ILogger<UpdateProfileAliasAvatarCommandHandler>>());
 
     private User Given(User user)

@@ -22,7 +22,7 @@ internal sealed class JwtTokenGenerator : IJwtTokenGenerator
     {
         DateTime expiresAtUtc = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);
 
-        Claim[] claims =
+        List<Claim> claims =
         [
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
@@ -31,6 +31,12 @@ internal sealed class JwtTokenGenerator : IJwtTokenGenerator
             new("age_group", user.AgeGroup.ToString()),
             new("is_admin", user.IsAdmin ? "true" : "false"),
         ];
+
+        // Only guardians carry the claim, so its presence is the role check.
+        if (user.IsGuardian)
+        {
+            claims.Add(new Claim("guardian", "true"));
+        }
 
         SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(_settings.Secret));
         SigningCredentials credentials = new(signingKey, SecurityAlgorithms.HmacSha256);

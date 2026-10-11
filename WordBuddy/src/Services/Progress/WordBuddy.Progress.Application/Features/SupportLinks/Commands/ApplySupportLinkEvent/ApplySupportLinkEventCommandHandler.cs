@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Progress.Application.Features.Challenges;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Shared.Kernel;
@@ -10,23 +11,27 @@ namespace WordBuddy.Progress.Application.Features.SupportLinks.Commands.ApplySup
 
 /// <summary>
 /// Idempotent upsert by <c>LinkId</c>. A replay or an event older than the stored state changes nothing (still a success).
-/// On an applied revoke, the supporter cap set by the revoked supporter is cleared in the same save.
+/// On an applied revoke, the supporter cap set by the revoked supporter is cleared in the same save,
+/// and the challenge consent that supporter gave for the learner is deleted (WB-29).
 /// </summary>
 public sealed class ApplySupportLinkEventCommandHandler : ICommandHandler<ApplySupportLinkEventCommand>
 {
     private readonly ISupportLinkProjectionRepository _repository;
     private readonly IVocabularyLearnerSettingsRepository _settings;
+    private readonly IChallengeConsentCleaner _consentCleaner;
     private readonly IValidator<ApplySupportLinkEventCommand> _validator;
     private readonly ILogger<ApplySupportLinkEventCommandHandler> _logger;
 
     public ApplySupportLinkEventCommandHandler(
         ISupportLinkProjectionRepository repository,
         IVocabularyLearnerSettingsRepository settings,
+        IChallengeConsentCleaner consentCleaner,
         IValidator<ApplySupportLinkEventCommand> validator,
         ILogger<ApplySupportLinkEventCommandHandler> logger)
     {
         _repository = repository;
         _settings = settings;
+        _consentCleaner = consentCleaner;
         _validator = validator;
         _logger = logger;
     }
@@ -79,6 +84,16 @@ public sealed class ApplySupportLinkEventCommandHandler : ICommandHandler<ApplyS
             {
                 _logger.LogWarning("ApplySupportLinkEventCommand failed to persist: {ErrorCode}", save.Error.Code);
                 return save;
+            }
+        }
+
+        if (applied && !command.IsActive)
+        {
+            // WB-29: a revoked link ends the Guardian consent that supporter gave for this learner.
+            Result cleaned = await _consentCleaner.RemoveForLinkAsync(command.LearnerId, command.SupporterId, ct);
+            if (cleaned.IsFailure)
+            {
+                return cleaned;
             }
         }
 

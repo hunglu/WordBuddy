@@ -25,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
     end: true,
   },
   { to: '/vocabulary/review', label: 'Review', icon: '🧠', end: true },
+  { to: '/challenges', label: 'Challenges', icon: '🏆', end: false },
   { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
   { to: '/progress', label: 'My Progress', icon: '✅', end: false },
   { to: '/support', label: 'Supporters', icon: '🤝', end: false },

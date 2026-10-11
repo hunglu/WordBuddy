@@ -18,6 +18,8 @@ public sealed class UpdateProfileAliasAvatarCommandHandler : ICommandHandler<Upd
     private readonly IUserRepository _users;
     private readonly ISupportLinkRepository _links;
     private readonly IDistributedCache _cache;
+    private readonly ILearnerProfileEventPublisher _profileEvents;
+    private readonly TimeProvider _time;
     private readonly IValidator<UpdateProfileAliasAvatarCommand> _validator;
     private readonly ILogger<UpdateProfileAliasAvatarCommandHandler> _logger;
 
@@ -25,12 +27,16 @@ public sealed class UpdateProfileAliasAvatarCommandHandler : ICommandHandler<Upd
         IUserRepository users,
         ISupportLinkRepository links,
         IDistributedCache cache,
+        ILearnerProfileEventPublisher profileEvents,
+        TimeProvider time,
         IValidator<UpdateProfileAliasAvatarCommand> validator,
         ILogger<UpdateProfileAliasAvatarCommandHandler> logger)
     {
         _users = users;
         _links = links;
         _cache = cache;
+        _profileEvents = profileEvents;
+        _time = time;
         _validator = validator;
         _logger = logger;
     }
@@ -67,6 +73,8 @@ public sealed class UpdateProfileAliasAvatarCommandHandler : ICommandHandler<Upd
                 "UpdateProfileAliasAvatarCommand rejected: UserId={UserId}, ErrorCode={ErrorCode}", command.UserId, set.Error.Code);
             return Result.Failure<UserDto>(set.Error);
         }
+
+        await _profileEvents.PublishAsync(user, _time.GetUtcNow().UtcDateTime, ct);
 
         Result save = await _users.SaveChangesAsync(ct);
         if (save.IsFailure)

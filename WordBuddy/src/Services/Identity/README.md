@@ -11,8 +11,20 @@ references to any other WordBuddy service or shared project — see the root
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | Anonymous | Creates a new account, returns a JWT |
+| POST | `/api/auth/register` | Anonymous | Creates a new account, returns a JWT. Optional `timeZoneId` (IANA id; unknown id → `400`) |
 | POST | `/api/auth/login` | Anonymous | Authenticates an existing account, returns a JWT |
+| PUT | `/api/auth/profile/time-zone` | Bearer | Sets or clears the caller IANA time zone (`{ "timeZoneId": "Asia/Ho_Chi_Minh" }`); unknown id → `400 User.UnknownTimeZone` |
+| PUT | `/api/auth/admin/users/{id}/guardian` | `AdminOnly` | Grants or removes the Guardian role (`{ "isGuardian": true }`); a child account → `400 User.GuardianMustBeAdult`; non-admin → `403` |
+| POST | `/api/auth/admin/learner-profiles/republish` | `AdminOnly` | One-off backfill (WB-29): publishes `LearnerProfileUpdated` for every user. Safe to rerun; returns `{ "published": n }` |
+
+### Profile event and Guardian role (WB-29)
+
+- Every register, alias/avatar, time zone and Guardian change stages one `LearnerProfileUpdated` in the
+  outbox (same save as the change). Payload: user id, age group, alias, avatar, time zone, guardian flag, time.
+  No email. The display name is sent for adults only (`null` for a child).
+- The JWT carries `guardian = true` only for accounts with the Guardian role. A changed role shows in a new token
+  after the next login.
+- Run the republish endpoint once after release so Progress knows the existing users.
 
 Swagger UI: `http://localhost:5080/swagger` (Development only).
 

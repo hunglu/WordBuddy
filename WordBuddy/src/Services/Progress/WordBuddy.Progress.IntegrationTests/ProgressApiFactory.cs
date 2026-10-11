@@ -36,6 +36,9 @@ public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncL
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);
         Environment.SetEnvironmentVariable("Messaging__Transport", "InMemory");
+
+        // Tests drive the challenge life cycle and score projection by hand; the background clock stays off.
+        Environment.SetEnvironmentVariable("Challenges__SchedulerEnabled", "false");
     }
 
     /// <summary>Stand-in for the Content service; tests register the senses it returns.</summary>
