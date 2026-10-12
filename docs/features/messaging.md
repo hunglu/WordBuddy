@@ -3,7 +3,7 @@ feature: Messaging
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-22_vocabulary-srs-engine
+last-updated-by: WB-31_configurable-messaging-bus-settings
 ---
 
 # Messaging
@@ -75,9 +75,10 @@ All keys live in the `Messaging` section and are validated at startup (`Validate
 
 ## Pending changes
 
-- `WB-31_configurable-messaging-bus-settings` — all bus time settings read from appsettings; fail fast on missing broker credentials (#31)
+None.
 
 ## Change history
 
 - `WB-21_messaging-rabbitmq-foundation` — RabbitMQ + MassTransit; Content publishes LearnerWordAdded/Removed, Progress consumes them. (#21)
 - `WB-22_vocabulary-srs-engine` — consumers also maintain `LearnerWordStates`; admin backfill republishes `LearnerWordAdded`. (#22)
+- `WB-31_configurable-messaging-bus-settings` — all bus time settings read from `Messaging` appsettings section, validated at startup; missing broker credentials fail fast outside Development. Outbox query delay stays 1 s (the proposal's "100 s" was wrong). (#31)
