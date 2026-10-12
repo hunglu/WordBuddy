@@ -49,12 +49,14 @@ public static class MessagingExtensions
         services.AddSingleton<IValidateOptions<MessagingOptions>, MessagingOptionsValidator>();
         services.AddOptions<MessagingOptions>()
             .Bind(configuration.GetSection(MessagingOptions.SectionName))
+            .PostConfigure(o => o.Retry.ApplyDefaults())
             .ValidateOnStart();
 
-        // Registration-time values (transport, outbox) need an eager copy; the rest is read
-        // from IOptions<MessagingOptions> when the bus starts.
+        // Registration-time values (transport, outbox) need an eager copy of the same section;
+        // the rest is read from IOptions<MessagingOptions> when the bus starts.
         MessagingOptions eager = new();
         configuration.GetSection(MessagingOptions.SectionName).Bind(eager);
+        eager.Retry.ApplyDefaults();
 
         if (string.Equals(eager.Transport, InMemoryTransport, StringComparison.OrdinalIgnoreCase))
         {

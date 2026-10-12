@@ -32,6 +32,14 @@ public sealed class MessagingOptionsTests
         MessagingOptions options = new();
         options.RabbitMq.Username = "user";
         options.RabbitMq.Password = "pw";
+        options.Retry.ApplyDefaults();
+        return options;
+    }
+
+    private static MessagingOptions ValidDefaults()
+    {
+        MessagingOptions options = new();
+        options.Retry.ApplyDefaults();
         return options;
     }
 
@@ -60,13 +68,40 @@ public sealed class MessagingOptionsTests
         options.RabbitMq.RequestedConnectionTimeoutMs.Should().Be(5000);
         options.Outbox.QueryDelayMs.Should().Be(250);
         options.Outbox.DuplicateDetectionWindowSeconds.Should().Be(60);
-        options.Retry.IntervalsMs.Should().Contain([500, 2500]);
+        options.Retry.IntervalsMs.Should().Equal(500, 2500);
+    }
+
+    [Fact]
+    public void MessagingOptions_AppsettingsStyleThreeItems_BindsExactlyThree()
+    {
+        MessagingOptions options = Bind(new Dictionary<string, string?>
+        {
+            ["Messaging:Retry:IntervalsMs:0"] = "200",
+            ["Messaging:Retry:IntervalsMs:1"] = "1000",
+            ["Messaging:Retry:IntervalsMs:2"] = "5000",
+        });
+        options.Retry.ApplyDefaults();
+
+        options.Retry.IntervalsMs.Should().Equal(200, 1000, 5000);
+    }
+
+    [Fact]
+    public void MessagingOptions_OverrideWithFewerItems_BindsExactlyTheOverride()
+    {
+        MessagingOptions options = Bind(new Dictionary<string, string?>
+        {
+            ["Messaging:Retry:IntervalsMs:0"] = "500",
+        });
+        options.Retry.ApplyDefaults();
+
+        options.Retry.IntervalsMs.Should().Equal(500);
     }
 
     [Fact]
     public void MessagingOptions_SectionMissing_UsesDefaults()
     {
         MessagingOptions options = Bind([]);
+        options.Retry.ApplyDefaults();
 
         options.Transport.Should().Be("RabbitMq");
         options.RabbitMq.Host.Should().Be("localhost");
@@ -171,7 +206,7 @@ public sealed class MessagingOptionsTests
     [Fact]
     public void Validate_MissingCredentialsInProduction_Fails()
     {
-        ValidateOptionsResult result = CreateValidator("Production").Validate(null, new MessagingOptions());
+        ValidateOptionsResult result = CreateValidator("Production").Validate(null, ValidDefaults());
 
         result.Failed.Should().BeTrue();
         result.FailureMessage.Should().Contain("Messaging:RabbitMq:Username")
@@ -181,7 +216,7 @@ public sealed class MessagingOptionsTests
     [Fact]
     public void Validate_MissingCredentialsInDevelopment_Succeeds()
     {
-        ValidateOptionsResult result = CreateValidator("Development").Validate(null, new MessagingOptions());
+        ValidateOptionsResult result = CreateValidator("Development").Validate(null, ValidDefaults());
 
         result.Succeeded.Should().BeTrue();
     }
@@ -189,7 +224,8 @@ public sealed class MessagingOptionsTests
     [Fact]
     public void Validate_MissingCredentialsWithInMemoryTransport_Succeeds()
     {
-        MessagingOptions options = new() { Transport = "InMemory" };
+        MessagingOptions options = ValidDefaults();
+        options.Transport = "InMemory";
 
         ValidateOptionsResult result = CreateValidator("Production").Validate(null, options);
 

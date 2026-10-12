@@ -2,6 +2,7 @@ using FluentAssertions;
 using MassTransit.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using WordBuddy.Content.Infrastructure.Persistence;
@@ -53,7 +54,7 @@ public sealed class MessagingRegistrationTests
             })
             .Build();
         ServiceCollection services = new();
-        services.AddSingleton<IHostEnvironment>(new Microsoft.Extensions.Hosting.Internal.HostingEnvironment { EnvironmentName = "Production" });
+        services.AddSingleton<IHostEnvironment>(new ProductionEnvironment());
         services.AddWordBuddyMessaging<ContentDbContext>(configuration);
         using ServiceProvider provider = services.BuildServiceProvider();
 
@@ -68,5 +69,16 @@ public sealed class MessagingRegistrationTests
         Action act = () => Register("Kafka");
 
         act.Should().Throw<InvalidOperationException>();
+    }
+
+    private sealed class ProductionEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = "Production";
+
+        public string ApplicationName { get; set; } = "Tests";
+
+        public string ContentRootPath { get; set; } = string.Empty;
+
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

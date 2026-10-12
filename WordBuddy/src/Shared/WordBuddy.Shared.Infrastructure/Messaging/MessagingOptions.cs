@@ -57,6 +57,23 @@ public sealed class OutboxOptions
 /// <summary>Consumer retry settings.</summary>
 public sealed class RetryOptions
 {
-    /// <summary>Delay before each retry attempt, in milliseconds. One entry per attempt.</summary>
-    public int[] IntervalsMs { get; set; } = [200, 1000, 5000];
+    /// <summary>Fallback intervals, used only when nothing is configured.</summary>
+    public static readonly int[] DefaultIntervalsMs = [200, 1000, 5000];
+
+    /// <summary>
+    /// Delay before each retry attempt, in milliseconds. One entry per attempt.
+    /// Starts empty on purpose: the configuration binder appends to an existing array, so a
+    /// non-empty default would be merged with configured values. Call
+    /// <see cref="ApplyDefaults"/> after binding.
+    /// </summary>
+    public int[] IntervalsMs { get; set; } = [];
+
+    /// <summary>Sets <see cref="IntervalsMs"/> to <see cref="DefaultIntervalsMs"/> when nothing was bound.</summary>
+    public void ApplyDefaults()
+    {
+        if (IntervalsMs is null || IntervalsMs.Length == 0)
+        {
+            IntervalsMs = [.. DefaultIntervalsMs];
+        }
+    }
 }
