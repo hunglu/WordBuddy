@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { problemMessage } from '../api/supportLinks'
 import { avatarEmoji, cardClass, inputClass, primaryButtonClass } from '../components/support/supportUi'
+import { TimeZoneForm } from '../components/profile/TimeZoneForm'
 import { useAvatarCatalog, useCurrentUser, useUpdateProfile } from '../hooks/useSupportLinks'
 import type { User } from '../types'
 
@@ -19,6 +20,7 @@ export function ProfilePage(): ReactElement {
       {currentUser.data && (
         <ProfileForm key={`${currentUser.data.alias ?? ''}|${currentUser.data.avatarId ?? ''}`} user={currentUser.data} />
       )}
+      {currentUser.data && <TimeZoneForm key={currentUser.data.timeZoneId ?? ''} user={currentUser.data} />}
     </motion.div>
   )
 }

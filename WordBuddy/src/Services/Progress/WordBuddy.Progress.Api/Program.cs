@@ -26,6 +26,7 @@ public sealed class Program
             .AddWordBuddyServices()
             .AddVocabularySrs(builder.Configuration)
             .AddDashboard(builder.Configuration)
+            .AddChallenges(builder.Configuration)
             .AddWordBuddyRateLimiting()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
 

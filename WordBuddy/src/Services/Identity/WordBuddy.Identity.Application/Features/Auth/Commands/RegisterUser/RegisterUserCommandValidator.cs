@@ -1,4 +1,5 @@
 using FluentValidation;
+using WordBuddy.Identity.Domain;
 
 namespace WordBuddy.Identity.Application.Features.Auth.Commands.RegisterUser;
 
@@ -10,5 +11,9 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
         RuleFor(c => c.Password).NotEmpty().MinimumLength(8);
         RuleFor(c => c.DisplayName).NotEmpty().MaximumLength(100);
         RuleFor(c => c.AgeGroup).IsInEnum();
+        RuleFor(c => c.TimeZoneId)
+            .Must(z => User.IsKnownTimeZone(z!))
+            .WithMessage("The time zone id is not known.")
+            .When(c => !string.IsNullOrWhiteSpace(c.TimeZoneId));
     }
 }

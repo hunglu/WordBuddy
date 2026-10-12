@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Progress.Application.Interfaces;
+using WordBuddy.Progress.Infrastructure.Challenges;
 using WordBuddy.Progress.Infrastructure.ContentClient;
 using WordBuddy.Progress.Infrastructure.Messaging;
 using WordBuddy.Progress.Infrastructure.Persistence;
@@ -32,8 +33,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
 
         services.AddScoped<IVocabularyExerciseRepository, VocabularyExerciseRepository>();
+        services.AddScoped<IChallengeRepository, ChallengeRepository>();
+        services.AddScoped<IChallengeProfileRepository, ChallengeProfileRepository>();
 
         AddContentClient(services, configuration);
+
+        // Challenge clock (WB-29). ChallengeOptions is registered by the host (AddChallenges).
+        services.AddHostedService<ChallengeSchedulerHostedService>();
 
         // No Redis instance exists in this repo yet; the in-memory IDistributedCache satisfies the
         // caching convention (dashboard). Swapping in Redis later is a DI-only change.
@@ -46,6 +52,7 @@ public static class ServiceCollectionExtensions
             bus.AddConsumer<LearnerWordRemovedConsumer>();
             bus.AddConsumer<SupportLinkActivatedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Activated);
             bus.AddConsumer<SupportLinkRevokedConsumer>().Endpoint(e => e.Name = SupportLinkQueues.Revoked);
+            bus.AddConsumer<LearnerProfileUpdatedConsumer>().Endpoint(e => e.Name = LearnerProfileQueues.Updated);
             bus.AddConsumer<LearnerGroupMemberActivatedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberActivated);
             bus.AddConsumer<LearnerGroupMemberRemovedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberRemoved);
             bus.AddConsumer<LearnerGroupDeletedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.GroupDeleted);

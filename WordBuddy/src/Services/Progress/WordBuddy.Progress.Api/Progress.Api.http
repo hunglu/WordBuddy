@@ -1,6 +1,28 @@
-@WordBuddy.Progress.Api_HostAddress = http://localhost:5178
+@WordBuddy.Progress.Api_HostAddress = http://localhost:5083
+@token = <paste a JWT from Identity /api/auth/login>
+@guardianToken = <paste a JWT of a Guardian (has the guardian claim)>
+@challengeId = 00000000-0000-0000-0000-000000000000
+@childId = 00000000-0000-0000-0000-000000000000
 
-GET {{WordBuddy.Progress.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### List the open and running challenges of my audience (WB-29)
+GET {{WordBuddy.Progress.Api_HostAddress}}/api/progress/challenges
+Authorization: Bearer {{token}}
 
-###
+### Board of one challenge (adult: full; child: own rank and top 5)
+GET {{WordBuddy.Progress.Api_HostAddress}}/api/progress/challenges/{{challengeId}}/board
+Authorization: Bearer {{token}}
+
+### Join a challenge (409 Challenge.Full when full)
+POST {{WordBuddy.Progress.Api_HostAddress}}/api/progress/challenges/{{challengeId}}/join
+Authorization: Bearer {{token}}
+
+### Leave a challenge
+DELETE {{WordBuddy.Progress.Api_HostAddress}}/api/progress/challenges/{{challengeId}}/join
+Authorization: Bearer {{token}}
+
+### Guardian allows challenges for a linked child (needs the Guardian role and an active link)
+PUT {{WordBuddy.Progress.Api_HostAddress}}/api/progress/challenges/consent/{{childId}}
+Authorization: Bearer {{guardianToken}}
+Content-Type: application/json
+
+{ "enabled": true }

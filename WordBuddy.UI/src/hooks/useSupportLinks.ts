@@ -20,6 +20,7 @@ import {
   updateProfile,
   type HandoverPrimaryPayload,
 } from '../api/supportLinks'
+import { updateTimeZone } from '../api/auth'
 
 export const SUPPORT_LINKS_KEY = ['supportLinks'] as const
 export const PENDING_APPROVALS_KEY = ['supportLinks', 'pending'] as const
@@ -109,6 +110,17 @@ export function useUpdateProfile() {
     onSuccess: (user) => {
       queryClient.setQueryData(CURRENT_USER_KEY, user)
       void queryClient.invalidateQueries({ queryKey: SUPPORT_LINKS_KEY })
+    },
+  })
+}
+
+/** Saves the caller time zone and puts the fresh profile into the cache. */
+export function useUpdateTimeZone() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: updateTimeZone,
+    onSuccess: (user) => {
+      queryClient.setQueryData(CURRENT_USER_KEY, user)
     },
   })
 }

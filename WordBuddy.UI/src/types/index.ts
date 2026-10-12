@@ -41,6 +41,10 @@ export interface User {
   avatarId?: string | null
   /** Whether the user has at least one active supporter (child learning gate). */
   hasActiveSupporter?: boolean
+  /** IANA time zone id (for example `Asia/Ho_Chi_Minh`). Defines the learner's local day for challenges. */
+  timeZoneId?: string | null
+  /** Whether the account holds the Guardian role (can allow challenges for linked children). */
+  isGuardian?: boolean
 }
 
 // ── Identity: support links (WB-24) ─────────────────────────────────────────
@@ -605,4 +609,57 @@ export interface GroupDashboard {
   to: string
   totals: GroupTotals
   members: GroupMemberDashboard[]
+}
+
+// ── Progress: vocabulary challenges (WB-29) ─────────────────────────────────
+
+export type ChallengeStatus = 'Scheduled' | 'Open' | 'Running' | 'Finished'
+
+export type ChallengeKind = 'Ranked' | 'Target'
+
+/** Adult and child challenges are never mixed. */
+export type ChallengeAudience = 'Adult' | 'Child'
+
+export type ChallengeMetric = 'MemoryPoints' | 'DueReviewsCorrect' | 'RecallUpgrades' | 'ListeningCorrect'
+
+export interface Challenge {
+  id: string
+  templateKey: string
+  name: string
+  audience: ChallengeAudience
+  kind: ChallengeKind
+  metric: ChallengeMetric
+  target: number | null
+  status: ChallengeStatus
+  opensAtUtc: string
+  startsAtUtc: string
+  endsAtUtc: string
+  capacity: number
+  participantCount: number
+  joined: boolean
+  myScore: number | null
+  myRank: number | null
+}
+
+/** One board row. There is no user id. For a child viewer `score`/`targetReached` are set on the own row only. */
+export interface ChallengeBoardEntry {
+  rank: number | null
+  name: string
+  avatarId: string | null
+  isMe: boolean
+  score: number | null
+  targetReached: boolean | null
+}
+
+export interface ChallengeBoard {
+  challengeId: string
+  name: string
+  status: ChallengeStatus
+  kind: ChallengeKind
+  metric: ChallengeMetric
+  target: number | null
+  participantCount: number
+  myRank: number | null
+  myScore: number | null
+  entries: ChallengeBoardEntry[]
 }

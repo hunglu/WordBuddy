@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WordBuddy.Progress.Domain;
+using WordBuddy.Progress.Domain.Challenges;
 using WordBuddy.Shared.Infrastructure.Messaging;
 
 namespace WordBuddy.Progress.Infrastructure.Persistence;
@@ -24,6 +25,11 @@ public sealed class ProgressDbContext : DbContext
     public DbSet<DeletedLearnerGroup> DeletedLearnerGroups => Set<DeletedLearnerGroup>();
     public DbSet<VocabularySessionIssue> VocabularySessionIssues => Set<VocabularySessionIssue>();
     public DbSet<VocabularyExercise> VocabularyExercises => Set<VocabularyExercise>();
+
+    public DbSet<Challenge> Challenges => Set<Challenge>();
+    public DbSet<ChallengeParticipant> ChallengeParticipants => Set<ChallengeParticipant>();
+    public DbSet<ChallengeProfile> ChallengeProfiles => Set<ChallengeProfile>();
+    public DbSet<ChallengeConsent> ChallengeConsents => Set<ChallengeConsent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

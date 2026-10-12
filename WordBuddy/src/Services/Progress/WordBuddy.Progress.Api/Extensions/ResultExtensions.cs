@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using WordBuddy.Progress.Domain.Challenges;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Progress.Api.Extensions;
@@ -16,7 +17,7 @@ internal static class ResultExtensions
     {
         int statusCode = result.Error.Code == ContentUnavailableCode
             ? StatusCodes.Status503ServiceUnavailable
-            : result.Error.Code.EndsWith(ForbiddenSuffix, StringComparison.Ordinal)
+            : result.Error.Code.EndsWith(ForbiddenSuffix, StringComparison.Ordinal) || ChallengeErrors.ForbiddenCodes.Contains(result.Error.Code)
             ? StatusCodes.Status403Forbidden
             : result.Error.Type switch
             {

@@ -13,7 +13,9 @@ import {
   useRespondToPendingSupporter,
   useSupportLinks,
 } from '../hooks/useSupportLinks'
+import { ChallengeConsentToggle } from '../components/challenges/ChallengeConsentToggle'
 import { useAuthStore } from '../store/authStore'
+import { hasGuardianClaim } from '../utils/jwt'
 
 /**
  * `/support` — learner support links. Adults: invite, accept, unlink, approve extra supporters of
@@ -22,6 +24,7 @@ import { useAuthStore } from '../store/authStore'
 export function SupportLinksPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
   const isChild = user?.ageGroup === 'Child'
+  const isGuardian = useAuthStore((state) => hasGuardianClaim(state.token))
 
   const { data, isLoading, isError, error } = useSupportLinks()
   const pending = usePendingSupporterApprovals(!isChild)
@@ -117,6 +120,9 @@ export function SupportLinksPage(): ReactElement {
                         <Link to={`/dashboard/learners/${link.learnerId}`} className={`${primaryButtonClass} mt-2 inline-block`}>
                           View dashboard
                         </Link>
+                      )}
+                      {link.status === 'Active' && isGuardian && (
+                        <ChallengeConsentToggle childId={link.learnerId} childName={link.learnerName} />
                       )}
                       {link.status === 'Active' && (
                         <WordsToApprove learnerId={link.learnerId} learnerName={link.learnerName} />

@@ -29,3 +29,11 @@ export function isJwtExpired(token: string): boolean {
   }
   return exp * 1000 <= Date.now()
 }
+
+/** Returns true if the JWT has the Guardian claim (`guardian = true`, issued by Identity). Display only. */
+export function hasGuardianClaim(token: string | null): boolean {
+  if (token === null) {
+    return false
+  }
+  return decodeJwtPayload(token)?.['guardian'] === 'true'
+}

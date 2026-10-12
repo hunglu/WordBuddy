@@ -1,4 +1,13 @@
 using FluentValidation;
+using WordBuddy.Progress.Application.Features.Challenges;
+using WordBuddy.Progress.Application.Features.Challenges.Commands.AdvanceChallengeLifecycle;
+using WordBuddy.Progress.Application.Features.Challenges.Commands.ApplyLearnerProfileEvent;
+using WordBuddy.Progress.Application.Features.Challenges.Commands.JoinChallenge;
+using WordBuddy.Progress.Application.Features.Challenges.Commands.LeaveChallenge;
+using WordBuddy.Progress.Application.Features.Challenges.Commands.RecomputeChallengeScores;
+using WordBuddy.Progress.Application.Features.Challenges.Commands.SetChildChallengeConsent;
+using WordBuddy.Progress.Application.Features.Challenges.Queries.GetChallengeBoard;
+using WordBuddy.Progress.Application.Features.Challenges.Queries.ListChallenges;
 using WordBuddy.Progress.Application.Features.Dashboard.Queries.GetLearnerDashboard;
 using WordBuddy.Progress.Application.Features.Groups;
 using WordBuddy.Progress.Application.Features.Groups.Commands.ApplyLearnerGroupEvent;
@@ -78,6 +87,26 @@ public static class ServiceCollectionExtensions
         // Dashboard (WB-26). DashboardOptions and DashboardCalculator are registered by the host.
         services.AddScoped<IQueryHandler<GetLearnerDashboardQuery, LearnerDashboardDto>, GetLearnerDashboardQueryHandler>();
         services.AddScoped<IValidator<GetLearnerDashboardQuery>, GetLearnerDashboardQueryValidator>();
+
+        // Vocabulary challenges (WB-29). ChallengeOptions is registered by the host.
+        services.AddScoped<IChallengeConsentCleaner, ChallengeConsentCleaner>();
+        services.AddScoped<ChallengeScoreProjector>();
+
+        services.AddScoped<IQueryHandler<ListChallengesQuery, IReadOnlyList<ChallengeDto>>, ListChallengesQueryHandler>();
+        services.AddScoped<IValidator<ListChallengesQuery>, ListChallengesQueryValidator>();
+        services.AddScoped<IQueryHandler<GetChallengeBoardQuery, ChallengeBoardDto>, GetChallengeBoardQueryHandler>();
+        services.AddScoped<IValidator<GetChallengeBoardQuery>, GetChallengeBoardQueryValidator>();
+
+        services.AddScoped<ICommandHandler<JoinChallengeCommand>, JoinChallengeCommandHandler>();
+        services.AddScoped<IValidator<JoinChallengeCommand>, JoinChallengeCommandValidator>();
+        services.AddScoped<ICommandHandler<LeaveChallengeCommand>, LeaveChallengeCommandHandler>();
+        services.AddScoped<IValidator<LeaveChallengeCommand>, LeaveChallengeCommandValidator>();
+        services.AddScoped<ICommandHandler<SetChildChallengeConsentCommand>, SetChildChallengeConsentCommandHandler>();
+        services.AddScoped<IValidator<SetChildChallengeConsentCommand>, SetChildChallengeConsentCommandValidator>();
+        services.AddScoped<ICommandHandler<AdvanceChallengeLifecycleCommand, int>, AdvanceChallengeLifecycleCommandHandler>();
+        services.AddScoped<ICommandHandler<RecomputeChallengeScoresCommand, int>, RecomputeChallengeScoresCommandHandler>();
+        services.AddScoped<ICommandHandler<ApplyLearnerProfileEventCommand>, ApplyLearnerProfileEventCommandHandler>();
+        services.AddScoped<IValidator<ApplyLearnerProfileEventCommand>, ApplyLearnerProfileEventCommandValidator>();
 
         return services;
     }

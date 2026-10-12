@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { registerUser } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
+import { browserTimeZone } from '../utils/timeZone'
 import type { AgeGroup } from '../types'
 
 const registerSchema = z
@@ -74,6 +75,7 @@ export function RegisterPage(): ReactElement {
             password: values.password,
             displayName: values.displayName,
             ageGroup: values.ageGroup,
+            timeZoneId: browserTimeZone(),
           }),
         )}
         className="flex flex-col gap-4"

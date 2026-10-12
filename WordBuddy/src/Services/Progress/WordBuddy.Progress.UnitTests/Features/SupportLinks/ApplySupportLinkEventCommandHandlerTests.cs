@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using WordBuddy.Progress.Application.Features.Challenges;
 using WordBuddy.Progress.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
@@ -14,6 +15,7 @@ public class ApplySupportLinkEventCommandHandlerTests
 
     private readonly Mock<ISupportLinkProjectionRepository> _repository = new();
     private readonly Mock<IVocabularyLearnerSettingsRepository> _settings = new();
+    private readonly Mock<IChallengeConsentCleaner> _cleaner = new();
     private readonly Guid _linkId = Guid.NewGuid();
     private readonly Guid _learnerId = Guid.NewGuid();
     private readonly Guid _supporterId = Guid.NewGuid();
@@ -29,12 +31,13 @@ public class ApplySupportLinkEventCommandHandlerTests
             .Callback<SupportLinkProjection, CancellationToken>((p, _) => _stored = p)
             .Returns(Task.CompletedTask);
         _repository.Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
+        _cleaner.Setup(c => c.RemoveForLinkAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
         _settings.Setup(s => s.GetTrackedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<VocabularyLearnerSettings>(Error.NotFound("VocabularySettings.NotFound", "none")));
     }
 
     private ApplySupportLinkEventCommandHandler CreateHandler() =>
-        new(_repository.Object, _settings.Object, new ApplySupportLinkEventCommandValidator(), Mock.Of<ILogger<ApplySupportLinkEventCommandHandler>>());
+        new(_repository.Object, _settings.Object, _cleaner.Object, new ApplySupportLinkEventCommandValidator(), Mock.Of<ILogger<ApplySupportLinkEventCommandHandler>>());
 
     private ApplySupportLinkEventCommand Event(bool isActive, DateTime at) => new(_linkId, _learnerId, _supporterId, isActive, at);
 
@@ -119,5 +122,50 @@ public class ApplySupportLinkEventCommandHandlerTests
 
         settings.SupporterNewWordCap.Should().Be(3);
         settings.SupporterCapSetBy.Should().Be(otherSupporter);
+    }
+
+    [Fact]
+    public async Task ApplySupportLinkEventCommandHandler_HandleAsync_AppliedRevokeDeletesTheChallengeConsentOfThatSupporter()
+    {
+        ApplySupportLinkEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(Event(isActive: true, T0));
+
+        (await handler.HandleAsync(Event(isActive: false, T0.AddMinutes(1)))).IsSuccess.Should().BeTrue();
+
+        _cleaner.Verify(c => c.RemoveForLinkAsync(_learnerId, _supporterId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplySupportLinkEventCommandHandler_HandleAsync_ActivateLeavesConsentsAlone()
+    {
+        await CreateHandler().HandleAsync(Event(isActive: true, T0));
+
+        _cleaner.Verify(c => c.RemoveForLinkAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplySupportLinkEventCommandHandler_HandleAsync_OlderRevokeBehindActiveLinkLeavesConsentsAlone()
+    {
+        ApplySupportLinkEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(Event(isActive: true, T0.AddMinutes(5)));
+
+        await handler.HandleAsync(Event(isActive: false, T0));
+
+        _cleaner.Verify(c => c.RemoveForLinkAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplySupportLinkEventCommandHandler_HandleAsync_CleanupFailsOnceThenReplayStillRemovesConsent()
+    {
+        _cleaner.SetupSequence(c => c.RemoveForLinkAsync(_learnerId, _supporterId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Conflict("Challenge.Conflict", "boom")))
+            .ReturnsAsync(Result.Success());
+        ApplySupportLinkEventCommandHandler handler = CreateHandler();
+        await handler.HandleAsync(Event(isActive: true, T0));
+
+        (await handler.HandleAsync(Event(isActive: false, T0.AddMinutes(1)))).IsFailure.Should().BeTrue();
+        (await handler.HandleAsync(Event(isActive: false, T0.AddMinutes(1)))).IsSuccess.Should().BeTrue();
+
+        _cleaner.Verify(c => c.RemoveForLinkAsync(_learnerId, _supporterId, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

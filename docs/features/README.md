@@ -18,7 +18,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Vocabulary autofill | `vocabulary-autofill.md` | shipped |
 | Supporter dashboard | `supporter-dashboard.md` | shipped |
 | Learning groups | `learning-groups.md` | shipped |
-| Vocabulary challenges | `vocabulary-challenges.md` | proposed |
+| Vocabulary challenges | `vocabulary-challenges.md` | shipped |
 | User profile | `user-profile.md` | proposed |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.

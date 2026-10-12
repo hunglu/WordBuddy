@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISupportLinkRepository, SupportLinkRepository>();
         services.AddScoped<ISupportLinkEventPublisher, OutboxSupportLinkEventPublisher>();
+        services.AddScoped<ILearnerProfileEventPublisher, OutboxLearnerProfileEventPublisher>();
         services.AddScoped<ILearnerGroupRepository, LearnerGroupRepository>();
         services.AddScoped<ILearnerGroupEventPublisher, OutboxLearnerGroupEventPublisher>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();

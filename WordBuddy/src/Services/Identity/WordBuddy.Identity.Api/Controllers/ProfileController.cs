@@ -5,6 +5,7 @@ using WordBuddy.Identity.Api.Models;
 using WordBuddy.Identity.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileAliasAvatar;
+using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileTimeZone;
 using WordBuddy.Identity.Application.Features.Profile.Queries.GetCurrentUser;
 using WordBuddy.Identity.Domain;
 using WordBuddy.Shared.Kernel;
@@ -19,13 +20,16 @@ public sealed class ProfileController : ControllerBase
 {
     private readonly IQueryHandler<GetCurrentUserQuery, UserDto> _getCurrentUser;
     private readonly ICommandHandler<UpdateProfileAliasAvatarCommand, UserDto> _updateProfile;
+    private readonly ICommandHandler<UpdateProfileTimeZoneCommand, UserDto> _updateTimeZone;
 
     public ProfileController(
         IQueryHandler<GetCurrentUserQuery, UserDto> getCurrentUser,
-        ICommandHandler<UpdateProfileAliasAvatarCommand, UserDto> updateProfile)
+        ICommandHandler<UpdateProfileAliasAvatarCommand, UserDto> updateProfile,
+        ICommandHandler<UpdateProfileTimeZoneCommand, UserDto> updateTimeZone)
     {
         _getCurrentUser = getCurrentUser;
         _updateProfile = updateProfile;
+        _updateTimeZone = updateTimeZone;
     }
 
     /// <summary>Returns the caller profile, including whether an active supporter exists.</summary>
@@ -42,6 +46,15 @@ public sealed class ProfileController : ControllerBase
     {
         Result<UserDto> result = await _updateProfile.HandleAsync(
             new UpdateProfileAliasAvatarCommand(User.GetUserId(), request.Alias, request.AvatarId), ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Sets or clears the IANA time zone that defines the local day of the learner.</summary>
+    [HttpPut("profile/time-zone")]
+    public async Task<IActionResult> UpdateTimeZone([FromBody] UpdateTimeZoneRequest request, CancellationToken ct)
+    {
+        Result<UserDto> result = await _updateTimeZone.HandleAsync(
+            new UpdateProfileTimeZoneCommand(User.GetUserId(), request.TimeZoneId), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

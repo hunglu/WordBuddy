@@ -32,6 +32,15 @@ public sealed class User : Entity
     /// <summary>Gets the optional avatar id from <see cref="AvatarCatalog"/>.</summary>
     public string? AvatarId { get; private set; }
 
+    /// <summary>Gets the optional IANA time zone id (for example <c>Asia/Ho_Chi_Minh</c>). Defines the learner's local day.</summary>
+    public string? TimeZoneId { get; private set; }
+
+    /// <summary>Gets a value indicating whether this adult account holds the Guardian role (can allow challenges for linked children).</summary>
+    public bool IsGuardian { get; private set; }
+
+    /// <summary>Maximum time zone id length.</summary>
+    public const int TimeZoneIdMaxLength = 64;
+
     public User(Guid id, string email, string displayName, string passwordHash, AgeGroup ageGroup, bool isAdmin)
         : base(id)
     {
@@ -68,6 +77,37 @@ public sealed class User : Entity
 
         Alias = trimmed;
         AvatarId = avatarId;
+        return Result.Success();
+    }
+
+    /// <summary>Whether <paramref name="timeZoneId"/> is a known IANA (or system) time zone id of an allowed length.</summary>
+    public static bool IsKnownTimeZone(string timeZoneId) =>
+        !string.IsNullOrWhiteSpace(timeZoneId)
+        && timeZoneId.Trim().Length <= TimeZoneIdMaxLength
+        && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId.Trim(), out _);
+
+    /// <summary>Sets the IANA time zone (null clears). Unknown ids return <see cref="UserErrors.UnknownTimeZone"/>.</summary>
+    public Result SetTimeZone(string? timeZoneId)
+    {
+        string? trimmed = string.IsNullOrWhiteSpace(timeZoneId) ? null : timeZoneId.Trim();
+        if (trimmed is not null && !IsKnownTimeZone(trimmed))
+        {
+            return Result.Failure(UserErrors.UnknownTimeZone);
+        }
+
+        TimeZoneId = trimmed;
+        return Result.Success();
+    }
+
+    /// <summary>Grants or removes the Guardian role. Only adult accounts can hold it.</summary>
+    public Result SetGuardian(bool isGuardian)
+    {
+        if (isGuardian && AgeGroup != AgeGroup.Adult)
+        {
+            return Result.Failure(UserErrors.GuardianMustBeAdult);
+        }
+
+        IsGuardian = isGuardian;
         return Result.Success();
     }
 

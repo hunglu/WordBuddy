@@ -12,6 +12,13 @@ public interface IReviewLogRepository
     /// <summary>Counts earlier answers for this word in this session.</summary>
     Task<Result<int>> CountAttemptsAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Logs before <paramref name="endsAtUtc"/> of the given learners (read-only): every log inside
+    /// [<paramref name="startsAtUtc"/>, <paramref name="endsAtUtc"/>) plus the earlier logs of the words answered in that window.
+    /// Used by the challenge score projection.
+    /// </summary>
+    Task<IReadOnlyList<ReviewLog>> GetForChallengeAsync(IReadOnlyCollection<Guid> userIds, DateTime startsAtUtc, DateTime endsAtUtc, CancellationToken ct = default);
+
     /// <summary>Counts earlier correct answers for this word in this session.</summary>
     Task<Result<int>> CountCorrectAsync(Guid userId, Guid sessionId, Guid senseId, CancellationToken ct = default);
 }
