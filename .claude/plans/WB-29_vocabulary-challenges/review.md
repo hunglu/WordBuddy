@@ -1,11 +1,46 @@
 # Review: WB-29 Vocabulary challenges
 
-PR: #42 · Round 2 · Reviewed commit: cf09edc · 2026-10-11T23:07:56+07:00
+PR: #42 · Round 3 · Reviewed commit: 67a0e81 · 2026-10-12T08:20:40+07:00
 
 ## Verdict
+Approve — the deadlock retry is safe and bounded; no blockers or majors.
+
+## Scope
+Diff `1cabb1e..67a0e81`: `ChallengeRepository.cs`, `ChallengeEndpointsTests.cs` (fix for /test needs-fixes, flaky parallel join).
+
+## Checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| Transaction rolled back before retry | OK | `TryAddParticipantIfRoomAsync` owns `await using` transaction → disposed (rolled back) when the exception leaves the method, before the catch in the loop runs. |
+| Change tracker reset | OK | Participant set to `Detached` in both catch blocks → next attempt re-adds it once. |
+| No double insert | OK | A deadlock victim's insert is rolled back; a commit failure after success cannot loop because only 1205 retries and the count is re-checked under lock each attempt. |
+| Index name | OK | Matches migration `20261011130627_AddChallenges.cs:89`. |
+| SQL parameterized | OK | Still an interpolated `FormattableString` in `SqlQuery<int>`; `ChallengeId` is a parameter. |
+| Retry bounded + logged | OK | `MaxJoinAttempts = 4`; each retry logged with `Attempt` (template, no PII). Then `Challenge.Conflict`. |
+| Cancellation | OK | `OperationCanceledException` is not caught → propagates. |
+| Test | OK | Still asserts exactly 3 × 204, rest `409 Challenge.Full`, 3 rows; now with diagnostics in the failure message. |
+
+## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `ChallengeRepository.cs:105-111` | Retry has no delay; under heavy contention all 4 attempts can collide again. | Optional: short jittered delay (`Task.Delay(Random.Shared.Next(10, 50) * attempt, ct)`). |
+| 2 | nit | `ChallengeRepository.cs:90-91` | Constants declared mid-class between methods. | Optional: move to the top of the class. |
+| 3 | nit | — | Root cause not reproduced; fix is inferred. | The /test run must confirm the parallel-join test is stable (run it several times). |
+
+## Plan conformance
+All tasks still covered. Fix touched only the join path and its test. No migration change, no out-of-scope changes.
+
+## Previous rounds
+
+### Round 2
+PR: #42 · Round 2 · Reviewed commit: cf09edc · 2026-10-11T23:07:56+07:00
+
+#### Verdict
 Approve — all three majors are fixed; no new blockers or majors.
 
-## Round-1 findings
+#### Round-1 findings
 
 | # | Round-1 severity | Status | Evidence |
 |---|---|---|---|
@@ -16,16 +51,15 @@ Approve — all three majors are fixed; no new blockers or majors.
 | 5 | nit | Accepted | Noted in living spec. |
 | 6 | nit | Accepted | Noted in living spec. |
 
-## Findings
+#### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | nit | `ChallengeRepository.cs:117-123` | `Challenge.Conflict` and `Challenge.AlreadyJoined` both return 409; the client must read the error code to know a retry is safe. | Optional: document the code in the spec / UI retry message. |
 
-## Plan conformance
+#### Plan conformance
 All tasks still covered. Fix round touched only the files of findings 1-4, their tests, and the living spec. No out-of-scope changes. No migration change.
 
-## Previous rounds
 
 ### Round 1
 ### Review: WB-29 Vocabulary challenges

@@ -1,14 +1,14 @@
 ---
 title: WB-29_Vocabulary challenges
-status: implemented
+status: reviewed
 type: new
 issue: 29
 pr: 42
 affects: docs/features/vocabulary-challenges.md
 supersedes: none
-version: 1.7
+version: 1.8
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-12T00:00:00+07:00
+updated: 2026-10-12T08:20:40+07:00
 ---
 
 ## Problem
