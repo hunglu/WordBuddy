@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>WordBuddy.Shared.Infrastructure</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Description>Cross-cutting Serilog, OpenTelemetry, health-check, rate-limiting and messaging helpers shared across WordBuddy microservices.</Description>
   </PropertyGroup>
 

@@ -1,14 +1,14 @@
 ---
 title: WB-31_Configurable messaging bus settings
-status: planned
+status: implemented
 type: change
 issue: 31
 pr: none
 affects: docs/features/messaging.md
 supersedes: none
-version: 1.1
+version: 1.2
 created: 2026-10-06T21:42:26+07:00
-updated: 2026-10-12T15:37:36+07:00
+updated: 2026-10-12T15:52:05+07:00
 ---
 
 ## Problem

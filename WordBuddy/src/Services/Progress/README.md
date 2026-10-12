@@ -216,9 +216,11 @@ Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Progress validates
   tokens Identity issued
 - `Services:Content:BaseUrl` — Content base URL (default `http://localhost:5081`; `Services__Content__BaseUrl` in compose and k8s);
-- `Messaging:RabbitMq:{Host,VirtualHost,Username}` — broker (defaults in `appsettings.json`);
-  `Messaging:RabbitMq:Password` only via user-secrets or env `Messaging__RabbitMq__Password`.
-  `Messaging:Transport = InMemory` is for tests only.
+- `Messaging:*` — bus settings, validated at startup (full key table: `docs/features/messaging.md`):
+  `Transport`, `RabbitMq:{Host,VirtualHost,Username,HeartbeatSeconds,RequestedConnectionTimeoutMs}`,
+  `Outbox:{QueryDelayMs,DuplicateDetectionWindowSeconds}`, `Retry:IntervalsMs` (defaults in `appsettings.json`).
+  `Messaging:RabbitMq:Username` and `Password` are required outside Development; set the password
+  only via user-secrets or env `Messaging__RabbitMq__Password`. `Messaging:Transport = InMemory` is for tests only.
 - `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
   Tracing section
 

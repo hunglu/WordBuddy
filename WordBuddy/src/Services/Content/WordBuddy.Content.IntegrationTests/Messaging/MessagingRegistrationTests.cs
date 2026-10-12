@@ -2,6 +2,8 @@ using FluentAssertions;
 using MassTransit.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using WordBuddy.Content.Infrastructure.Persistence;
 using WordBuddy.Shared.Infrastructure.Messaging;
 
@@ -38,6 +40,26 @@ public sealed class MessagingRegistrationTests
         IServiceCollection services = Register(transport: null);
 
         services.Should().NotContain(d => d.ServiceType == typeof(ITestHarness));
+    }
+
+    [Fact]
+    public void AddWordBuddyMessaging_InvalidRetryInterval_ThrowsOptionsValidationExceptionOnResolve()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [MessagingExtensions.TransportKey] = MessagingExtensions.InMemoryTransport,
+                ["Messaging:Retry:IntervalsMs:0"] = "-1",
+            })
+            .Build();
+        ServiceCollection services = new();
+        services.AddSingleton<IHostEnvironment>(new Microsoft.Extensions.Hosting.Internal.HostingEnvironment { EnvironmentName = "Production" });
+        services.AddWordBuddyMessaging<ContentDbContext>(configuration);
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        Action act = () => _ = provider.GetRequiredService<IOptions<MessagingOptions>>().Value;
+
+        act.Should().Throw<OptionsValidationException>().WithMessage("*Messaging:Retry:IntervalsMs*");
     }
 
     [Fact]

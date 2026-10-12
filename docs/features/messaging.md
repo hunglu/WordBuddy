@@ -53,6 +53,26 @@ Same behaviour for both. Events carry no `AgeGroup` and no child data.
 
 None.
 
+## Configuration
+
+All keys live in the `Messaging` section and are validated at startup (`ValidateOnStart`). A bad value stops the service with an error that names the key. Env override: `Messaging__Retry__IntervalsMs__0=500`.
+
+| Key | Default | Rule |
+| --- | --- | --- |
+| `Messaging:Transport` | `RabbitMq` | `RabbitMq` or `InMemory` (tests only) |
+| `Messaging:RabbitMq:Host` | `localhost` | not empty (RabbitMq) |
+| `Messaging:RabbitMq:VirtualHost` | `/` | — |
+| `Messaging:RabbitMq:Username` | — | required outside Development |
+| `Messaging:RabbitMq:Password` | — | required outside Development; env or user-secrets only |
+| `Messaging:RabbitMq:HeartbeatSeconds` | `10` | 0 or more (0 = off) |
+| `Messaging:RabbitMq:RequestedConnectionTimeoutMs` | `10000` | more than 0 |
+| `Messaging:Outbox:QueryDelayMs` | `1000` | more than 0 |
+| `Messaging:Outbox:DuplicateDetectionWindowSeconds` | `1800` | more than 0 |
+| `Messaging:Retry:IntervalsMs` | `[200, 1000, 5000]` | not empty; each value more than 0 |
+
+- Credentials: in Development only, missing Username/Password fall back to `guest`/`guest`. Elsewhere the service refuses to start.
+- Docker compose and kind must supply `RABBITMQ_USER` / `RABBITMQ_PASSWORD` (`.env`, `k8s/secret.yaml`).
+
 ## Pending changes
 
 - `WB-31_configurable-messaging-bus-settings` — all bus time settings read from appsettings; fail fast on missing broker credentials (#31)

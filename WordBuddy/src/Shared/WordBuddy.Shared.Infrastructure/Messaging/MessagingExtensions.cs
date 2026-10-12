@@ -2,6 +2,8 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Shared.Infrastructure.Messaging;
@@ -28,8 +30,9 @@ public static class MessagingExtensions
 
     /// <summary>
     /// Registers MassTransit with the EF Core outbox/inbox on <typeparamref name="TDbContext"/>.
-    /// RabbitMQ settings come from <c>Messaging:RabbitMq:{Host,VirtualHost,Username,Password}</c>;
-    /// the password must come from environment variables or user-secrets, never from a file in git.
+    /// Settings come from the validated <see cref="MessagingOptions"/> (<c>Messaging</c> section); bad values fail at startup.
+    /// Outside Development, RabbitMQ <c>Username</c>/<c>Password</c> are required and must come from
+    /// environment variables or user-secrets, never from a file in git.
     /// Set <c>Messaging:Transport = InMemory</c> in tests to use the in-memory test harness.
     /// </summary>
     /// <typeparam name="TDbContext">The service's own DbContext; it must call
@@ -43,36 +46,48 @@ public static class MessagingExtensions
         Action<IBusRegistrationConfigurator>? configureConsumers = null)
         where TDbContext : DbContext
     {
-        string transport = configuration[TransportKey] ?? RabbitMqTransport;
+        services.AddSingleton<IValidateOptions<MessagingOptions>, MessagingOptionsValidator>();
+        services.AddOptions<MessagingOptions>()
+            .Bind(configuration.GetSection(MessagingOptions.SectionName))
+            .ValidateOnStart();
 
-        if (string.Equals(transport, InMemoryTransport, StringComparison.OrdinalIgnoreCase))
+        // Registration-time values (transport, outbox) need an eager copy; the rest is read
+        // from IOptions<MessagingOptions> when the bus starts.
+        MessagingOptions eager = new();
+        configuration.GetSection(MessagingOptions.SectionName).Bind(eager);
+
+        if (string.Equals(eager.Transport, InMemoryTransport, StringComparison.OrdinalIgnoreCase))
         {
-            services.AddMassTransitTestHarness(bus => ConfigureBus<TDbContext>(bus, configureConsumers));
+            services.AddMassTransitTestHarness(bus => ConfigureBus<TDbContext>(bus, eager, configureConsumers));
             return services;
         }
 
-        if (!string.Equals(transport, RabbitMqTransport, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(eager.Transport, RabbitMqTransport, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                $"Unknown '{TransportKey}' value '{transport}'. Use '{RabbitMqTransport}' or '{InMemoryTransport}'.");
+                $"Unknown '{TransportKey}' value '{eager.Transport}'. Use '{RabbitMqTransport}' or '{InMemoryTransport}'.");
         }
-
-        IConfigurationSection rabbit = configuration.GetSection("Messaging:RabbitMq");
-        string host = rabbit["Host"] ?? "localhost";
-        string virtualHost = rabbit["VirtualHost"] ?? "/";
-        string username = rabbit["Username"] ?? "guest";
-        string password = rabbit["Password"] ?? "guest";
 
         services.AddMassTransit(bus =>
         {
-            ConfigureBus<TDbContext>(bus, configureConsumers);
+            ConfigureBus<TDbContext>(bus, eager, configureConsumers);
 
             bus.UsingRabbitMq((context, cfg) =>
             {
-                cfg.Host(host, virtualHost, h =>
+                MessagingOptions options = context.GetRequiredService<IOptions<MessagingOptions>>().Value;
+                IHostEnvironment env = context.GetRequiredService<IHostEnvironment>();
+                RabbitMqOptions rabbit = options.RabbitMq;
+
+                // guest/guest is the RabbitMQ default account; allowed only in Development.
+                string username = rabbit.Username ?? (env.IsDevelopment() ? "guest" : string.Empty);
+                string password = rabbit.Password ?? (env.IsDevelopment() ? "guest" : string.Empty);
+
+                cfg.Host(rabbit.Host, rabbit.VirtualHost, h =>
                 {
                     h.Username(username);
                     h.Password(password);
+                    h.Heartbeat(TimeSpan.FromSeconds(rabbit.HeartbeatSeconds));
+                    h.RequestedConnectionTimeout(TimeSpan.FromMilliseconds(rabbit.RequestedConnectionTimeoutMs));
                 });
 
                 cfg.ConfigureEndpoints(context);
@@ -84,6 +99,7 @@ public static class MessagingExtensions
 
     private static void ConfigureBus<TDbContext>(
         IBusRegistrationConfigurator bus,
+        MessagingOptions eager,
         Action<IBusRegistrationConfigurator>? configureConsumers)
         where TDbContext : DbContext
     {
@@ -93,16 +109,17 @@ public static class MessagingExtensions
         {
             outbox.UseSqlServer();
             outbox.UseBusOutbox();
-            outbox.QueryDelay = TimeSpan.FromSeconds(1);
+            outbox.QueryDelay = TimeSpan.FromMilliseconds(eager.Outbox.QueryDelayMs);
+            outbox.DuplicateDetectionWindow = TimeSpan.FromSeconds(eager.Outbox.DuplicateDetectionWindowSeconds);
         });
 
         bus.AddConfigureEndpointsCallback((context, _, endpoint) =>
         {
+            MessagingOptions options = context.GetRequiredService<IOptions<MessagingOptions>>().Value;
+            TimeSpan[] intervals = options.Retry.IntervalsMs.Select(ms => TimeSpan.FromMilliseconds(ms)).ToArray();
+
             // Retry wraps the inbox so a failed attempt rolls back and is tried again.
-            endpoint.UseMessageRetry(retry => retry.Intervals(
-                TimeSpan.FromMilliseconds(200),
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(5)));
+            endpoint.UseMessageRetry(retry => retry.Intervals(intervals));
             endpoint.UseEntityFrameworkOutbox<TDbContext>(context);
         });
 

@@ -49,6 +49,11 @@ Copy `WordBuddy.Identity.Api/appsettings.Development.json.example` to
 `appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyIdentity`)
 - `Jwt:Secret` / `Jwt:Issuer` / `Jwt:ExpiryMinutes`
+- `Messaging:*` — bus settings, validated at startup (full key table: `docs/features/messaging.md`):
+  `Transport`, `RabbitMq:{Host,VirtualHost,Username,HeartbeatSeconds,RequestedConnectionTimeoutMs}`,
+  `Outbox:{QueryDelayMs,DuplicateDetectionWindowSeconds}`, `Retry:IntervalsMs` (defaults in `appsettings.json`).
+  `Messaging:RabbitMq:Username` and `Password` are required outside Development; set the password
+  only via user-secrets or env `Messaging__RabbitMq__Password`. `Messaging:Transport = InMemory` is for tests only.
 - `Serilog:*` — sinks/levels (Console + rolling file in dev, Console-only + Warning in prod)
 - `OpenTelemetry:OtlpEndpoint` — where traces are exported (Jaeger's OTLP/gRPC port,
   `http://localhost:4317`, by default); harmless if nothing is listening there
