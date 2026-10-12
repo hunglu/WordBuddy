@@ -180,16 +180,21 @@ public sealed class ChallengeEndpointsTests
         HttpResponseMessage[] responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
             Client(Guid.NewGuid(), "Adult").PostAsync($"/api/progress/challenges/{challenge.Id}/join", null)));
 
-        responses.Count(r => r.StatusCode == HttpStatusCode.NoContent).Should().Be(3);
-        responses.Where(r => r.StatusCode != HttpStatusCode.NoContent).Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Conflict);
-        foreach (HttpResponseMessage rejected in responses.Where(r => r.StatusCode == HttpStatusCode.Conflict))
+        string[] outcomes = new string[responses.Length];
+        for (int i = 0; i < responses.Length; i++)
         {
-            (await ProblemTitleAsync(rejected)).Should().Be("Challenge.Full");
+            string detail = responses[i].StatusCode == HttpStatusCode.NoContent ? string.Empty : await ProblemTitleAsync(responses[i]);
+            outcomes[i] = $"{(int)responses[i].StatusCode} {detail}".Trim();
         }
 
         using IServiceScope scope = _factory.Services.CreateScope();
         ProgressDbContext db = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
-        (await db.ChallengeParticipants.CountAsync(p => p.ChallengeId == challenge.Id)).Should().Be(3);
+        int rows = await db.ChallengeParticipants.CountAsync(p => p.ChallengeId == challenge.Id);
+        string diagnostics = $"responses: [{string.Join("; ", outcomes)}], rows: {rows}";
+
+        outcomes.Count(o => o == "204").Should().Be(3, diagnostics);
+        outcomes.Where(o => o != "204").Should().OnlyContain(o => o == "409 Challenge.Full", diagnostics);
+        rows.Should().Be(3, diagnostics);
     }
 
     [Fact]
