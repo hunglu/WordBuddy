@@ -78,6 +78,9 @@ services:
       Messaging__RabbitMq__Host: rabbitmq
       Messaging__RabbitMq__Username: ${RABBITMQ_USER}
       Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      # Optional tuning (defaults in appsettings.json), e.g.:
+      # Messaging__Outbox__QueryDelayMs: 1000
+      # Messaging__Retry__IntervalsMs__0: 200
     ports:
       - "5080:8080"
 
@@ -101,6 +104,9 @@ services:
       Messaging__RabbitMq__Host: rabbitmq
       Messaging__RabbitMq__Username: ${RABBITMQ_USER}
       Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      # Optional tuning (defaults in appsettings.json), e.g.:
+      # Messaging__Outbox__QueryDelayMs: 1000
+      # Messaging__Retry__IntervalsMs__0: 200
     ports:
       - "5081:8080"
     volumes:
@@ -143,6 +149,9 @@ services:
       Messaging__RabbitMq__Host: rabbitmq
       Messaging__RabbitMq__Username: ${RABBITMQ_USER}
       Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      # Optional tuning (defaults in appsettings.json), e.g.:
+      # Messaging__Outbox__QueryDelayMs: 1000
+      # Messaging__Retry__IntervalsMs__0: 200
     ports:
       - "5083:8080"
 

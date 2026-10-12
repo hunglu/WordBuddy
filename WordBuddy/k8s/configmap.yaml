@@ -9,3 +9,9 @@ data:
   Jwt__ExpiryMinutes: "60"
   FileStorage__BasePath: "/app/media"
   Messaging__RabbitMq__Host: "rabbitmq"
+  # Optional tuning (defaults shown). RabbitMQ creds come from k8s/secret.yaml.
+  # Messaging__Outbox__QueryDelayMs: "1000"
+  # Messaging__Outbox__DuplicateDetectionWindowSeconds: "1800"
+  # Messaging__Retry__IntervalsMs__0: "200"
+  # Messaging__RabbitMq__HeartbeatSeconds: "10"
+  # Messaging__RabbitMq__RequestedConnectionTimeoutMs: "10000"
