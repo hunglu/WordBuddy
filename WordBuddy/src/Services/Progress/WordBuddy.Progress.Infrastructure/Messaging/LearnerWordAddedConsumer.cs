@@ -1,5 +1,5 @@
 using MassTransit;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.Features.LearnerWords.Commands.RecordLearnerWordAdded;
 using WordBuddy.Shared.Contracts.Vocabulary;
 using WordBuddy.Shared.Kernel;

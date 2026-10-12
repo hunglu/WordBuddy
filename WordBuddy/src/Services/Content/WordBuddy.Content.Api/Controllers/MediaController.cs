@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WordBuddy.Content.Api.Extensions;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Features.Media.Commands.UploadMedia;
 using WordBuddy.Content.Application.Features.Media.Queries.GetMediaAsset;

@@ -1,6 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Features.Autofill;
 using WordBuddy.Content.Application.Features.Autofill.Commands.AddAutofillSenseToMyList;

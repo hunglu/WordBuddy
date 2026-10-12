@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using WordBuddy.Progress.Api.Authorization;
 using WordBuddy.Progress.Api.Extensions;
 using WordBuddy.Progress.Api.Models;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.VocabularySrs;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.CreateVocabularyExercise;

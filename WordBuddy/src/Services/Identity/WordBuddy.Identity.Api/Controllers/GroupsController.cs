@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WordBuddy.Identity.Api.Extensions;
 using WordBuddy.Identity.Api.Models;
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Features.Groups.Commands.AddGroupMembers;
 using WordBuddy.Identity.Application.Features.Groups.Commands.CreateGroup;

@@ -1,7 +1,7 @@
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Application.Settings;
 using WordBuddy.Identity.Domain;

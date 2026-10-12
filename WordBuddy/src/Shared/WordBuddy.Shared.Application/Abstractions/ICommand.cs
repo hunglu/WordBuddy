@@ -1,4 +1,4 @@
-namespace WordBuddy.Identity.Application.Abstractions;
+namespace WordBuddy.Shared.Application.Abstractions;
 
 /// <summary>Marker for a command that mutates state and returns no value beyond success/failure.</summary>
 public interface ICommand
@@ -6,11 +6,13 @@ public interface ICommand
 }
 
 /// <summary>Marker for a command that mutates state and returns a <typeparamref name="TResult"/> on success.</summary>
+/// <typeparam name="TResult">The value returned on success.</typeparam>
 public interface ICommand<TResult>
 {
 }
 
 /// <summary>Marker for a query that reads state and returns a <typeparamref name="TResult"/>.</summary>
+/// <typeparam name="TResult">The value returned on success.</typeparam>
 public interface IQuery<TResult>
 {
 }

@@ -1,5 +1,5 @@
 using MassTransit;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.ApplyLearnerProfileEvent;
 using WordBuddy.Shared.Contracts.Profiles;
 using WordBuddy.Shared.Kernel;

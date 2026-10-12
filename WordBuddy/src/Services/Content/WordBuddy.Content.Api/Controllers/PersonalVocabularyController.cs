@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using WordBuddy.Content.Api.Authorization;
 using WordBuddy.Content.Api.Extensions;
 using WordBuddy.Content.Api.Models;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddPersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddSharedVocabularyWordToMyList;

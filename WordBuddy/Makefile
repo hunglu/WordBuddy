@@ -26,6 +26,7 @@ clean:
 
 pack-shared:
 	dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
+	dotnet pack src/Shared/WordBuddy.Shared.Application -o local-nuget-feed
 	dotnet pack src/Shared/WordBuddy.Shared.Infrastructure -o local-nuget-feed
 	dotnet pack src/Shared/WordBuddy.Shared.Contracts -o local-nuget-feed
 

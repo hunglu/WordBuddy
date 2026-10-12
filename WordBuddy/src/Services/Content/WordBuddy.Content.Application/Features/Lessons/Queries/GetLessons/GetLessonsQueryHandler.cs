@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;

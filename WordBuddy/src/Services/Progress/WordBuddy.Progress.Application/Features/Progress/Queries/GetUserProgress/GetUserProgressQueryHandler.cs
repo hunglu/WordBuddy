@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;

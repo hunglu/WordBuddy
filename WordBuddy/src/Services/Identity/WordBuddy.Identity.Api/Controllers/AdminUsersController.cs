@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WordBuddy.Identity.Api.Extensions;
 using WordBuddy.Identity.Api.Models;
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.Features.Profile.Commands.RepublishLearnerProfiles;
 using WordBuddy.Identity.Application.Features.Profile.Commands.SetGuardianRole;
 using WordBuddy.Shared.Kernel;
