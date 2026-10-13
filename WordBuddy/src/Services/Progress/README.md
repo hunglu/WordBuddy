@@ -69,12 +69,21 @@ answer → AnswerGrader (rating) → first attempt of a new/due word? → FSRS-6
 | Rule | Child | Adult |
 | --- | --- | --- |
 | New-word cap | Backlog rule 10/8/6/5, or own setting | Same |
-| Grading thresholds | Base × 1.25 | Base × 1.0 |
+| Grading thresholds | Base × 1.25, or the age band multiplier | Base × 1.0, or the age band multiplier |
 | FSRS, ReviewLog | Same | Same |
 
 `age_group` comes from the JWT; missing or unknown → treated as Child (more lenient grading).
 This differs from Content, which fails on a missing `age_group` claim. The lenient default is
 safe here: the claim only sets grading thresholds, never content access.
+
+**Age band (WB-20).** Identity adds an `age_band` claim (`Under7`, `Age7To9`, `Age10To12`, `Age13To17`, `Adult`) when the user set a date of birth. The claim holds the band only, never the date.
+
+| Claim state | Threshold multiplier |
+| --- | --- |
+| Known `age_band` | `Vocabulary:Grading:AgeBandMultiplier` for that band |
+| Missing or unknown `age_band` | `AgeGroupMultiplier` for `age_group` (WB-22 behaviour) |
+
+Past `ReviewLogs` rows keep the rating they were recorded with.
 
 ### Server-side answer checking (WB-28)
 
@@ -172,6 +181,7 @@ Scheduler (5 min)  → ChallengeScorer(ReviewLogs) → ChallengeParticipants.Sco
 | | `SessionDurationMinutes` | `30` |
 | `Vocabulary:Grading` | `PictureChoice` / `ListeningChoice` / `Typing` (`FastMs`, `SlowMs`) | 3000/10000, 4000/12000, 6000/20000 |
 | | `AgeGroupMultiplier` (`Child`, `Adult`) | `1.25`, `1.0` |
+| | `AgeBandMultiplier` (`Under7`, `Age7To9`, `Age10To12`, `Age13To17`, `Adult`) | `1.5`, `1.35`, `1.2`, `1.1`, `1.0` |
 | `Vocabulary:NewWordCap` | `LowBacklogMax`/`Cap`, `MediumBacklogMax`/`Cap`, `HighBacklogMax`/`Cap`, `OverflowCap` | 20→10, 40→8, 60→6, else 5 |
 
 Swagger UI: `http://localhost:5083/swagger` (Development only). Bearer tokens come from

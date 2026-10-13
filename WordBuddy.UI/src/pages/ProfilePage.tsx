@@ -3,11 +3,15 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { problemMessage } from '../api/supportLinks'
 import { avatarEmoji, cardClass, inputClass, primaryButtonClass } from '../components/support/supportUi'
+import { AccountInfoCard } from '../components/profile/AccountInfoCard'
+import { ChangePasswordForm } from '../components/profile/ChangePasswordForm'
+import { DateOfBirthForm } from '../components/profile/DateOfBirthForm'
+import { MySupportersCard } from '../components/profile/MySupportersCard'
 import { TimeZoneForm } from '../components/profile/TimeZoneForm'
 import { useAvatarCatalog, useCurrentUser, useUpdateProfile } from '../hooks/useSupportLinks'
 import type { User } from '../types'
 
-/** `/profile` — alias and avatar. The alias is what linked users see instead of the name. */
+/** `/profile` — account info, alias and avatar, date of birth, time zone, password, supporters. The alias is what linked users see instead of the name. */
 export function ProfilePage(): ReactElement {
   const currentUser = useCurrentUser()
 
@@ -20,7 +24,11 @@ export function ProfilePage(): ReactElement {
       {currentUser.data && (
         <ProfileForm key={`${currentUser.data.alias ?? ''}|${currentUser.data.avatarId ?? ''}`} user={currentUser.data} />
       )}
+      {currentUser.data && <AccountInfoCard key={currentUser.data.displayName} user={currentUser.data} />}
+      {currentUser.data && <DateOfBirthForm key={currentUser.data.dateOfBirth ?? ''} user={currentUser.data} />}
       {currentUser.data && <TimeZoneForm key={currentUser.data.timeZoneId ?? ''} user={currentUser.data} />}
+      {currentUser.data && <ChangePasswordForm />}
+      {currentUser.data && <MySupportersCard user={currentUser.data} />}
     </motion.div>
   )
 }

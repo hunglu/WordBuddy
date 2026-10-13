@@ -32,6 +32,13 @@ internal sealed class JwtTokenGenerator : IJwtTokenGenerator
             new("is_admin", user.IsAdmin ? "true" : "false"),
         ];
 
+        // Only the coarse band is shared, never the date of birth.
+        AgeBand? band = user.GetAgeBand(DateOnly.FromDateTime(DateTime.UtcNow));
+        if (band is not null)
+        {
+            claims.Add(new Claim("age_band", band.Value.ToString()));
+        }
+
         // Only guardians carry the claim, so its presence is the role check.
         if (user.IsGuardian)
         {

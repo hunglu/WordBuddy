@@ -3,7 +3,7 @@ namespace WordBuddy.Progress.Domain;
 /// <summary>
 /// Maps an answer to an FSRS rating. Pure. Wrong → Again; correct with hint or slow → Hard;
 /// correct and fast → Easy; else Good. Thresholds per <see cref="ExerciseType"/>, scaled by the
-/// <see cref="AgeGroup"/> multiplier (D-7).
+/// <see cref="AgeGroup"/> multiplier (D-7), or by the <see cref="AgeBand"/> multiplier when the band is known (WB-20).
 /// </summary>
 public sealed class AnswerGrader
 {
@@ -15,8 +15,8 @@ public sealed class AnswerGrader
         _options = options;
     }
 
-    /// <summary>Derives the rating for one answer.</summary>
-    public FsrsRating Grade(ExerciseType exerciseType, AgeGroup ageGroup, bool isCorrect, int responseMs, bool hintUsed)
+    /// <summary>Derives the rating for one answer. A known <paramref name="ageBand"/> wins over <paramref name="ageGroup"/>.</summary>
+    public FsrsRating Grade(ExerciseType exerciseType, AgeGroup ageGroup, bool isCorrect, int responseMs, bool hintUsed, AgeBand? ageBand = null)
     {
         if (!isCorrect)
         {
@@ -24,7 +24,7 @@ public sealed class AnswerGrader
         }
 
         ResponseTimeThresholds thresholds = _options.For(exerciseType);
-        double multiplier = _options.For(ageGroup);
+        double multiplier = ageBand is { } band ? _options.For(band) : _options.For(ageGroup);
         double slowMs = thresholds.SlowMs * multiplier;
         double fastMs = thresholds.FastMs * multiplier;
 

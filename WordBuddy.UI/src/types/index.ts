@@ -29,6 +29,9 @@ export type SenseOrigin = 'Manual' | 'AutoFill'
 
 // ── Identity ────────────────────────────────────────────────────────────────
 
+/** Age range derived by Identity from the date of birth (the `age_band` token claim). */
+export type AgeBand = 'Under7' | 'Age7To9' | 'Age10To12' | 'Age13To17' | 'Adult'
+
 export interface User {
   id: string
   email: string
@@ -45,6 +48,10 @@ export interface User {
   timeZoneId?: string | null
   /** Whether the account holds the Guardian role (can allow challenges for linked children). */
   isGuardian?: boolean
+  /** Own date of birth (`yyyy-MM-dd`), or null when unset. Only the owner and active supporters see it. */
+  dateOfBirth?: string | null
+  /** Age band derived from the date of birth, or null. */
+  ageBand?: AgeBand | null
 }
 
 // ── Identity: support links (WB-24) ─────────────────────────────────────────
@@ -88,6 +95,8 @@ export interface SupportLink {
   status: SupportLinkStatus
   createdAtUtc: string
   unlinkRequest: UnlinkRequest | null
+  /** Learner date of birth (`yyyy-MM-dd`). Set only on an Active link in the supporter list; read-only. */
+  learnerDateOfBirth?: string | null
 }
 
 export interface SupportInvitation {

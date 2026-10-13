@@ -15,10 +15,10 @@ public sealed class User : Entity
     public string Email { get; }
 
     /// <summary>Gets the display name shown in the UI.</summary>
-    public string DisplayName { get; }
+    public string DisplayName { get; private set; }
 
     /// <summary>Gets the salted password hash. Never exposed outside <c>Identity.Infrastructure</c>.</summary>
-    public string PasswordHash { get; }
+    public string PasswordHash { get; private set; }
 
     /// <summary>Gets the account's age group, used to enforce content restrictions.</summary>
     public AgeGroup AgeGroup { get; }
@@ -37,6 +37,27 @@ public sealed class User : Entity
 
     /// <summary>Gets a value indicating whether this adult account holds the Guardian role (can allow challenges for linked children).</summary>
     public bool IsGuardian { get; private set; }
+
+    /// <summary>Gets the optional date of birth. Never logged, never put in events or tokens (only the <see cref="AgeBand"/> is shared).</summary>
+    public DateOnly? DateOfBirth { get; private set; }
+
+    /// <summary>Minimum display name length.</summary>
+    public const int DisplayNameMinLength = 2;
+
+    /// <summary>Maximum display name length.</summary>
+    public const int DisplayNameMaxLength = 50;
+
+    /// <summary>Youngest accepted age in years.</summary>
+    public const int MinAgeYears = 3;
+
+    /// <summary>Oldest accepted age in years.</summary>
+    public const int MaxAgeYears = 120;
+
+    /// <summary>Age at which a person is an adult.</summary>
+    public const int AdultAgeYears = 18;
+
+    /// <summary>Youngest age an Adult account may have.</summary>
+    public const int MinAdultAccountAgeYears = 13;
 
     /// <summary>Maximum time zone id length.</summary>
     public const int TimeZoneIdMaxLength = 64;
@@ -109,6 +130,94 @@ public sealed class User : Entity
 
         IsGuardian = isGuardian;
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Sets or clears the date of birth. Rules: not in the future; age 3 to 120; a Child account must be
+    /// under 18 and an Adult account 13 or older. Null clears.
+    /// </summary>
+    public Result SetDateOfBirth(DateOnly? dateOfBirth, DateOnly today)
+    {
+        if (dateOfBirth is null)
+        {
+            DateOfBirth = null;
+            return Result.Success();
+        }
+
+        if (dateOfBirth.Value > today)
+        {
+            return Result.Failure(UserErrors.DateOfBirthInvalid);
+        }
+
+        int age = AgeOn(dateOfBirth.Value, today);
+        if (age < MinAgeYears || age > MaxAgeYears)
+        {
+            return Result.Failure(UserErrors.DateOfBirthInvalid);
+        }
+
+        if ((AgeGroup == AgeGroup.Child && age >= AdultAgeYears)
+            || (AgeGroup == AgeGroup.Adult && age < MinAdultAccountAgeYears))
+        {
+            return Result.Failure(UserErrors.DateOfBirthAgeGroupMismatch);
+        }
+
+        DateOfBirth = dateOfBirth;
+        return Result.Success();
+    }
+
+    /// <summary>Sets the display name (trimmed, 2 to 50 characters).</summary>
+    public Result SetDisplayName(string name)
+    {
+        string trimmed = (name ?? string.Empty).Trim();
+        if (trimmed.Length < DisplayNameMinLength || trimmed.Length > DisplayNameMaxLength)
+        {
+            return Result.Failure(UserErrors.DisplayNameLength);
+        }
+
+        DisplayName = trimmed;
+        return Result.Success();
+    }
+
+    /// <summary>Replaces the password hash. The caller verifies the current password and hashes the new one.</summary>
+    public Result ChangePassword(string newHash)
+    {
+        if (string.IsNullOrWhiteSpace(newHash))
+        {
+            return Result.Failure(UserErrors.PasswordTooWeak);
+        }
+
+        PasswordHash = newHash;
+        return Result.Success();
+    }
+
+    /// <summary>The age band on <paramref name="today"/>, or null when no date of birth is set.</summary>
+    public AgeBand? GetAgeBand(DateOnly today)
+    {
+        if (DateOfBirth is null)
+        {
+            return null;
+        }
+
+        int age = AgeOn(DateOfBirth.Value, today);
+        return age switch
+        {
+            < 7 => AgeBand.Under7,
+            < 10 => AgeBand.Age7To9,
+            < 13 => AgeBand.Age10To12,
+            < AdultAgeYears => AgeBand.Age13To17,
+            _ => AgeBand.Adult,
+        };
+    }
+
+    private static int AgeOn(DateOnly dateOfBirth, DateOnly today)
+    {
+        int age = today.Year - dateOfBirth.Year;
+        if (dateOfBirth.AddYears(age) > today)
+        {
+            age--;
+        }
+
+        return age;
     }
 
     /// <summary>Name shown to linked users: alias, else display name for adults, else a neutral label for children.</summary>
