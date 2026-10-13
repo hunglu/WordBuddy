@@ -18,9 +18,10 @@ internal sealed class LessonRepository : ILessonRepository
         _logger = logger;
     }
 
-    public async Task<Result<IReadOnlyList<Lesson>>> GetPublishedAsync(LessonType? type, Level? level, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<Lesson>>> GetPublishedAsync(LessonType? type, Level? level, AgeGroup? targetAgeGroup, CancellationToken ct = default)
     {
-        _logger.LogDebug("Querying published Lessons: Type={Type}, Level={Level}", type, level);
+        _logger.LogDebug(
+            "Querying published Lessons: Type={Type}, Level={Level}, TargetAgeGroup={TargetAgeGroup}", type, level, targetAgeGroup);
 
         IQueryable<Lesson> query = _dbContext.Lessons.AsNoTracking().Where(l => l.IsPublished);
         if (type is not null)
@@ -32,8 +33,57 @@ internal sealed class LessonRepository : ILessonRepository
             query = query.Where(l => l.Level == level);
         }
 
+        if (targetAgeGroup is not null)
+        {
+            query = query.Where(l => l.TargetAgeGroup == targetAgeGroup);
+        }
+
         List<Lesson> lessons = await query.ToListAsync(ct);
         return Result.Success<IReadOnlyList<Lesson>>(lessons);
+    }
+
+    public async Task<Result<IReadOnlyList<Lesson>>> ListAllAsync(LessonType? type, Level? level, bool? isPublished, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Querying all Lessons: Type={Type}, Level={Level}, IsPublished={IsPublished}", type, level, isPublished);
+
+        IQueryable<Lesson> query = _dbContext.Lessons.AsNoTracking().Include(l => l.VocabularyWords);
+        if (type is not null)
+        {
+            query = query.Where(l => l.Type == type);
+        }
+        if (level is not null)
+        {
+            query = query.Where(l => l.Level == level);
+        }
+        if (isPublished is not null)
+        {
+            query = query.Where(l => l.IsPublished == isPublished);
+        }
+
+        List<Lesson> lessons = await query.OrderBy(l => l.Title).ToListAsync(ct);
+        return Result.Success<IReadOnlyList<Lesson>>(lessons);
+    }
+
+    public async Task<Result<Lesson>> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Loading Lesson for update: LessonId={LessonId}", id);
+
+        Lesson? lesson = await _dbContext.Lessons
+            .AsTracking()
+            .Include(l => l.VocabularyWords)
+            .FirstOrDefaultAsync(l => l.Id == id, ct);
+
+        return lesson is null
+            ? Result.Failure<Lesson>(Error.NotFound("Lesson.NotFound", $"Lesson {id} was not found."))
+            : Result.Success(lesson);
+    }
+
+    public void Remove(Lesson lesson) => _dbContext.Lessons.Remove(lesson);
+
+    public async Task<Result> SaveChangesAsync(CancellationToken ct = default)
+    {
+        await _dbContext.SaveChangesAsync(ct);
+        return Result.Success();
     }
 
     public async Task<Result<Lesson>> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default)

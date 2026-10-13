@@ -34,6 +34,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true },
+  { to: '/admin/lessons', label: 'Lesson authoring', icon: '✏️', end: false },
   { to: '/admin/support-links', label: 'Support links', icon: '🔗', end: true },
 ]
 

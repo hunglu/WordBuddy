@@ -162,6 +162,23 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         return Result.Success<IReadOnlyList<Sense>>(words);
     }
 
+    public async Task<Result<IReadOnlyList<Sense>>> SearchAttachableAsync(string? search, int take, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Searching attachable Senses: Take={Take}", take);
+
+        IQueryable<Sense> query = _dbContext.Senses
+            .AsNoTracking()
+            .Where(w => w.Source == VocabularySource.System || w.ShareStatus == VocabularyShareStatus.Shared);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(w => w.Word.Contains(search));
+        }
+
+        List<Sense> words = await query.OrderBy(w => w.Word).ThenBy(w => w.Id).Take(take).ToListAsync(ct);
+        return Result.Success<IReadOnlyList<Sense>>(words);
+    }
+
     public async Task<Result<IReadOnlyList<Sense>>> GetPendingModerationAsync(CancellationToken ct = default)
     {
         _logger.LogDebug("Querying pending-moderation Senses");

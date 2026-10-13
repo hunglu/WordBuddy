@@ -33,6 +33,17 @@ public sealed class GetLessonDetailQueryHandler : IQueryHandler<GetLessonDetailQ
 
         Lesson lesson = lessonResult.Value;
 
+        // Same error as an unknown id, so a caller cannot probe for drafts or adult-only lessons.
+        bool hiddenFromCaller = !lesson.IsPublished ||
+            (query.RequestingAgeGroup == AgeGroup.Child && lesson.TargetAgeGroup != AgeGroup.Child);
+        if (hiddenFromCaller)
+        {
+            _logger.LogWarning(
+                "GetLessonDetailQuery lesson not visible: LessonId={LessonId}, IsPublished={IsPublished}, AgeGroup={AgeGroup}",
+                lesson.Id, lesson.IsPublished, query.RequestingAgeGroup);
+            return Result.Failure<LessonDetailDto>(Error.NotFound("Lesson.NotFound", $"Lesson {query.LessonId} was not found."));
+        }
+
         LessonDetailDto dto = new(
             lesson.Id,
             lesson.Title,
@@ -44,6 +55,7 @@ public sealed class GetLessonDetailQueryHandler : IQueryHandler<GetLessonDetailQ
             // LessonSenses. System words always carry a non-empty Example.
             lesson.VocabularyWords
                 .Where(link => link.Sense is not null)
+                .Where(link => IsListedFor(link.Sense!, query.RequestingAgeGroup))
                 .OrderBy(link => link.SortOrder)
                 .Select(link => link.Sense!)
                 .Select(v => ToVocabularyItem(v, query.RequestingAgeGroup))
@@ -58,6 +70,13 @@ public sealed class GetLessonDetailQueryHandler : IQueryHandler<GetLessonDetailQ
         _logger.LogInformation("GetLessonDetailQuery succeeded: LessonId={LessonId}", lesson.Id);
         return Result.Success(dto);
     }
+
+    /// <summary>A Child does not get words hidden from children. An unapproved auto-filled word stays
+    /// listed, as an "awaiting approval" placeholder without content (WB-25).</summary>
+    private static bool IsListedFor(Sense sense, AgeGroup ageGroup) =>
+        ageGroup != AgeGroup.Child ||
+        !sense.IsHiddenFromChildrenInLessons ||
+        sense.IsAwaitingChildApproval(ageGroup, callerLink: null);
 
     /// <summary>Lesson word with WB-25 enrichment. A Child waiting for approval of an auto-filled
     /// word gets no content.</summary>

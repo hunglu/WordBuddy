@@ -8,7 +8,7 @@ public sealed class LessonSense
     public Guid LessonId { get; private set; }
     public Guid SenseId { get; private set; }
     public Sense? Sense { get; private set; }
-    public int SortOrder { get; private set; }
+    public int SortOrder { get; internal set; }
 
     private LessonSense(Guid lessonId, Guid senseId, int sortOrder)
     {

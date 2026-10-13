@@ -4,4 +4,6 @@ using WordBuddy.Content.Domain;
 
 namespace WordBuddy.Content.Application.Features.Lessons.Queries.GetLessons;
 
-public sealed record GetLessonsQuery(LessonType? Type, Level? Level) : IQuery<IReadOnlyList<LessonDto>>;
+/// <summary>Lists published lessons. A Child (<paramref name="RequestingAgeGroup"/>, from the JWT) only gets
+/// lessons targeted at children; an Adult gets all.</summary>
+public sealed record GetLessonsQuery(LessonType? Type, Level? Level, AgeGroup RequestingAgeGroup) : IQuery<IReadOnlyList<LessonDto>>;
