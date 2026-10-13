@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WordBuddy.Content.Api.Extensions;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RepublishLearnerWords;
 using WordBuddy.Shared.Kernel;
 

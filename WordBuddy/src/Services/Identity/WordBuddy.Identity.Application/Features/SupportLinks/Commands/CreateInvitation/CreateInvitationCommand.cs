@@ -1,4 +1,4 @@
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Domain.SupportLinks;
 

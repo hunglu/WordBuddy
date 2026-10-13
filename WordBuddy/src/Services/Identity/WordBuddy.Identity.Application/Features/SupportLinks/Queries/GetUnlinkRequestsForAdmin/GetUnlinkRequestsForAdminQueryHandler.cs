@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Domain.SupportLinks;

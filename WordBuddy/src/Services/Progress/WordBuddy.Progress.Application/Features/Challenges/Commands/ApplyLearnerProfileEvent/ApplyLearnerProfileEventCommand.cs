@@ -1,4 +1,4 @@
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 
 namespace WordBuddy.Progress.Application.Features.Challenges.Commands.ApplyLearnerProfileEvent;
 

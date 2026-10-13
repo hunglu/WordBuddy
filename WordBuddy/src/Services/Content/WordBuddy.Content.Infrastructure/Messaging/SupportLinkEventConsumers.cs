@@ -1,5 +1,5 @@
 using MassTransit;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 using WordBuddy.Shared.Contracts.SupportLinks;
 using WordBuddy.Shared.Kernel;

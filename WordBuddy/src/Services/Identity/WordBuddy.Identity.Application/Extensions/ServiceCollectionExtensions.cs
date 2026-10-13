@@ -1,6 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Features.Groups;
 using WordBuddy.Identity.Application.Features.Groups.Commands.AddGroupMembers;

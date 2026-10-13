@@ -1,6 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using WordBuddy.Quiz.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Quiz.Application.DTOs;
 using WordBuddy.Quiz.Application.Features.Quizzes.Commands.CreateQuiz;
 using WordBuddy.Quiz.Application.Features.Quizzes.Commands.SubmitQuizAnswer;

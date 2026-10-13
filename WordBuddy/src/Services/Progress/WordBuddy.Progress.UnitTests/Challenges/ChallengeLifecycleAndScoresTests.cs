@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.Features.Challenges;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.AdvanceChallengeLifecycle;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.RecomputeChallengeScores;

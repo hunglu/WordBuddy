@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WordBuddy.Content.Api.Authorization;
 using WordBuddy.Content.Api.Extensions;
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Features.Autofill.Commands.AddAutofillSenseToMyList;
 using WordBuddy.Content.Application.Features.Autofill.Commands.ApproveChildWord;

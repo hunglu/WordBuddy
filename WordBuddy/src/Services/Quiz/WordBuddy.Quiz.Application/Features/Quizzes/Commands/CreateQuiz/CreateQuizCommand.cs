@@ -1,4 +1,4 @@
-using WordBuddy.Quiz.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Quiz.Domain;
 
 namespace WordBuddy.Quiz.Application.Features.Quizzes.Commands.CreateQuiz;

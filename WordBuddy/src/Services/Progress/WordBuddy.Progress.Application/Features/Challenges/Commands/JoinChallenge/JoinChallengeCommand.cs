@@ -1,4 +1,4 @@
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Domain;
 
 namespace WordBuddy.Progress.Application.Features.Challenges.Commands.JoinChallenge;

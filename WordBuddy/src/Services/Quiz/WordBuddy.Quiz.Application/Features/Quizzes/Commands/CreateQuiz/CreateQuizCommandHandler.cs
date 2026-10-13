@@ -1,7 +1,7 @@
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Quiz.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Quiz.Application.Interfaces;
 using WordBuddy.Quiz.Domain;
 using WordBuddy.Shared.Kernel;

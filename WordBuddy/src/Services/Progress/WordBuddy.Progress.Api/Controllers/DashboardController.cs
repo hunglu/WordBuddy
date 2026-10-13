@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WordBuddy.Progress.Api.Authorization;
 using WordBuddy.Progress.Api.Extensions;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.Dashboard.Queries.GetLearnerDashboard;
 using WordBuddy.Progress.Application.Features.Groups.Queries.GetGroupDashboard;

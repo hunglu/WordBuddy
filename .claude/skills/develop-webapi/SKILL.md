@@ -92,12 +92,14 @@ Queries/
 One handler per command/query. DTOs returned to callers live in `Application/DTOs/`, not inside
 the feature folder.
 
-## Core interfaces (Application layer, define once per service under `Application/Abstractions/`)
+## Core interfaces (shared package `WordBuddy.Shared.Application`, namespace `WordBuddy.Shared.Application.Abstractions`)
 
 CLAUDE.md forbids MediatR for dispatch, so there is no pipeline-behavior magic — validation is
-called explicitly at the top of every handler. Use these small interfaces instead of a mediator:
+called explicitly at the top of every handler. Use these small interfaces instead of a mediator. They ship in the `WordBuddy.Shared.Application`
+NuGet package. Never redefine them per service; add `using WordBuddy.Shared.Application.Abstractions;`:
 
 ```csharp
+// namespace WordBuddy.Shared.Application.Abstractions
 public interface ICommandHandler<in TCommand>
     where TCommand : ICommand
 {

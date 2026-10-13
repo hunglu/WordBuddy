@@ -1,4 +1,4 @@
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 
 namespace WordBuddy.Content.Application.Features.Autofill.Queries.GetPendingChildApprovals;

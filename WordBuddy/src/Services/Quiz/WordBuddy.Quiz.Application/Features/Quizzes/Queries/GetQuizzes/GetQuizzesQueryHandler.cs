@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using WordBuddy.Quiz.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Quiz.Application.DTOs;
 using WordBuddy.Quiz.Application.Interfaces;
 using WordBuddy.Shared.Kernel;

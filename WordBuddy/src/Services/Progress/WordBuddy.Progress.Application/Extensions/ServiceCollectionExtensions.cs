@@ -16,7 +16,7 @@ using WordBuddy.Progress.Application.Features.SupportLinks.Commands.ApplySupport
 using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateLearnerVocabularySettings;
 using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerVocabularySettings;
 using Microsoft.Extensions.DependencyInjection;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.LearnerWords.Commands.RecordLearnerWordAdded;
 using WordBuddy.Progress.Application.Features.LearnerWords.Commands.RecordLearnerWordRemoved;

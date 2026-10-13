@@ -2,7 +2,7 @@ using FluentAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.Features.Challenges;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.ApplyLearnerProfileEvent;
 using WordBuddy.Progress.Domain;

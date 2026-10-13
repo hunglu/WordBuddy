@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WordBuddy.Quiz.Api.Extensions;
 using WordBuddy.Quiz.Api.Models;
-using WordBuddy.Quiz.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Quiz.Application.DTOs;
 using WordBuddy.Quiz.Application.Features.Quizzes.Commands.CreateQuiz;
 using WordBuddy.Quiz.Application.Features.Quizzes.Commands.SubmitQuizAnswer;

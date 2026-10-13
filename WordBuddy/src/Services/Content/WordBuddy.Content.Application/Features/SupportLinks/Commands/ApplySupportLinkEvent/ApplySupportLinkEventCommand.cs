@@ -1,4 +1,4 @@
-using WordBuddy.Content.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 
 namespace WordBuddy.Content.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 

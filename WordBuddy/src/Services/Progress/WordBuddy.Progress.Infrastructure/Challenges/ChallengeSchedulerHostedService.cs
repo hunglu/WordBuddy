@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Progress.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.AdvanceChallengeLifecycle;
 using WordBuddy.Progress.Application.Features.Challenges.Commands.RecomputeChallengeScores;
 using WordBuddy.Progress.Domain.Challenges;

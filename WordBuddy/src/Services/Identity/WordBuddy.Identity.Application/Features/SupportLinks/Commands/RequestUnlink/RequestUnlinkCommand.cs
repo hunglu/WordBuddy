@@ -1,4 +1,4 @@
-using WordBuddy.Identity.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 
 namespace WordBuddy.Identity.Application.Features.SupportLinks.Commands.RequestUnlink;
 

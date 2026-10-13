@@ -1,4 +1,4 @@
-using WordBuddy.Quiz.Application.Abstractions;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Quiz.Application.DTOs;
 
 namespace WordBuddy.Quiz.Application.Features.Quizzes.Queries.GetQuizById;
