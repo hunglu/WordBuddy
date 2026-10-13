@@ -121,7 +121,7 @@ public sealed class RecordVocabularyReviewCommandHandler : ICommandHandler<Recor
 
         bool isCorrect = AnswerChecker.IsCorrect(exercise.ExerciseType, exercise.ExpectedAnswer, command.Answer.OptionKey, command.Answer.Text);
         ResponseTiming timing = _timeEvaluator.Evaluate(command.ClientResponseMs, exercise.IssuedAtUtc, nowUtc);
-        FsrsRating rating = _grader.Grade(exercise.ExerciseType, command.AgeGroup, isCorrect, timing.UsedMs, command.HintUsed);
+        FsrsRating rating = _grader.Grade(exercise.ExerciseType, command.AgeGroup, isCorrect, timing.UsedMs, command.HintUsed, command.AgeBand);
         bool reschedule = attemptNo == 1 && isDue;
 
         if (reschedule)

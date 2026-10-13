@@ -80,12 +80,18 @@ public sealed class GetMySupportLinksQueryHandler : IQueryHandler<GetMySupportLi
         SupportLinkDto Map(SupportLink link) => SupportLinkDtoMapper.ToDto(
             link, usersById, requestByLink.GetValueOrDefault(link.Id), query.UserId, _options.UnlinkOverrideWaitDays);
 
+        // Read-only view for an Active supporter only; pending and ended links never carry it.
+        static SupportLinkDto WithLearnerDateOfBirth(SupportLinkDto dto, SupportLink link, IReadOnlyDictionary<Guid, User> users) =>
+            link.Status == SupportLinkStatus.Active && users.TryGetValue(link.LearnerId, out User? learner)
+                ? dto with { LearnerDateOfBirth = learner.DateOfBirth }
+                : dto;
+
         IReadOnlyList<SupportLinkInvitation> invitations =
             await _links.GetOpenInvitationsByCreatorAsync(query.UserId, _time.GetUtcNow().UtcDateTime, ct);
 
         MySupportLinksDto result = new(
             mine.Where(l => l.LearnerId == query.UserId).Select(Map).ToList(),
-            mine.Where(l => l.SupporterId == query.UserId).Select(Map).ToList(),
+            mine.Where(l => l.SupporterId == query.UserId).Select(l => WithLearnerDateOfBirth(Map(l), l, usersById)).ToList(),
             managed.Select(Map).ToList(),
             invitations.Select(i => new InvitationDto(i.Id, i.CreatorSide, i.Relationship, i.ExpiresAtUtc)).ToList(),
             mine.Any(l => l.LearnerId == query.UserId && l.IsActive));

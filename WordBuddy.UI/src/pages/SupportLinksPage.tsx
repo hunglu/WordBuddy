@@ -6,7 +6,7 @@ import { GroupRequests } from '../components/groups/GroupRequests'
 import { InvitePanel } from '../components/support/InvitePanel'
 import { SupportLinkCard } from '../components/support/SupportLinkCard'
 import { WordsToApprove } from '../components/support/WordsToApprove'
-import { cardClass, formatDate, primaryButtonClass, softButtonClass, successButtonClass, dangerButtonClass } from '../components/support/supportUi'
+import { cardClass, formatDate, formatPlainDate, primaryButtonClass, softButtonClass, successButtonClass, dangerButtonClass } from '../components/support/supportUi'
 import {
   useCancelInvitation,
   usePendingSupporterApprovals,
@@ -116,6 +116,11 @@ export function SupportLinksPage(): ReactElement {
                   {data.asSupporter.map((link) => (
                     <div key={link.id}>
                       <SupportLinkCard link={link} show="learner" canAct />
+                      {link.status === 'Active' && link.learnerDateOfBirth && (
+                        <p className="mt-2 text-sm text-wb-ink-muted">
+                          Date of birth: {formatPlainDate(link.learnerDateOfBirth)} (read-only)
+                        </p>
+                      )}
                       {link.status === 'Active' && (
                         <Link to={`/dashboard/learners/${link.learnerId}`} className={`${primaryButtonClass} mt-2 inline-block`}>
                           View dashboard

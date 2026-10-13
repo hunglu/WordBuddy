@@ -46,6 +46,12 @@ export function avatarEmoji(avatarId: string | null | undefined): string {
   return (avatarId ? AVATAR_EMOJI[avatarId] : undefined) ?? '🙂'
 }
 
+/** Display text of a plain `yyyy-MM-dd` date (no time zone shift). */
+export function formatPlainDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString()
+}
+
 /** Local date of an ISO timestamp, for display. */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString()

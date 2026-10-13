@@ -100,7 +100,8 @@ public sealed class VocabularySrsController : ControllerBase
                 request.ExerciseId,
                 new ReviewAnswer(request.Answer.OptionKey, request.Answer.Text),
                 request.ClientResponseMs,
-                request.HintUsed),
+                request.HintUsed,
+                User.GetAgeBand()),
             ct);
 
         if (result.IsFailure)

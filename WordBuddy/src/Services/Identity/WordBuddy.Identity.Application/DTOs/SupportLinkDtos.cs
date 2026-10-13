@@ -3,6 +3,7 @@ using WordBuddy.Identity.Domain.SupportLinks;
 namespace WordBuddy.Identity.Application.DTOs;
 
 /// <summary>A support link as seen by one of its parties. Names are public names (alias first; never a child display name).</summary>
+/// <remarks><c>LearnerDateOfBirth</c> is set only for an Active link in the caller supporter list (read-only view).</remarks>
 public sealed record SupportLinkDto(
     Guid Id,
     Guid LearnerId,
@@ -15,7 +16,8 @@ public sealed record SupportLinkDto(
     SupportRelationship? Relationship,
     SupportLinkStatus Status,
     DateTime CreatedAtUtc,
-    UnlinkRequestDto? UnlinkRequest);
+    UnlinkRequestDto? UnlinkRequest,
+    DateOnly? LearnerDateOfBirth = null);
 
 /// <summary>The open unlink request of a link, as seen by the caller.</summary>
 /// <param name="Id">Request id.</param>

@@ -23,6 +23,13 @@ internal static class RateLimitingConfiguration
 
     private static readonly TimeSpan GroupWriteWindow = TimeSpan.FromMinutes(1);
 
+    /// <summary>Policy for password changes (guessing the current password must stay slow).</summary>
+    public const string PasswordChangePolicy = "password-change";
+
+    private const int PasswordChangePermitLimit = 5;
+
+    private static readonly TimeSpan PasswordChangeWindow = TimeSpan.FromMinutes(1);
+
     /// <summary>Registers the rate limiter and its policies.</summary>
     public static IServiceCollection AddWordBuddyRateLimiting(this IServiceCollection services)
     {
@@ -52,6 +59,18 @@ internal static class RateLimitingConfiguration
                     {
                         PermitLimit = GroupWritePermitLimit,
                         Window = GroupWriteWindow,
+                        QueueLimit = 0,
+                    }));
+
+            options.AddPolicy(PasswordChangePolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "anonymous",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = PasswordChangePermitLimit,
+                        Window = PasswordChangeWindow,
                         QueueLimit = 0,
                     }));
 

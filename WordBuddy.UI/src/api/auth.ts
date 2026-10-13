@@ -30,3 +30,26 @@ export async function updateTimeZone(timeZoneId: string | null): Promise<User> {
   const { data } = await apiClient.put<User>('/auth/profile/time-zone', { timeZoneId })
   return data
 }
+
+/** Sets (or clears with `null`) the caller date of birth (`yyyy-MM-dd`). Returns a fresh token with the new age band. */
+export async function updateDateOfBirth(dateOfBirth: string | null): Promise<AuthToken> {
+  const { data } = await apiClient.put<AuthToken>('/auth/profile/date-of-birth', { dateOfBirth })
+  return data
+}
+
+/** Changes the caller display name. Returns the fresh profile. */
+export async function updateDisplayName(displayName: string): Promise<User> {
+  const { data } = await apiClient.put<User>('/auth/profile/display-name', { displayName })
+  return data
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+}
+
+/** Changes the caller password. Returns a fresh token. */
+export async function changePassword(payload: ChangePasswordPayload): Promise<AuthToken> {
+  const { data } = await apiClient.post<AuthToken>('/auth/profile/password', payload)
+  return data
+}

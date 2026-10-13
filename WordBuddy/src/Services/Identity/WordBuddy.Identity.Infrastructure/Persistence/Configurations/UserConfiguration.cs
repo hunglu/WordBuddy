@@ -23,6 +23,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Alias).IsUnique().HasFilter("[Alias] IS NOT NULL");
         builder.Property(u => u.AvatarId).HasMaxLength(30);
         builder.Property(u => u.TimeZoneId).HasMaxLength(User.TimeZoneIdMaxLength);
+        builder.Property(u => u.DateOfBirth).HasColumnType("date");
         builder.Property(u => u.IsGuardian).HasDefaultValue(false).IsRequired();
         builder.Ignore(u => u.PublicName);
     }

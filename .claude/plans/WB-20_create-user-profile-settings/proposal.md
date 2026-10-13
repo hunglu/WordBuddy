@@ -1,14 +1,14 @@
 ---
 title: WB-20_Create User Profile Setting function
-status: idea
+status: in-progress
 type: new
 issue: 20
 pr: none
 affects: docs/features/user-profile.md
 supersedes: none
-version: 1.0
+version: 1.2
 created: 2026-10-07T09:47:51+07:00
-updated: 2026-10-07T09:47:51+07:00
+updated: 2026-10-13T10:38:43+07:00
 ---
 
 ## Problem

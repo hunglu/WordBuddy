@@ -37,4 +37,17 @@ internal static class ClaimsPrincipalExtensions
             ? value
             : AgeGroup.Child;
     }
+
+    /// <summary>
+    /// Extracts the age band from the JWT <c>age_band</c> claim. Missing or unknown → null, so grading
+    /// falls back to the <see cref="AgeGroup"/> multiplier (WB-20).
+    /// </summary>
+    public static AgeBand? GetAgeBand(this ClaimsPrincipal user)
+    {
+        string? band = user.FindFirstValue("age_band");
+
+        return band is not null && Enum.TryParse(band, ignoreCase: true, out AgeBand value) && Enum.IsDefined(value)
+            ? value
+            : null;
+    }
 }

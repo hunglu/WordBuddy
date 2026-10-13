@@ -12,4 +12,9 @@ public static class UserErrors
     public static readonly Error UnknownAvatar = Error.Validation("User.UnknownAvatar", "The avatar is not in the catalog.");
     public static readonly Error UnknownTimeZone = Error.Validation("User.UnknownTimeZone", "The time zone id is not known.");
     public static readonly Error GuardianMustBeAdult = Error.Validation("User.GuardianMustBeAdult", "Only an adult account can hold the Guardian role.");
+    public static readonly Error DateOfBirthInvalid = Error.Validation("User.DateOfBirthInvalid", "The date of birth is not valid.");
+    public static readonly Error DateOfBirthAgeGroupMismatch = Error.Validation("User.DateOfBirthAgeGroupMismatch", "The date of birth does not match the account age group.");
+    public static readonly Error DisplayNameLength = Error.Validation("User.DisplayNameLength", "The display name must be 2 to 50 characters.");
+    public static readonly Error WrongCurrentPassword = Error.Validation("User.WrongCurrentPassword", "The current password is incorrect.");
+    public static readonly Error PasswordTooWeak = Error.Validation("User.PasswordTooWeak", "The new password is not valid.");
 }

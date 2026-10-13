@@ -27,3 +27,13 @@ public sealed record UpdateTimeZoneRequest(string? TimeZoneId);
 /// <summary>Body of <c>PUT /api/auth/admin/users/{id}/guardian</c>.</summary>
 /// <param name="IsGuardian">True grants the Guardian role (adults only); false removes it.</param>
 public sealed record SetGuardianRequest(bool IsGuardian);
+
+/// <summary>Body of <c>PUT /api/auth/profile/date-of-birth</c>.</summary>
+/// <param name="DateOfBirth">ISO date (<c>yyyy-MM-dd</c>); null clears.</param>
+public sealed record UpdateDateOfBirthRequest(DateOnly? DateOfBirth);
+
+/// <summary>Body of <c>PUT /api/auth/profile/display-name</c>.</summary>
+public sealed record UpdateDisplayNameRequest(string DisplayName);
+
+/// <summary>Body of <c>POST /api/auth/profile/password</c>.</summary>
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
