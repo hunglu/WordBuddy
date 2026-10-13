@@ -367,7 +367,7 @@ VALUES ({rawId}, {lexemeId}, {word}, N'Old.', {hash}, N'System', {SystemOwner.Us
         using IServiceScope scope = _factory.Services.CreateScope();
         ContentDbContext db = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
         Sense sense = await db.Senses.AsTracking().SingleAsync(s => s.Id == senseId);
-        Lesson lesson = new(lessonId, "Auto-fill test", "Test only.", LessonType.Vocabulary, Level.Beginner, AgeGroup.Child, isPublished: false);
+        Lesson lesson = new(lessonId, "Auto-fill test", "Test only.", LessonType.Vocabulary, Level.Beginner, AgeGroup.Child, isPublished: true);
         lesson.AddVocabularyWord(sense);
         db.Lessons.Add(lesson);
         await db.SaveChangesAsync();

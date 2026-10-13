@@ -22,7 +22,8 @@ public sealed class GetLessonsQueryHandler : IQueryHandler<GetLessonsQuery, IRea
     {
         _logger.LogInformation("GetLessonsQuery started: Type={Type}, Level={Level}", query.Type, query.Level);
 
-        Result<IReadOnlyList<Lesson>> lessonsResult = await _lessonRepository.GetPublishedAsync(query.Type, query.Level, ct);
+        Result<IReadOnlyList<Lesson>> lessonsResult = await _lessonRepository.GetPublishedAsync(
+            query.Type, query.Level, query.RequestingAgeGroup == AgeGroup.Child ? AgeGroup.Child : null, ct);
         if (lessonsResult.IsFailure)
         {
             _logger.LogWarning(

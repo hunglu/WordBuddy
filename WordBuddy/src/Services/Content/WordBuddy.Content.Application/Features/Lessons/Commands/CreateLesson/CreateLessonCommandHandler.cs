@@ -38,7 +38,8 @@ public sealed class CreateLessonCommandHandler : ICommandHandler<CreateLessonCom
         }
 
         Guid id = Guid.NewGuid();
-        Lesson lesson = new(id, command.Title, command.Description, command.Type, command.Level, command.TargetAgeGroup);
+        // New lessons start as drafts; an admin publishes them once the words are in place.
+        Lesson lesson = new(id, command.Title, command.Description, command.Type, command.Level, command.TargetAgeGroup, isPublished: false);
 
         Result addResult = await _lessonRepository.AddAsync(lesson, ct);
         if (addResult.IsFailure)

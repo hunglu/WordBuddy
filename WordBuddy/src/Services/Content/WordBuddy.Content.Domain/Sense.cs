@@ -431,6 +431,11 @@ public sealed class Sense : Entity
         ImageAssetId = imageAssetId;
     }
 
+    /// <summary>Whether a Child must not see this word inside a lesson: it is in the shared pool and
+    /// not cleared as <see cref="VisibleToChildren"/>. System (lesson) words are never in the pool, so
+    /// their <see cref="VisibleToChildren"/> flag does not apply.</summary>
+    public bool IsHiddenFromChildrenInLessons => ShareStatus == VocabularyShareStatus.Shared && !VisibleToChildren;
+
     /// <summary>Whether a caller may see (and therefore be linked to) this word: they wrote it, it
     /// is a non-shared system (lesson) word, or it is <see cref="VocabularyShareStatus.Shared"/> —
     /// and, for a Child caller, cleared as <see cref="VisibleToChildren"/>. A shared word always

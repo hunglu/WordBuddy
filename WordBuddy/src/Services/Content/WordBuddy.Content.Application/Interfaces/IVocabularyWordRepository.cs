@@ -40,6 +40,11 @@ public interface IVocabularyWordRepository
     /// are omitted. No visibility filter: the caller applies <see cref="Sense.IsVisibleTo"/>.</summary>
     Task<Result<IReadOnlyList<SenseReviewCandidate>>> GetForReviewAsync(Guid userId, IReadOnlyCollection<Guid> senseIds, CancellationToken ct = default);
 
+    /// <summary>Returns at most <paramref name="take"/> senses an admin may attach to a lesson (system
+    /// senses and <see cref="VocabularyShareStatus.Shared"/> senses) whose word contains
+    /// <paramref name="search"/> (<see langword="null"/> or empty = no text filter), ordered by word.</summary>
+    Task<Result<IReadOnlyList<Sense>>> SearchAttachableAsync(string? search, int take, CancellationToken ct = default);
+
     /// <summary>Returns senses awaiting moderation, oldest first.</summary>
     Task<Result<IReadOnlyList<Sense>>> GetPendingModerationAsync(CancellationToken ct = default);
 

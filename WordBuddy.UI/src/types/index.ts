@@ -225,6 +225,60 @@ export interface LessonFilters {
   level?: Level
 }
 
+/** Where a word comes from (backend `VocabularySource`). */
+export type VocabularySource = 'System' | 'Learner'
+
+/** One row of the admin lesson list (`GET /lessons/admin`) — drafts included. */
+export interface AdminLessonDto extends Lesson {
+  isPublished: boolean
+  senseCount: number
+}
+
+/** A word attached to a lesson, as the admin editor sees it. */
+export interface AdminLessonSenseDto {
+  senseId: string
+  word: string
+  definition: string
+  example: string | null
+  sortOrder: number
+  /** `false` when a child would not see this word in the lesson. */
+  visibleToChildren: boolean
+  shareStatus: VocabularyShareStatus
+  source: VocabularySource
+}
+
+/** A lesson in the admin editor (`GET /lessons/admin/{id}`). */
+export interface AdminLessonDetailDto extends Lesson {
+  isPublished: boolean
+  senses: AdminLessonSenseDto[]
+}
+
+/** A word the admin may attach to a lesson (`GET /lessons/admin/senses`). */
+export interface AdminSenseSearchResult {
+  senseId: string
+  word: string
+  definition: string
+  example: string | null
+  visibleToChildren: boolean
+  shareStatus: VocabularyShareStatus
+  source: VocabularySource
+}
+
+export interface AdminLessonFilters {
+  type?: LessonType
+  level?: Level
+  isPublished?: boolean
+}
+
+/** Values of the lesson details form. `type` can only be chosen when creating. */
+export interface LessonFormValues {
+  title: string
+  description: string
+  type: LessonType
+  level: Level
+  targetAgeGroup: AgeGroup
+}
+
 export interface PersonalVocabularyWord extends SenseEnrichment {
   id: string
   ownerUserId: string

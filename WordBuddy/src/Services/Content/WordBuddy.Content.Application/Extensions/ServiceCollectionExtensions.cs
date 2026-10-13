@@ -7,7 +7,17 @@ using WordBuddy.Content.Application.Features.Autofill.Commands.AddAutofillSenseT
 using WordBuddy.Content.Application.Features.Autofill.Commands.ApproveChildWord;
 using WordBuddy.Content.Application.Features.Autofill.Queries.GetPendingChildApprovals;
 using WordBuddy.Content.Application.Features.Autofill.Queries.LookupAutofill;
+using WordBuddy.Content.Application.Features.Lessons.Commands.AttachLessonSense;
 using WordBuddy.Content.Application.Features.Lessons.Commands.CreateLesson;
+using WordBuddy.Content.Application.Features.Lessons.Commands.DeleteLesson;
+using WordBuddy.Content.Application.Features.Lessons.Commands.DetachLessonSense;
+using WordBuddy.Content.Application.Features.Lessons.Commands.PublishLesson;
+using WordBuddy.Content.Application.Features.Lessons.Commands.ReorderLessonSenses;
+using WordBuddy.Content.Application.Features.Lessons.Commands.UnpublishLesson;
+using WordBuddy.Content.Application.Features.Lessons.Commands.UpdateLesson;
+using WordBuddy.Content.Application.Features.Lessons.Queries.GetAdminLessonDetail;
+using WordBuddy.Content.Application.Features.Lessons.Queries.GetAdminLessons;
+using WordBuddy.Content.Application.Features.Lessons.Queries.SearchLessonSenses;
 using WordBuddy.Content.Application.Features.Lessons.Queries.GetLessonDetail;
 using WordBuddy.Content.Application.Features.Lessons.Queries.GetLessons;
 using WordBuddy.Content.Application.Features.Media.Commands.UploadMedia;
@@ -40,6 +50,25 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICommandHandler<CreateLessonCommand, Guid>, CreateLessonCommandHandler>();
         services.AddScoped<IValidator<CreateLessonCommand>, CreateLessonCommandValidator>();
+
+        services.AddScoped<ICommandHandler<UpdateLessonCommand>, UpdateLessonCommandHandler>();
+        services.AddScoped<IValidator<UpdateLessonCommand>, UpdateLessonCommandValidator>();
+        services.AddScoped<ICommandHandler<PublishLessonCommand>, PublishLessonCommandHandler>();
+        services.AddScoped<IValidator<PublishLessonCommand>, PublishLessonCommandValidator>();
+        services.AddScoped<ICommandHandler<UnpublishLessonCommand>, UnpublishLessonCommandHandler>();
+        services.AddScoped<IValidator<UnpublishLessonCommand>, UnpublishLessonCommandValidator>();
+        services.AddScoped<ICommandHandler<DeleteLessonCommand>, DeleteLessonCommandHandler>();
+        services.AddScoped<IValidator<DeleteLessonCommand>, DeleteLessonCommandValidator>();
+        services.AddScoped<ICommandHandler<AttachLessonSenseCommand>, AttachLessonSenseCommandHandler>();
+        services.AddScoped<IValidator<AttachLessonSenseCommand>, AttachLessonSenseCommandValidator>();
+        services.AddScoped<ICommandHandler<DetachLessonSenseCommand>, DetachLessonSenseCommandHandler>();
+        services.AddScoped<IValidator<DetachLessonSenseCommand>, DetachLessonSenseCommandValidator>();
+        services.AddScoped<ICommandHandler<ReorderLessonSensesCommand>, ReorderLessonSensesCommandHandler>();
+        services.AddScoped<IValidator<ReorderLessonSensesCommand>, ReorderLessonSensesCommandValidator>();
+        services.AddScoped<IQueryHandler<GetAdminLessonsQuery, IReadOnlyList<AdminLessonDto>>, GetAdminLessonsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAdminLessonDetailQuery, AdminLessonDetailDto>, GetAdminLessonDetailQueryHandler>();
+        services.AddScoped<IQueryHandler<SearchLessonSensesQuery, IReadOnlyList<AdminSenseSearchResultDto>>, SearchLessonSensesQueryHandler>();
+        services.AddScoped<IValidator<SearchLessonSensesQuery>, SearchLessonSensesQueryValidator>();
 
         services.AddScoped<ICommandHandler<UploadMediaCommand, MediaAssetDto>, UploadMediaCommandHandler>();
         services.AddScoped<IValidator<UploadMediaCommand>, UploadMediaCommandValidator>();
