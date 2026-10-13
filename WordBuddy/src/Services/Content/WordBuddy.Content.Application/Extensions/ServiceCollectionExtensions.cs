@@ -54,11 +54,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<UpdateLessonCommand>, UpdateLessonCommandHandler>();
         services.AddScoped<IValidator<UpdateLessonCommand>, UpdateLessonCommandValidator>();
         services.AddScoped<ICommandHandler<PublishLessonCommand>, PublishLessonCommandHandler>();
+        services.AddScoped<IValidator<PublishLessonCommand>, PublishLessonCommandValidator>();
         services.AddScoped<ICommandHandler<UnpublishLessonCommand>, UnpublishLessonCommandHandler>();
+        services.AddScoped<IValidator<UnpublishLessonCommand>, UnpublishLessonCommandValidator>();
         services.AddScoped<ICommandHandler<DeleteLessonCommand>, DeleteLessonCommandHandler>();
+        services.AddScoped<IValidator<DeleteLessonCommand>, DeleteLessonCommandValidator>();
         services.AddScoped<ICommandHandler<AttachLessonSenseCommand>, AttachLessonSenseCommandHandler>();
         services.AddScoped<IValidator<AttachLessonSenseCommand>, AttachLessonSenseCommandValidator>();
         services.AddScoped<ICommandHandler<DetachLessonSenseCommand>, DetachLessonSenseCommandHandler>();
+        services.AddScoped<IValidator<DetachLessonSenseCommand>, DetachLessonSenseCommandValidator>();
         services.AddScoped<ICommandHandler<ReorderLessonSensesCommand>, ReorderLessonSensesCommandHandler>();
         services.AddScoped<IValidator<ReorderLessonSensesCommand>, ReorderLessonSensesCommandValidator>();
         services.AddScoped<IQueryHandler<GetAdminLessonsQuery, IReadOnlyList<AdminLessonDto>>, GetAdminLessonsQueryHandler>();

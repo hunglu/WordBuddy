@@ -105,7 +105,7 @@ public class LessonCommandHandlerTests
     {
         Lesson lesson = SetupLesson(isPublished: false);
 
-        Result result = await new PublishLessonCommandHandler(_lessons.Object, NullLogger<PublishLessonCommandHandler>.Instance)
+        Result result = await new PublishLessonCommandHandler(_lessons.Object, new PublishLessonCommandValidator(), NullLogger<PublishLessonCommandHandler>.Instance)
             .HandleAsync(new PublishLessonCommand(lesson.Id));
 
         result.IsSuccess.Should().BeTrue();
@@ -118,7 +118,7 @@ public class LessonCommandHandlerTests
     {
         Lesson lesson = SetupLesson(isPublished: true);
 
-        Result result = await new PublishLessonCommandHandler(_lessons.Object, NullLogger<PublishLessonCommandHandler>.Instance)
+        Result result = await new PublishLessonCommandHandler(_lessons.Object, new PublishLessonCommandValidator(), NullLogger<PublishLessonCommandHandler>.Instance)
             .HandleAsync(new PublishLessonCommand(lesson.Id));
 
         result.IsSuccess.Should().BeTrue();
@@ -130,7 +130,7 @@ public class LessonCommandHandlerTests
     {
         Guid id = SetupMissingLesson();
 
-        Result result = await new PublishLessonCommandHandler(_lessons.Object, NullLogger<PublishLessonCommandHandler>.Instance)
+        Result result = await new PublishLessonCommandHandler(_lessons.Object, new PublishLessonCommandValidator(), NullLogger<PublishLessonCommandHandler>.Instance)
             .HandleAsync(new PublishLessonCommand(id));
 
         result.Error.Type.Should().Be(ErrorType.NotFound);
@@ -141,7 +141,7 @@ public class LessonCommandHandlerTests
     {
         Lesson lesson = SetupLesson(isPublished: true);
 
-        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, NullLogger<UnpublishLessonCommandHandler>.Instance)
+        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, new UnpublishLessonCommandValidator(), NullLogger<UnpublishLessonCommandHandler>.Instance)
             .HandleAsync(new UnpublishLessonCommand(lesson.Id));
 
         result.IsSuccess.Should().BeTrue();
@@ -154,7 +154,7 @@ public class LessonCommandHandlerTests
     {
         Lesson lesson = SetupLesson(isPublished: false);
 
-        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, NullLogger<UnpublishLessonCommandHandler>.Instance)
+        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, new UnpublishLessonCommandValidator(), NullLogger<UnpublishLessonCommandHandler>.Instance)
             .HandleAsync(new UnpublishLessonCommand(lesson.Id));
 
         result.IsSuccess.Should().BeTrue();
@@ -165,7 +165,7 @@ public class LessonCommandHandlerTests
     {
         Guid id = SetupMissingLesson();
 
-        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, NullLogger<UnpublishLessonCommandHandler>.Instance)
+        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, new UnpublishLessonCommandValidator(), NullLogger<UnpublishLessonCommandHandler>.Instance)
             .HandleAsync(new UnpublishLessonCommand(id));
 
         result.Error.Type.Should().Be(ErrorType.NotFound);
@@ -178,7 +178,7 @@ public class LessonCommandHandlerTests
     {
         Lesson lesson = SetupLesson();
 
-        Result result = await new DeleteLessonCommandHandler(_lessons.Object, NullLogger<DeleteLessonCommandHandler>.Instance)
+        Result result = await new DeleteLessonCommandHandler(_lessons.Object, new DeleteLessonCommandValidator(), NullLogger<DeleteLessonCommandHandler>.Instance)
             .HandleAsync(new DeleteLessonCommand(lesson.Id));
 
         result.IsSuccess.Should().BeTrue();
@@ -191,7 +191,7 @@ public class LessonCommandHandlerTests
     {
         Guid id = SetupMissingLesson();
 
-        Result result = await new DeleteLessonCommandHandler(_lessons.Object, NullLogger<DeleteLessonCommandHandler>.Instance)
+        Result result = await new DeleteLessonCommandHandler(_lessons.Object, new DeleteLessonCommandValidator(), NullLogger<DeleteLessonCommandHandler>.Instance)
             .HandleAsync(new DeleteLessonCommand(id));
 
         result.Error.Type.Should().Be(ErrorType.NotFound);
@@ -319,7 +319,7 @@ public class LessonCommandHandlerTests
     // ---- Detach
 
     private DetachLessonSenseCommandHandler DetachHandler() =>
-        new(_lessons.Object, NullLogger<DetachLessonSenseCommandHandler>.Instance);
+        new(_lessons.Object, new DetachLessonSenseCommandValidator(), NullLogger<DetachLessonSenseCommandHandler>.Instance);
 
     [Fact]
     public async Task DetachLessonSenseCommandHandler_HandleAsync_Attached_RemovesAndRenumbers()
@@ -416,5 +416,52 @@ public class LessonCommandHandlerTests
         Result result = await ReorderHandler().HandleAsync(new ReorderLessonSensesCommand(id, []));
 
         result.Error.Code.Should().Be("Lesson.NotFound");
+    }
+
+    // ---- Validation (empty ids never reach the repository)
+
+    [Fact]
+    public async Task PublishLessonCommandHandler_HandleAsync_EmptyId_ReturnsValidationError()
+    {
+        Result result = await new PublishLessonCommandHandler(_lessons.Object, new PublishLessonCommandValidator(), NullLogger<PublishLessonCommandHandler>.Instance)
+            .HandleAsync(new PublishLessonCommand(Guid.Empty));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _lessons.Verify(r => r.GetByIdForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UnpublishLessonCommandHandler_HandleAsync_EmptyId_ReturnsValidationError()
+    {
+        Result result = await new UnpublishLessonCommandHandler(_lessons.Object, new UnpublishLessonCommandValidator(), NullLogger<UnpublishLessonCommandHandler>.Instance)
+            .HandleAsync(new UnpublishLessonCommand(Guid.Empty));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _lessons.Verify(r => r.GetByIdForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteLessonCommandHandler_HandleAsync_EmptyId_ReturnsValidationError()
+    {
+        Result result = await new DeleteLessonCommandHandler(_lessons.Object, new DeleteLessonCommandValidator(), NullLogger<DeleteLessonCommandHandler>.Instance)
+            .HandleAsync(new DeleteLessonCommand(Guid.Empty));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _lessons.Verify(r => r.GetByIdForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DetachLessonSenseCommandHandler_HandleAsync_EmptyId_ReturnsValidationError(bool emptyLesson)
+    {
+        DetachLessonSenseCommand command = emptyLesson
+            ? new(Guid.Empty, Guid.NewGuid())
+            : new(Guid.NewGuid(), Guid.Empty);
+
+        Result result = await DetachHandler().HandleAsync(command);
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _lessons.Verify(r => r.GetByIdForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

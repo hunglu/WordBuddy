@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { problemMessage } from '../../api/supportLinks'
 import { useAttachLessonSense, useLessonSenseSearch } from '../../hooks/useAdminLessons'
 import { shareStatusClasses } from '../../theme/variants'
 import { inputClass, softButtonClass } from '../support/supportUi'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 type AddWordPickerProps = Readonly<{
   lessonId: string
@@ -14,8 +16,15 @@ type AddWordPickerProps = Readonly<{
 /** Search box + result list to add system and shared-pool words to a lesson. */
 export function AddWordPicker({ lessonId, attachedSenseIds }: AddWordPickerProps): ReactElement {
   const [search, setSearch] = useState('')
-  const results = useLessonSenseSearch(search.trim(), true)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const results = useLessonSenseSearch(debouncedSearch, true)
   const attach = useAttachLessonSense()
+
+  // Wait for a pause in typing before the term reaches the query key.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [search])
 
   return (
     <div>

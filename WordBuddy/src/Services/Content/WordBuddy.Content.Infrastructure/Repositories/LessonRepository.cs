@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces;
@@ -82,8 +83,18 @@ internal sealed class LessonRepository : ILessonRepository
 
     public async Task<Result> SaveChangesAsync(CancellationToken ct = default)
     {
-        await _dbContext.SaveChangesAsync(ct);
-        return Result.Success();
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            // Two admins attached the same word to the same lesson at once (PK of LessonSenses).
+            _logger.LogWarning("Lesson save hit a unique-key violation on LessonSenses");
+            return Result.Failure(Error.Conflict(
+                "Lesson.SenseAlreadyAttached", "This word is already attached to the lesson."));
+        }
     }
 
     public async Task<Result<Lesson>> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default)

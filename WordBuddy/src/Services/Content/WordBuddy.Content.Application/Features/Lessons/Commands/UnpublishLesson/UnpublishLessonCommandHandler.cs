@@ -1,3 +1,5 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
@@ -9,19 +11,29 @@ namespace WordBuddy.Content.Application.Features.Lessons.Commands.UnpublishLesso
 public sealed class UnpublishLessonCommandHandler : ICommandHandler<UnpublishLessonCommand>
 {
     private readonly ILessonRepository _lessonRepository;
+    private readonly IValidator<UnpublishLessonCommand> _validator;
     private readonly ILogger<UnpublishLessonCommandHandler> _logger;
 
     public UnpublishLessonCommandHandler(
         ILessonRepository lessonRepository,
+        IValidator<UnpublishLessonCommand> validator,
         ILogger<UnpublishLessonCommandHandler> logger)
     {
         _lessonRepository = lessonRepository;
+        _validator = validator;
         _logger = logger;
     }
 
     public async Task<Result> HandleAsync(UnpublishLessonCommand command, CancellationToken ct = default)
     {
         _logger.LogInformation("UnpublishLessonCommand started: LessonId={LessonId}", command.LessonId);
+
+        ValidationResult validation = await _validator.ValidateAsync(command, ct);
+        if (!validation.IsValid)
+        {
+            _logger.LogWarning("UnpublishLessonCommand validation failed: {Errors}", validation.ToString());
+            return Result.Failure(Error.Validation("UnpublishLesson.Validation", validation.ToString()));
+        }
 
         Result<Lesson> lessonResult = await _lessonRepository.GetByIdForUpdateAsync(command.LessonId, ct);
         if (lessonResult.IsFailure)

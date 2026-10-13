@@ -17,7 +17,7 @@ unpublish, and attach / detach / reorder senses (`LessonSenses`).
 
 ## Rules
 
-- **Child vs adult:** only admins write. Children see only child-targeted lessons and child-visible senses.
+- **Child vs adult:** only admins write. Children see only child-targeted lessons. Inside a lesson, system words are always shown; shared-pool words not cleared for children are hidden.
 
 ## API
 
