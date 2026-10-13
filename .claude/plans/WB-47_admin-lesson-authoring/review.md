@@ -1,7 +1,31 @@
 # Review: WB-47 Admin lesson authoring
 
-PR: #51 · Round 1 · Reviewed commit: 7ecfdfa · 2026-10-13T21:54:25+07:00
+PR: #51 · Round 2 · Reviewed commit: 3431dc9 · 2026-10-13T22:53:51+07:00
 
+## Verdict
+Approve — all round-1 findings fixed; the fix round adds no new problems.
+
+## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `Content.Infrastructure/Repositories/LessonRepository.cs:91` | New 409 path (SQL 2601/2627 → `Lesson.SenseAlreadyAttached`) has no test. A real race is hard to reproduce. | Optional: tester adds an integration test that inserts the same `LessonSense` row directly, then attaches via the API. Not blocking. |
+
+## Round-1 fixes — verified
+| R1 # | Fix | Status |
+|---|---|---|
+| 1 | Validators for Publish / Unpublish / Delete / DetachLessonSense (`NotEmpty`), injected, registered in DI, `Result.Failure(Error.Validation)` before any DB call; 4 new unit tests | Fixed |
+| 2 | Line endings restored to main's per-file endings. `git diff --stat origin/main...` equals `--ignore-cr-at-eol` stat (e.g. `types/index.ts` +54, `Lesson.cs` +89/-4) — no whole-file rewrite | Fixed |
+| 3 | `SaveChangesAsync` catches `DbUpdateException` with SQL 2601/2627 → `Error.Conflict`; all 7 lesson handlers already return the save `Result` | Fixed (see nit 1) |
+| 4 | `AddWordPicker` debounces search 300 ms (`setTimeout` + cleanup) | Fixed |
+| 5 | `lesson-authoring.md` child rule now matches code | Fixed |
+
+## Plan conformance
+- All tasks in `tasks.md` still reflected. Fix round touched only round-1 items.
+- No EF migration → no database diagram update.
+
+## Previous rounds
+
+### Round 1 — 7ecfdfa
 ## Verdict
 Changes requested — one major: four new commands have no FluentValidation validator (CLAUDE.md rule). Logic, auth and child rules are correct.
 
@@ -37,6 +61,3 @@ Changes requested — one major: four new commands have no FluentValidation vali
 - Extra task (sense search) is from open question 5 — in scope.
 - Out of scope: line-ending churn only (#2).
 - No EF migration → no database diagram update needed.
-
-## Previous rounds
-None.

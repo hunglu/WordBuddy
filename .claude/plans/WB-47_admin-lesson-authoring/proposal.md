@@ -1,14 +1,14 @@
 ---
 title: WB-47_Admin lesson authoring
-status: implemented
+status: reviewed
 type: new
 issue: 47
 pr: 51            # set by /code when it opens the pull request
 affects: docs/features/lesson-authoring.md
 supersedes: none
-version: 1.4
+version: 1.5
 created: 2026-10-13T18:12:59+07:00
-updated: 2026-10-13T22:26:41+07:00
+updated: 2026-10-13T22:53:51+07:00
 ---
 
 ## Problem
