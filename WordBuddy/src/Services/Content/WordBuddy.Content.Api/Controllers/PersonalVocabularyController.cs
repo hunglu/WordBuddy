@@ -10,6 +10,7 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddShar
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.DeletePersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.ModerateSharedVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RequestShareVocabularyWord;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.UpdatePersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetMyVocabularyWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetRandomVocabularyWordsForCheck;
@@ -33,6 +34,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     private readonly ICommandHandler<ModerateSharedVocabularyWordCommand> _moderate;
     private readonly ICommandHandler<AddSharedVocabularyWordToMyListCommand, Guid> _addSharedToMyList;
     private readonly ICommandHandler<DeletePersonalVocabularyWordCommand> _deleteWord;
+    private readonly ICommandHandler<UpdatePersonalVocabularyWordCommand> _updateWord;
     private readonly IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getMyWords;
     private readonly IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getSharedWords;
     private readonly IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getRandomForCheck;
@@ -46,6 +48,7 @@ public sealed class PersonalVocabularyController : ControllerBase
         ICommandHandler<ModerateSharedVocabularyWordCommand> moderate,
         ICommandHandler<AddSharedVocabularyWordToMyListCommand, Guid> addSharedToMyList,
         ICommandHandler<DeletePersonalVocabularyWordCommand> deleteWord,
+        ICommandHandler<UpdatePersonalVocabularyWordCommand> updateWord,
         IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getMyWords,
         IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getSharedWords,
         IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> getRandomForCheck,
@@ -58,6 +61,7 @@ public sealed class PersonalVocabularyController : ControllerBase
         _moderate = moderate;
         _addSharedToMyList = addSharedToMyList;
         _deleteWord = deleteWord;
+        _updateWord = updateWord;
         _getMyWords = getMyWords;
         _getSharedWords = getSharedWords;
         _getRandomForCheck = getRandomForCheck;
@@ -103,6 +107,24 @@ public sealed class PersonalVocabularyController : ControllerBase
         }
 
         _logger.LogInformation("RequestShare succeeded: WordId={WordId}", id);
+        return NoContent();
+    }
+
+    /// <summary>Edits the word, definition and example of the caller's own private word in place.
+    /// 204 on success; 403 for a system or someone else's word; 409 when the word is not private or
+    /// the caller already has an identical word.</summary>
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateWord(Guid id, [FromBody] UpdatePersonalVocabularyWordRequest request, CancellationToken ct)
+    {
+        Result result = await _updateWord.HandleAsync(
+            new UpdatePersonalVocabularyWordCommand(id, User.GetUserId(), request.Word, request.Definition, request.Example), ct);
+
+        if (result.IsFailure)
+        {
+            return result.ToProblemResult(this);
+        }
+
+        _logger.LogInformation("UpdateWord succeeded: WordId={WordId}", id);
         return NoContent();
     }
 

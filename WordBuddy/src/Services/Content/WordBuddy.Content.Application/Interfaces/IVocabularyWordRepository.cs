@@ -60,7 +60,12 @@ public interface IVocabularyWordRepository
     /// re-created once and the add retried.</summary>
     Task<Result<Guid>> AddAsync(Sense word, LearnerWord authorLink, CancellationToken ct = default);
 
-    /// <summary>Persists changes made to a sense previously returned by <see cref="GetByIdAsync"/>.</summary>
+    /// <summary>Deletes the lexeme when no sense references it any more. Returns whether it was deleted.</summary>
+    Task<Result<bool>> DeleteLexemeIfOrphanedAsync(Guid lexemeId, CancellationToken ct = default);
+
+    /// <summary>Persists changes made to a sense previously returned by <see cref="GetByIdAsync"/> or
+    /// <see cref="GetLinkAsync"/>. A duplicate content hash for the same owner (concurrent edit)
+    /// returns <c>PersonalVocabularyWord.Duplicate</c> (conflict).</summary>
     Task<Result> UpdateAsync(Sense word, CancellationToken ct = default);
 
     /// <summary>Adds a link from a learner to an existing sense. Idempotent under concurrency: if the

@@ -424,6 +424,57 @@ public sealed class Sense : Entity
         return Result.Success();
     }
 
+    /// <summary>Checks that <paramref name="ownerUserId"/> may edit this sense: it must be their own
+    /// learner sense (else <c>Sense.Forbidden</c>, mapped to 403) and still
+    /// <see cref="VocabularyShareStatus.Private"/> (else <c>Sense.NotEditable</c>, conflict).</summary>
+    public Result CheckEditable(Guid ownerUserId)
+    {
+        if (Source != VocabularySource.Learner || OwnerUserId != ownerUserId)
+        {
+            return Result.Failure(Error.Failure(
+                "Sense.Forbidden", $"Sense {Id} cannot be edited by this user."));
+        }
+
+        return ShareStatus == VocabularyShareStatus.Private
+            ? Result.Success()
+            : Result.Failure(Error.Conflict(
+                "Sense.NotEditable",
+                $"Sense {Id} cannot be edited from its current status ({ShareStatus})."));
+    }
+
+    /// <summary>Edits the Word, Definition and Example of the owner's own
+    /// <see cref="VocabularyShareStatus.Private"/> learner sense in place. The id stays, so progress
+    /// history stays valid. Recomputes <see cref="ContentHash"/> and keeps <see cref="Examples"/> in
+    /// step. When the normalized word changes, the sense moves to <paramref name="lexemeId"/> and the
+    /// stale <see cref="AudioAssetId"/> is cleared; the image is kept.
+    /// <para>Fails with <c>Sense.Forbidden</c> (mapped to 403) for a non-learner sense or another owner, and with
+    /// <c>Sense.NotEditable</c> (conflict) when the status is not Private.</para></summary>
+    public Result EditLearnerContent(Guid ownerUserId, Guid lexemeId, string word, string definition, string? example)
+    {
+        Result guard = CheckEditable(ownerUserId);
+        if (guard.IsFailure)
+        {
+            return guard;
+        }
+
+        bool wordChanged = NormalizeWord(word) != NormalizeWord(Word);
+
+        Word = word;
+        Definition = definition;
+        Example = example;
+        Examples = string.IsNullOrWhiteSpace(example) ? [] : [example];
+        ContentHash = ComputeContentHash(word, definition, example);
+
+        if (wordChanged)
+        {
+            LexemeId = lexemeId;
+            AudioAssetId = null;
+            Audio = null;
+        }
+
+        return Result.Success();
+    }
+
     /// <summary>Attaches a picture (a <see cref="MediaAsset"/> id) to this sense, replacing any
     /// previous one.</summary>
     public void AttachImage(Guid imageAssetId)

@@ -332,8 +332,19 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
     {
         _logger.LogDebug("Updating Sense with Id={WordId}", word.Id);
 
-        await _dbContext.SaveChangesAsync(ct);
-        return Result.Success();
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // A concurrent edit or add gave the same owner a sense with this content hash first
+            // (UX_Senses_ContentHash_OwnerUserId_Learner).
+            _logger.LogWarning("Update of WordId={WordId} hit a duplicate content hash", word.Id);
+            return Result.Failure(Error.Conflict(
+                "PersonalVocabularyWord.Duplicate", "You already have this word."));
+        }
     }
 
     public async Task<Result> LinkAsync(LearnerWord link, CancellationToken ct = default)
@@ -388,6 +399,18 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         await _dbContext.SaveChangesAsync(ct);
 
         return Result.Success();
+    }
+
+    public async Task<Result<bool>> DeleteLexemeIfOrphanedAsync(Guid lexemeId, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Deleting Lexeme if orphaned: LexemeId={LexemeId}", lexemeId);
+
+        // Guarded in SQL: a lexeme still referenced by any sense is never deleted.
+        int deleted = await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE FROM [Lexemes] WHERE [Id] = {lexemeId} AND NOT EXISTS (SELECT 1 FROM [Senses] WHERE [LexemeId] = {lexemeId})",
+            ct);
+
+        return Result.Success(deleted > 0);
     }
 
     public async Task<Result<bool>> DeleteIfOrphanedAsync(Guid senseId, CancellationToken ct = default)

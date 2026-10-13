@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { AutofillResults } from '../components/autofill/AutofillResults'
 import { SenseDetails } from '../components/autofill/SenseDetails'
 import { DeleteWordConfirmDialog, needsDeleteConfirmation } from '../components/vocabulary/DeleteWordConfirmDialog'
+import { EditWordForm } from '../components/vocabulary/EditWordForm'
 import {
   useAddVocabularyWord,
   useDeleteVocabularyWord,
@@ -34,6 +35,7 @@ export function VocabularyBuilderPage(): ReactElement {
   const requestShare = useRequestShareVocabularyWord()
   const [wordToConfirm, setWordToConfirm] = useState<PersonalVocabularyWord | null>(null)
   const [autofillWord, setAutofillWord] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const onDelete = (word: PersonalVocabularyWord): void => {
     deleteWord.reset()
@@ -192,15 +194,28 @@ export function VocabularyBuilderPage(): ReactElement {
                   {word.shareStatus}
                 </span>
               </div>
-              <SenseDetails
-                sense={{
-                  ...word,
-                  // Manual words have no `examples` list yet: fall back to the single example.
-                  examples: word.examples && word.examples.length > 0 ? word.examples : word.example ? [word.example] : [],
-                }}
-              />
+              {editingId === word.id ? (
+                <EditWordForm word={word} onClose={() => setEditingId(null)} />
+              ) : (
+                <SenseDetails
+                  sense={{
+                    ...word,
+                    // Manual words have no `examples` list yet: fall back to the single example.
+                    examples: word.examples && word.examples.length > 0 ? word.examples : word.example ? [word.example] : [],
+                  }}
+                />
+              )}
 
               <div className="mt-2 flex gap-2">
+                {word.isAuthor && word.shareStatus === 'Private' && editingId !== word.id && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(word.id)}
+                    className="rounded-wb-md bg-wb-primary-soft px-3 py-1.5 text-sm font-semibold text-wb-ink hover:bg-wb-primary-soft-hover"
+                  >
+                    Edit
+                  </button>
+                )}
                 {user?.ageGroup !== 'Child' && word.isAuthor && (word.shareStatus === 'Private' || word.shareStatus === 'Rejected') && (
                   <button
                     type="button"

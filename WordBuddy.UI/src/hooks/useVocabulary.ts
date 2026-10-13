@@ -8,7 +8,9 @@ import {
   getSharedVocabularyWords,
   moderateVocabularyWord,
   requestShareVocabularyWord,
+  updateMyWord,
   type ModerateVocabularyWordPayload,
+  type UpdateVocabularyWordPayload,
 } from '../api/vocabulary'
 import { getVocabularyRecallProgress, submitVocabularyRecallCheck } from '../api/progress'
 import type { VocabularyRecallResultItem } from '../types'
@@ -38,6 +40,14 @@ export function useAddVocabularyWord() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: addVocabularyWord,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY }),
+  })
+}
+
+export function useUpdateMyWord() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateVocabularyWordPayload }) => updateMyWord(id, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY }),
   })
 }

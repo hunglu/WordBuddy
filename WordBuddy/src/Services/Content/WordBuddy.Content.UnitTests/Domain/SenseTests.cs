@@ -362,6 +362,127 @@ public class SenseTests
         word.IsVisibleTo(Guid.NewGuid(), AgeGroup.Child).Should().BeTrue();
     }
 
+    [Fact]
+    public void Sense_EditLearnerContent_OwnPrivate_KeepsIdAndRecomputesHash()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Sense sense = TestWords.Learner(ownerId, "apple", "a fruit", "I ate one.");
+        Guid id = sense.Id;
+
+        Result result = sense.EditLearnerContent(ownerId, sense.LexemeId, "apple", "a red fruit", "It is red.");
+
+        result.IsSuccess.Should().BeTrue();
+        sense.Id.Should().Be(id);
+        sense.Definition.Should().Be("a red fruit");
+        sense.Example.Should().Be("It is red.");
+        sense.Examples.Should().Equal("It is red.");
+        sense.ContentHash.Should().Be(Sense.ComputeContentHash("apple", "a red fruit", "It is red."));
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_NoExample_ClearsExamples()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Sense sense = TestWords.Learner(ownerId, "apple", "a fruit", "I ate one.");
+
+        sense.EditLearnerContent(ownerId, sense.LexemeId, "apple", "a fruit", null);
+
+        sense.Example.Should().BeNull();
+        sense.Examples.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_SystemSense_ReturnsForbidden()
+    {
+        Sense sense = TestWords.System();
+
+        Result result = sense.EditLearnerContent(SystemOwner.UserId, sense.LexemeId, "pear", "a fruit", null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().EndWith("Forbidden");
+        sense.Word.Should().Be("apple");
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_OtherOwner_ReturnsForbidden()
+    {
+        Sense sense = TestWords.Learner(Guid.NewGuid());
+
+        Result result = sense.EditLearnerContent(Guid.NewGuid(), sense.LexemeId, "pear", "a fruit", null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().EndWith("Forbidden");
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_PendingReview_ReturnsConflict()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Sense sense = TestWords.Pending(ownerId);
+
+        Result result = sense.EditLearnerContent(ownerId, sense.LexemeId, "pear", "a fruit", null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        sense.Word.Should().Be("apple");
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_Shared_ReturnsConflict()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Sense sense = TestWords.Shared(ownerId, visibleToChildren: true);
+
+        Result result = sense.EditLearnerContent(ownerId, sense.LexemeId, "pear", "a fruit", null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_Rejected_ReturnsConflict()
+    {
+        Sense sense = Rejected();
+
+        Result result = sense.EditLearnerContent(sense.OwnerUserId, sense.LexemeId, "pear", "a fruit", null);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_WordChanged_ClearsAudioKeepsImageAndMovesLexeme()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Sense sense = TestWords.Learner(ownerId);
+        Guid imageId = Guid.NewGuid();
+        sense.AttachImage(imageId);
+        typeof(Sense).GetProperty(nameof(Sense.AudioAssetId))!.SetValue(sense, Guid.NewGuid());
+        Guid newLexemeId = Guid.NewGuid();
+
+        sense.EditLearnerContent(ownerId, newLexemeId, "pear", "a fruit", null);
+
+        sense.AudioAssetId.Should().BeNull();
+        sense.ImageAssetId.Should().Be(imageId);
+        sense.LexemeId.Should().Be(newLexemeId);
+    }
+
+    [Fact]
+    public void Sense_EditLearnerContent_DefinitionOnly_KeepsAudioAndLexeme()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Sense sense = TestWords.Learner(ownerId);
+        Guid audioId = Guid.NewGuid();
+        typeof(Sense).GetProperty(nameof(Sense.AudioAssetId))!.SetValue(sense, audioId);
+        Guid lexemeId = sense.LexemeId;
+
+        sense.EditLearnerContent(ownerId, Guid.NewGuid(), "Apple", "a sweet fruit", null);
+
+        sense.AudioAssetId.Should().Be(audioId);
+        sense.LexemeId.Should().Be(lexemeId);
+        sense.Word.Should().Be("Apple");
+    }
+
     private static Sense Rejected()
     {
         Sense word = TestWords.Pending(Guid.NewGuid());
