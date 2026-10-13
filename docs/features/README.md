@@ -20,6 +20,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Learning groups | `learning-groups.md` | shipped |
 | Vocabulary challenges | `vocabulary-challenges.md` | shipped |
 | User profile | `user-profile.md` | shipped |
+| Lesson authoring | `lesson-authoring.md` | shipped |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.

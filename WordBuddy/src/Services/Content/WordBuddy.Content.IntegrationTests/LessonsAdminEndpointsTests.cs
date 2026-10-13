@@ -8,7 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Content.Api.Models;
 using WordBuddy.Content.Application.DTOs;
+using WordBuddy.Content.Application.Interfaces;
+using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.IntegrationTests;
 
@@ -242,6 +245,36 @@ public sealed class LessonsAdminEndpointsTests
 
         (await admin.PutAsJsonAsync($"/api/lessons/admin/{lessonId}/senses/order", new { senseIds = new[] { Guid.NewGuid() } }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>The race case: the same link is inserted by another writer after the lesson was loaded.
+    /// The repository must turn the PK violation into a 409-style conflict, not throw.</summary>
+    [Fact]
+    public async Task LessonRepository_SaveChanges_DuplicateLessonSenseRow_ReturnsSenseAlreadyAttached()
+    {
+        HttpClient admin = await ClientAsync("Adult", isAdmin: true);
+        Guid dog = await SystemSenseIdAsync(admin, "Dog");
+        Guid lessonId = await CreateLessonAsync(admin, $"Race {Guid.NewGuid():N}");
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ILessonRepository repository = scope.ServiceProvider.GetRequiredService<ILessonRepository>();
+        ContentDbContext db = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        Lesson lesson = (await repository.GetByIdForUpdateAsync(lessonId)).Value;
+        Sense sense = await db.Senses.AsTracking().SingleAsync(s => s.Id == dog);
+        lesson.AttachSense(sense).IsSuccess.Should().BeTrue();
+
+        using (IServiceScope other = _factory.Services.CreateScope())
+        {
+            ContentDbContext otherDb = other.ServiceProvider.GetRequiredService<ContentDbContext>();
+            await otherDb.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO LessonSenses (LessonId, SenseId, SortOrder) VALUES ({lessonId}, {dog}, 0)");
+        }
+
+        Result result = await repository.SaveChangesAsync();
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Lesson.SenseAlreadyAttached");
+        result.Error.Type.Should().Be(ErrorType.Conflict);
     }
 
     // ---- child filter
