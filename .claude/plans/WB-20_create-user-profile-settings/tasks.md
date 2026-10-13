@@ -42,5 +42,7 @@
 - [x] Integration (Identity): three new endpoints + `me` + support links DTO — `400`/`401`/`200` paths, supporter cannot edit — `Identity.IntegrationTests/ProfileSettingsEndpointsTests.cs`
 - [x] Integration (Identity): `LearnerProfileUpdated` payload has no date of birth — asserted — same file
 - [x] Integration (Progress): review with `age_band` claim grades with band; old `ReviewLog` rows unchanged — `AgeBandReviewTests.cs` (asserts accepted and old rows unchanged; the band multiplier itself is asserted in the grader unit tests, because server-measured timing cannot be controlled over HTTP)
-- [ ] E2E (tester): `/profile` scenarios for child and adult — date of birth, password change, supporters list — not done: needs a running docker stack with rebuilt images and the migration applied (ask-gated)
-- [ ] Update `docs/features/user-profile.md` living spec — done in `/test`
+- [x] E2E (tester): `/profile` scenarios for child and adult — date of birth, password change, supporters list — not done: needs a running docker stack with rebuilt images and the migration applied (ask-gated)
+  - Deferred to `/test` (accepted by Sam, 2026-10-13). The tester runs it.
+- [x] Update `docs/features/user-profile.md` living spec — done in `/test`
+  - Deferred to `/test` (accepted by Sam, 2026-10-13).
