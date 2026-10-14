@@ -1,14 +1,63 @@
 # Review: WB-50 Lexeme admin view
 
-PR: #54 · Round 1 · Reviewed commit: 78af871 · 2026-10-14T17:18:03+07:00
+PR: #54 · Round 2 · Reviewed commit: c395194 · 2026-10-14T18:11:28+07:00
 
 ## Verdict
+
+Approve — both round 1 majors are fixed and verified. No new blockers or majors. 2 nits remain open.
+
+## Round 1 fixes — verification
+
+| # | Round 1 | Result | Evidence |
+|---|---|---|---|
+| 1 | major — upload limit | Fixed | `WordBuddy.UI/nginx.conf:59` `client_max_body_size 6m` = 6,291,456 bytes, equal to the controller `[RequestSizeLimit]` (5 MB + 1 MB). `WordBuddy/k8s/ingress.yaml:13` sets `proxy-body-size: 50m`. Directive placement is valid; nginx was not run. |
+| 2 | major — compose variable | Fixed | `docker-compose.yml:81` uses `:-7`; `.env.example` lists the variable. A missing value no longer reaches binding as `""`. |
+| 3 | nit — path guard | Fixed | `LocalFileStorageService.cs:57-58,67`: `Ordinal` on Linux, `OrdinalIgnoreCase` on Windows. |
+| 4 | nit — remove/upload race | Deferred | Accepted risk, consistent with last-write-wins. `/test` should note it in the living spec. |
+| 5 | nit — `audio/mp3` | Fixed | Validator accepts both types. Storage ignores the client type (handler passes the constant `audio/mpeg`, line 62). `GET /api/media/{id}` derives the type from `MediaAssetType.Audio` → `audio/mpeg` (`MediaController.cs:86`). Consistent end to end. |
+| 6 | nit — POS cast | Fixed | Zod input `'' \| PartOfSpeech`, transform rejects `''`; `useForm<Input, unknown, Output>`. No cast. |
+| 7 | nit — old-asset test | Fixed | `LexemesAdminEndpointsTests.cs:401-429` asserts old row gone, old file gone, new row linked. |
+
+Re-run here: Content unit tests 415 pass; `npm run build` OK. Integration tests not re-run (reported 184 pass).
+
+## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `WordBuddy/k8s/ingress.yaml:13` | The 50 MB limit now applies to every path, including anonymous `/api/auth`. ingress-nginx buffers request bodies before proxying, so it accepts and spools up to 50 MB per request before Kestrel (30 MB default) or app rate limiting reject it. **Scenario:** a client sends many 40 MB login bodies → ingress disk and bandwidth load, with no app-side 429 until the body is read. Not exploitable for data; local kind only today. | Move `/api/media` and `/api/vocabulary` into a second Ingress with `proxy-body-size: 50m` / `6m`, and leave the default 1 MB on the rest. Or accept for the local cluster and revisit before a cloud deploy. |
+| 2 | nit | `UploadLexemeAudioCommandValidator.cs:17` | The message still says "Content type must be audio/mpeg", while `audio/mp3` is also accepted. Harmless, slightly misleading. | Say "must be an MP3 file (audio/mpeg)". |
+
+Round 1 nit 4 (race) stays deferred by decision.
+
+## Focus checks
+
+| Check | Result |
+|---|---|
+| Ingress annotation, other paths | Raises the edge limit only. Backends keep their own limits: Kestrel 30 MB default, `/api/media` 50 MB, lexeme audio 6 MB. No path breaks. See nit 1 for the cost. |
+| `AliasContentType` vs serving | Consistent. The alias is accepted at input only; the stored file name, `MediaAsset` row and served `Content-Type` are all `audio/mpeg`. |
+| nginx 6m vs controller limit | Equal. A body between 6 MB and the limit cannot reach Kestrel, so the user sees nginx `413` instead of ProblemDetails; the UI shows its generic upload error. Acceptable. |
+| Regressions | None found. Fix diff touches 10 code/config files; no other behaviour changed. |
+| EF migration | None, so no database diagram update. |
+
+## Plan conformance
+
+- All 48 tasks remain covered.
+- Fix round stays inside round 1 findings. `ingress.yaml` and `.env.example` are infra changes the plan listed as "none"; both are required fixes, not scope creep.
+- E2E API and UI tests are written but not run. `/test` must run them.
+
+## Previous rounds
+
+### Round 1
+
+PR: #54 · Round 1 · Reviewed commit: 78af871 · 2026-10-14T17:18:03+07:00
+
+#### Verdict
 
 Changes requested — 2 majors in deployment config: audio uploads over 1 MB fail behind Nginx, and Identity can crash on startup under docker compose.
 
 The application code is sound. `AdminOnly` covers all 5 endpoints. The guarded asset delete, the `LIKE` escaping, the `409` path and the cache invalidation are correct.
 
-## Findings
+#### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
@@ -20,7 +69,7 @@ The application code is sound. `AdminOnly` covers all 5 endpoints. The guarded a
 | 6 | nit | `WordBuddy.UI/src/components/admin-lexemes/LexemeForm.tsx:68` | `'' as PartOfSpeech` is a type assertion that hides the "no POS" state from the type system. | Type the form field as `PartOfSpeech \| ''` and let Zod narrow it. |
 | 7 | nit | `WordBuddy/src/Services/Content/WordBuddy.Content.Application/Features/LexemesAdmin/Commands/UploadLexemeAudio/UploadLexemeAudioCommandHandler.cs:86` | The "old asset has a different `Url`" branch is only unit-tested. It is the one path that inserts a new row and runs the guarded delete in the same SQL transaction. | Tester: add one integration test that seeds an old asset with another `Url`, uploads, and asserts the old row and file are gone. |
 
-## Focus checks
+#### Focus checks
 
 | Check | Result |
 |---|---|
@@ -37,7 +86,7 @@ The application code is sound. `AdminOnly` covers all 5 endpoints. The guarded a
 | UI conventions | TanStack Query only, `isError` handled on both pages, `wb-` tokens only, Framer Motion page entry, no `any` or `enum`. |
 | Line endings | `git diff` and `--ignore-cr-at-eol` both give 4593 lines. 3 edited files stay CRLF, as on `main`. New files are LF. |
 
-## Plan conformance
+#### Plan conformance
 
 - All 48 tasks are reflected in the diff.
 - Reported deviations are acceptable:
@@ -51,7 +100,7 @@ The application code is sound. `AdminOnly` covers all 5 endpoints. The guarded a
   - placeholder `docs/features/lexeme-admin.md` — OK, `/test` fills it.
 - No EF migration, so no database diagram update is needed.
 
-## Fix round 1 — response
+#### Fix round 1 — response
 
 | # | Status | Fix |
 |---|---|---|
