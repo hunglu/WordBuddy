@@ -259,4 +259,26 @@ public sealed class ConcurrentVocabularyAddTests
         ContentDbContext dbContext = verifyScope.ServiceProvider.GetRequiredService<ContentDbContext>();
         (await dbContext.LearnerWords.CountAsync(l => l.UserId == adopterId && l.SenseId == word.Id)).Should().Be(1);
     }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWord_ConcurrentIdenticalAddWithNote_KeepsNote()
+    {
+        Guid userId = Guid.NewGuid();
+        string word = $"noted-{Guid.NewGuid():N}";
+        HttpClient client = await CreateClientAsync(userId, "Adult", isAdmin: false);
+
+        Task<HttpResponseMessage>[] requests = Enumerable.Range(0, ParallelRequests)
+            .Select(_ => client.PostAsJsonAsync("/api/vocabulary", new AddPersonalVocabularyWordRequest(word, "same meaning", null, "kept note")))
+            .ToArray();
+        HttpResponseMessage[] responses = await Task.WhenAll(requests);
+
+        responses.Should().OnlyContain(r => r.IsSuccessStatusCode);
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        List<string?> notes = await dbContext.LearnerWords
+            .Where(l => l.UserId == userId && l.Sense!.Word == word)
+            .Select(l => l.PersonalContext)
+            .ToListAsync();
+        notes.Should().ContainSingle().Which.Should().Be("kept note");
+    }
 }

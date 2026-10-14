@@ -30,7 +30,8 @@ export function useAutofillLookup(word: string | null) {
 export function useAddAutofillSense() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: addAutofillSense,
+    mutationFn: ({ senseId, personalContext }: { senseId: string; personalContext?: string }) =>
+      addAutofillSense(senseId, personalContext),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY }),
   })
 }

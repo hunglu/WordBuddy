@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using WordBuddy.Content.Api.Authorization;
 using WordBuddy.Content.Api.Extensions;
 using WordBuddy.Content.Api.Models;
@@ -10,6 +11,7 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddShar
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.DeletePersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.ModerateSharedVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RequestShareVocabularyWord;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.UpdatePersonalContext;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.UpdatePersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetMyVocabularyWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
@@ -35,6 +37,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     private readonly ICommandHandler<AddSharedVocabularyWordToMyListCommand, Guid> _addSharedToMyList;
     private readonly ICommandHandler<DeletePersonalVocabularyWordCommand> _deleteWord;
     private readonly ICommandHandler<UpdatePersonalVocabularyWordCommand> _updateWord;
+    private readonly ICommandHandler<UpdatePersonalContextCommand> _updatePersonalContext;
     private readonly IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getMyWords;
     private readonly IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getSharedWords;
     private readonly IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getRandomForCheck;
@@ -49,6 +52,7 @@ public sealed class PersonalVocabularyController : ControllerBase
         ICommandHandler<AddSharedVocabularyWordToMyListCommand, Guid> addSharedToMyList,
         ICommandHandler<DeletePersonalVocabularyWordCommand> deleteWord,
         ICommandHandler<UpdatePersonalVocabularyWordCommand> updateWord,
+        ICommandHandler<UpdatePersonalContextCommand> updatePersonalContext,
         IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getMyWords,
         IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getSharedWords,
         IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> getRandomForCheck,
@@ -62,6 +66,7 @@ public sealed class PersonalVocabularyController : ControllerBase
         _addSharedToMyList = addSharedToMyList;
         _deleteWord = deleteWord;
         _updateWord = updateWord;
+        _updatePersonalContext = updatePersonalContext;
         _getMyWords = getMyWords;
         _getSharedWords = getSharedWords;
         _getRandomForCheck = getRandomForCheck;
@@ -75,7 +80,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     public async Task<IActionResult> AddWord([FromBody] AddPersonalVocabularyWordRequest request, CancellationToken ct)
     {
         Result<Guid> result = await _addWord.HandleAsync(
-            new AddPersonalVocabularyWordCommand(User.GetUserId(), User.GetAgeGroup(), request.Word, request.Definition, request.Example), ct);
+            new AddPersonalVocabularyWordCommand(User.GetUserId(), User.GetAgeGroup(), request.Word, request.Definition, request.Example, request.PersonalContext), ct);
 
         if (result.IsFailure)
         {
@@ -155,10 +160,13 @@ public sealed class PersonalVocabularyController : ControllerBase
     /// <summary>Adds a shared pool word to the caller's own list (a link, not a copy). Idempotent;
     /// returns the shared word's id.</summary>
     [HttpPost("shared/{id:guid}/add-to-mine")]
-    public async Task<IActionResult> AddSharedWordToMyList(Guid id, CancellationToken ct)
+    public async Task<IActionResult> AddSharedWordToMyList(
+        Guid id,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] AddToMyListRequest? request,
+        CancellationToken ct)
     {
         Result<Guid> result = await _addSharedToMyList.HandleAsync(
-            new AddSharedVocabularyWordToMyListCommand(id, User.GetUserId(), User.GetAgeGroup()), ct);
+            new AddSharedVocabularyWordToMyListCommand(id, User.GetUserId(), User.GetAgeGroup(), request?.PersonalContext), ct);
 
         if (result.IsFailure)
         {
@@ -167,6 +175,16 @@ public sealed class PersonalVocabularyController : ControllerBase
 
         _logger.LogInformation("AddSharedWordToMyList succeeded: NewWordId={NewWordId}", result.Value);
         return CreatedAtAction(nameof(GetMyWords), new { }, result.Value);
+    }
+
+    /// <summary>Sets, edits or clears (null or blank) the caller's private note on a word in their list.</summary>
+    [HttpPut("{id:guid}/personal-context")]
+    public async Task<IActionResult> UpdatePersonalContext(Guid id, [FromBody] UpdatePersonalContextRequest request, CancellationToken ct)
+    {
+        Result result = await _updatePersonalContext.HandleAsync(
+            new UpdatePersonalContextCommand(id, User.GetUserId(), request.PersonalContext), ct);
+
+        return result.IsSuccess ? NoContent() : result.ToProblemResult(this);
     }
 
     /// <summary>Starts a recall-check session — a random subset of the caller's own words.</summary>

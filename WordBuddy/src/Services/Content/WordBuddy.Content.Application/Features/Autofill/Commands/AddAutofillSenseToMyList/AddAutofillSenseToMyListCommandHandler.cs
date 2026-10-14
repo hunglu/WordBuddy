@@ -54,6 +54,22 @@ public sealed class AddAutofillSenseToMyListCommandHandler : ICommandHandler<Add
         Result<LearnerWord> existing = await _repository.GetLinkAsync(command.RequestingUserId, sense.Id, ct);
         if (existing.IsSuccess)
         {
+            if (!string.IsNullOrWhiteSpace(command.PersonalContext))
+            {
+                LearnerWord current = existing.Value;
+                Result updateNote = current.SetPersonalContext(command.PersonalContext);
+                if (updateNote.IsFailure)
+                {
+                    return Result.Failure<Guid>(updateNote.Error);
+                }
+
+                Result saveNote = await _repository.SaveLinkAsync(current, ct);
+                if (saveNote.IsFailure)
+                {
+                    return Result.Failure<Guid>(saveNote.Error);
+                }
+            }
+
             _logger.LogInformation("AddAutofillSenseToMyListCommand succeeded: SenseId={SenseId}, AlreadyLinked={AlreadyLinked}", sense.Id, true);
             return Result.Success(sense.Id);
         }
@@ -63,6 +79,12 @@ public sealed class AddAutofillSenseToMyListCommandHandler : ICommandHandler<Add
         if (needsApproval)
         {
             link.RequireChildApproval();
+        }
+
+        Result noteResult = link.SetPersonalContext(command.PersonalContext);
+        if (noteResult.IsFailure)
+        {
+            return Result.Failure<Guid>(noteResult.Error);
         }
 
         Result linkResult = await _repository.LinkAsync(link, ct);

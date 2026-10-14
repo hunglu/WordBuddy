@@ -13,6 +13,8 @@ export interface AddVocabularyWordPayload {
   word: string
   definition: string
   example?: string
+  /** Optional private note (max 500). */
+  personalContext?: string
 }
 
 export async function addVocabularyWord(payload: AddVocabularyWordPayload): Promise<string> {
@@ -25,6 +27,11 @@ export type UpdateVocabularyWordPayload = AddVocabularyWordPayload
 /** Edits my own `Private` word in place (same id). 409 = duplicate or not editable. */
 export async function updateMyWord(id: string, payload: UpdateVocabularyWordPayload): Promise<void> {
   await apiClient.put(`/vocabulary/${id}`, payload)
+}
+
+/** Sets, edits or clears (`null`) my private note on a word in my list. */
+export async function updatePersonalContext(id: string, personalContext: string | null): Promise<void> {
+  await apiClient.put(`/vocabulary/${id}/personal-context`, { personalContext })
 }
 
 export async function getMyVocabularyWords(): Promise<PersonalVocabularyWord[]> {
@@ -51,8 +58,8 @@ export async function getSharedVocabularyWords(): Promise<PersonalVocabularyWord
   return data
 }
 
-export async function addSharedWordToMyList(id: string): Promise<string> {
-  const { data } = await apiClient.post<string>(`/vocabulary/shared/${id}/add-to-mine`)
+export async function addSharedWordToMyList(id: string, personalContext?: string): Promise<string> {
+  const { data } = await apiClient.post<string>(`/vocabulary/shared/${id}/add-to-mine`, { personalContext })
   return data
 }
 
@@ -108,8 +115,8 @@ export async function lookupAutofill(word: string): Promise<AutofillResult> {
 }
 
 /** Adds an auto-filled sense to my list. Idempotent; returns the sense id. */
-export async function addAutofillSense(senseId: string): Promise<string> {
-  const { data } = await apiClient.post<string>(`/vocabulary/autofill/${senseId}/add-to-mine`)
+export async function addAutofillSense(senseId: string, personalContext?: string): Promise<string> {
+  const { data } = await apiClient.post<string>(`/vocabulary/autofill/${senseId}/add-to-mine`, { personalContext })
   return data
 }
 

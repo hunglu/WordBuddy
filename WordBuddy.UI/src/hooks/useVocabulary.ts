@@ -9,6 +9,7 @@ import {
   moderateVocabularyWord,
   requestShareVocabularyWord,
   updateMyWord,
+  updatePersonalContext,
   type ModerateVocabularyWordPayload,
   type UpdateVocabularyWordPayload,
 } from '../api/vocabulary'
@@ -52,6 +53,16 @@ export function useUpdateMyWord() {
   })
 }
 
+/** Sets, edits or clears my private note on a word. */
+export function useUpdatePersonalContext() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, personalContext }: { id: string; personalContext: string | null }) =>
+      updatePersonalContext(id, personalContext),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY }),
+  })
+}
+
 export function useDeleteVocabularyWord() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -75,7 +86,8 @@ export function useRequestShareVocabularyWord() {
 export function useAddSharedWordToMyList() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: addSharedWordToMyList,
+    mutationFn: ({ id, personalContext }: { id: string; personalContext?: string }) =>
+      addSharedWordToMyList(id, personalContext),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_WORDS_KEY }),
   })
 }

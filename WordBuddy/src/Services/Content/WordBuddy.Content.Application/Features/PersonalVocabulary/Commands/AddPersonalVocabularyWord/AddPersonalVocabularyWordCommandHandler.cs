@@ -32,8 +32,8 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
     public async Task<Result<Guid>> HandleAsync(AddPersonalVocabularyWordCommand command, CancellationToken ct = default)
     {
         _logger.LogInformation(
-            "AddPersonalVocabularyWordCommand started: OwnerUserId={OwnerUserId}, Word={Word}",
-            command.OwnerUserId, command.Word);
+            "AddPersonalVocabularyWordCommand started: OwnerUserId={OwnerUserId}, Word={Word}, HasPersonalContext={HasPersonalContext}",
+            command.OwnerUserId, command.Word, !string.IsNullOrWhiteSpace(command.PersonalContext));
 
         ValidationResult validation = await _validator.ValidateAsync(command, ct);
         if (!validation.IsValid)
@@ -98,6 +98,12 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
 
         Sense word = createResult.Value;
         LearnerWord authorLink = new(Guid.NewGuid(), command.OwnerUserId, word.Id, isAuthor: true);
+        Result noteResult = authorLink.SetPersonalContext(command.PersonalContext);
+        if (noteResult.IsFailure)
+        {
+            _logger.LogWarning("AddPersonalVocabularyWordCommand rejected note: {ErrorCode}", noteResult.Error.Code);
+            return Result.Failure<Guid>(noteResult.Error);
+        }
 
         // The repository returns the existing word's id if a concurrent identical add won the race.
         Result<Guid> addResult = await _repository.AddAsync(word, authorLink, ct);
@@ -127,12 +133,32 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
         Result<LearnerWord> linkResult = await _repository.GetLinkAsync(command.OwnerUserId, existing.Id, ct);
         if (linkResult.IsSuccess)
         {
+            if (!string.IsNullOrWhiteSpace(command.PersonalContext))
+            {
+                Result updateNote = linkResult.Value.SetPersonalContext(command.PersonalContext);
+                if (updateNote.IsFailure)
+                {
+                    return Result.Failure<Guid>(updateNote.Error);
+                }
+
+                Result saveNote = await _repository.SaveLinkAsync(linkResult.Value, ct);
+                if (saveNote.IsFailure)
+                {
+                    return Result.Failure<Guid>(saveNote.Error);
+                }
+            }
+
             _logger.LogInformation("AddPersonalVocabularyWordCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", existing.Id, true);
             return Result.Success(existing.Id);
         }
 
         bool isAuthor = existing.Source == VocabularySource.Learner && existing.OwnerUserId == command.OwnerUserId;
         LearnerWord link = new(Guid.NewGuid(), command.OwnerUserId, existing.Id, isAuthor);
+        Result noteResult = link.SetPersonalContext(command.PersonalContext);
+        if (noteResult.IsFailure)
+        {
+            return Result.Failure<Guid>(noteResult.Error);
+        }
 
         Result addLinkResult = await _repository.LinkAsync(link, ct);
         if (addLinkResult.IsFailure)

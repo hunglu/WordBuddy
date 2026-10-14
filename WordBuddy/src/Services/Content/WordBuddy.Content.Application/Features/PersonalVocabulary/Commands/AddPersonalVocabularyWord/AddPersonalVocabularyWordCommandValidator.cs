@@ -1,4 +1,5 @@
 using FluentValidation;
+using WordBuddy.Content.Domain;
 
 namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddPersonalVocabularyWord;
 
@@ -11,5 +12,6 @@ public sealed class AddPersonalVocabularyWordCommandValidator : AbstractValidato
         RuleFor(c => c.Word).NotEmpty().MaximumLength(200);
         RuleFor(c => c.Definition).NotEmpty().MaximumLength(2000);
         RuleFor(c => c.Example).MaximumLength(500);
+        RuleFor(c => c.PersonalContext).MaximumLength(LearnerWord.PersonalContextMaxLength);
     }
 }

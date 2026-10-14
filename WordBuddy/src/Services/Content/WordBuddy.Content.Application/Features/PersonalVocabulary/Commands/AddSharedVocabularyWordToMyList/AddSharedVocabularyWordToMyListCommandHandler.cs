@@ -68,12 +68,34 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
         Result<LearnerWord> existingLink = await _repository.GetLinkAsync(command.RequestingUserId, source.Id, ct);
         if (existingLink.IsSuccess)
         {
+            if (!string.IsNullOrWhiteSpace(command.PersonalContext))
+            {
+                LearnerWord current = existingLink.Value;
+                Result updateNote = current.SetPersonalContext(command.PersonalContext);
+                if (updateNote.IsFailure)
+                {
+                    return Result.Failure<Guid>(updateNote.Error);
+                }
+
+                Result saveNote = await _repository.SaveLinkAsync(current, ct);
+                if (saveNote.IsFailure)
+                {
+                    return Result.Failure<Guid>(saveNote.Error);
+                }
+            }
+
             _logger.LogInformation("AddSharedVocabularyWordToMyListCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", source.Id, true);
             return Result.Success(source.Id);
         }
 
         bool isAuthor = source.OwnerUserId == command.RequestingUserId;
         LearnerWord link = new(Guid.NewGuid(), command.RequestingUserId, source.Id, isAuthor);
+
+        Result noteResult = link.SetPersonalContext(command.PersonalContext);
+        if (noteResult.IsFailure)
+        {
+            return Result.Failure<Guid>(noteResult.Error);
+        }
 
         Result linkResult = await _repository.LinkAsync(link, ct);
         if (linkResult.IsFailure)

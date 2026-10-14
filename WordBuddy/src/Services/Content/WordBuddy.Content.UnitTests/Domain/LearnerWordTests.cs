@@ -66,4 +66,57 @@ public class LearnerWordTests
 
         link.RequiresChildApproval.Should().BeTrue();
     }
+
+    [Fact]
+    public void LearnerWord_SetPersonalContext_Text_StoresTrimmedText()
+    {
+        LearnerWord link = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), isAuthor: true);
+
+        Result result = link.SetPersonalContext("  at the zoo  ");
+
+        result.IsSuccess.Should().BeTrue();
+        link.PersonalContext.Should().Be("at the zoo");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void LearnerWord_SetPersonalContext_BlankText_ClearsNote(string? blank)
+    {
+        LearnerWord link = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), isAuthor: true);
+        link.SetPersonalContext("old note");
+
+        Result result = link.SetPersonalContext(blank);
+
+        result.IsSuccess.Should().BeTrue();
+        link.PersonalContext.Should().BeNull();
+    }
+
+    [Fact]
+    public void LearnerWord_SetPersonalContext_MaxLength_Succeeds()
+    {
+        LearnerWord link = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), isAuthor: true);
+        string text = new('a', LearnerWord.PersonalContextMaxLength);
+
+        Result result = link.SetPersonalContext(text);
+
+        result.IsSuccess.Should().BeTrue();
+        link.PersonalContext.Should().Be(text);
+    }
+
+    [Fact]
+    public void LearnerWord_SetPersonalContext_TooLong_FailsWithoutTextInMessageAndKeepsOldNote()
+    {
+        LearnerWord link = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), isAuthor: true);
+        link.SetPersonalContext("old note");
+        string text = new('b', LearnerWord.PersonalContextMaxLength + 1);
+
+        Result result = link.SetPersonalContext(text);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("LearnerWord.PersonalContextTooLong");
+        result.Error.Description.Should().NotContain(text);
+        link.PersonalContext.Should().Be("old note");
+    }
 }

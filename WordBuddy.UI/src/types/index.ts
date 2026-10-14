@@ -294,6 +294,8 @@ export interface PersonalVocabularyWord extends SenseEnrichment {
   /** On the shared pool only: whether the caller currently owns this word. `false` everywhere else,
    * and for words handed over to WordBuddy. */
   isMine: boolean
+  /** My private note on where I met the word. Only on "my words" / recall check; never on the pool. */
+  personalContext?: string | null
 }
 
 /** A word as returned by the random-selection-for-check endpoint — same shape as

@@ -266,4 +266,101 @@ public class AddPersonalVocabularyWordCommandHandlerTests
             r => r.AddAsync(It.IsAny<Sense>(), It.Is<LearnerWord>(l => l.UserId == childId && l.IsAuthor), It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_NoteOnNewWord_StoresNoteOnAuthorLink()
+    {
+        SetupCandidates();
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddPersonalVocabularyWordCommand(Guid.NewGuid(), AgeGroup.Adult, "apple", "a fruit", null, "  heard at lunch "));
+
+        result.IsSuccess.Should().BeTrue();
+        _repository.Verify(
+            r => r.AddAsync(It.IsAny<Sense>(), It.Is<LearnerWord>(l => l.PersonalContext == "heard at lunch"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_NoteOnDedupeLink_StoresNote()
+    {
+        Guid userId = Guid.NewGuid();
+        Sense system = TestWords.System();
+        SetupCandidates(system);
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddPersonalVocabularyWordCommand(userId, AgeGroup.Adult, system.Word, system.Definition, system.Example, "from a film"));
+
+        result.IsSuccess.Should().BeTrue();
+        _repository.Verify(
+            r => r.LinkAsync(It.Is<LearnerWord>(l => l.PersonalContext == "from a film"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_NoteOnExistingLink_OverwritesAndSaves()
+    {
+        Guid userId = Guid.NewGuid();
+        Sense own = TestWords.Learner(userId);
+        SetupCandidates(own);
+        LearnerWord link = new(Guid.NewGuid(), userId, own, isAuthor: true);
+        link.SetPersonalContext("old");
+        _repository
+            .Setup(r => r.GetLinkAsync(userId, own.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(link));
+        _repository.Setup(r => r.SaveLinkAsync(link, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddPersonalVocabularyWordCommand(userId, AgeGroup.Adult, own.Word, own.Definition, own.Example, "new"));
+
+        result.IsSuccess.Should().BeTrue();
+        link.PersonalContext.Should().Be("new");
+        _repository.Verify(r => r.SaveLinkAsync(link, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_BlankNoteOnExistingLink_KeepsOldNote()
+    {
+        Guid userId = Guid.NewGuid();
+        Sense own = TestWords.Learner(userId);
+        SetupCandidates(own);
+        LearnerWord link = new(Guid.NewGuid(), userId, own, isAuthor: true);
+        link.SetPersonalContext("old");
+        _repository
+            .Setup(r => r.GetLinkAsync(userId, own.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(link));
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddPersonalVocabularyWordCommand(userId, AgeGroup.Adult, own.Word, own.Definition, own.Example, "   "));
+
+        result.IsSuccess.Should().BeTrue();
+        link.PersonalContext.Should().Be("old");
+        _repository.Verify(r => r.SaveLinkAsync(It.IsAny<LearnerWord>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_NoteTooLong_ReturnsValidationFailure()
+    {
+        SetupCandidates();
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddPersonalVocabularyWordCommand(Guid.NewGuid(), AgeGroup.Adult, "apple", "a fruit", null, new string('x', 501)));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        VerifyNoNewWord();
+    }
+
+    [Fact]
+    public async Task AddPersonalVocabularyWordCommandHandler_HandleAsync_Note_NeverLogged()
+    {
+        SetupCandidates();
+        CapturingLogger<AddPersonalVocabularyWordCommandHandler> logger = new();
+        AddPersonalVocabularyWordCommandHandler handler = new(_repository.Object, _validator, logger);
+
+        await handler.HandleAsync(new AddPersonalVocabularyWordCommand(Guid.NewGuid(), AgeGroup.Child, "apple", "a fruit", null, "SECRET-NOTE-123"));
+
+        logger.Entries.Should().NotBeEmpty();
+        logger.Entries.Should().NotContain(e => e.Contains("SECRET-NOTE-123"));
+    }
 }

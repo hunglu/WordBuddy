@@ -319,8 +319,10 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
             .AnyAsync(l => l.UserId == authorLink.UserId && l.SenseId == existing.Id, ct);
         if (!linked)
         {
-            Result linkResult = await LinkAsync(
-                new LearnerWord(Guid.NewGuid(), authorLink.UserId, existing.Id, isAuthor: true), ct);
+            LearnerWord replacement = new(Guid.NewGuid(), authorLink.UserId, existing.Id, isAuthor: true);
+            // Keep the learner's note; it was already validated on the author link.
+            replacement.SetPersonalContext(authorLink.PersonalContext);
+            Result linkResult = await LinkAsync(replacement, ct);
             if (linkResult.IsFailure)
             {
                 return Result.Failure<Guid>(linkResult.Error);
@@ -401,6 +403,13 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
                 link.UserId, link.SenseId);
         }
 
+        return Result.Success();
+    }
+
+    public async Task<Result> SaveLinkAsync(LearnerWord link, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Saving LearnerWord: UserId={UserId}, WordId={WordId}", link.UserId, link.SenseId);
+        await _dbContext.SaveChangesAsync(ct);
         return Result.Success();
     }
 

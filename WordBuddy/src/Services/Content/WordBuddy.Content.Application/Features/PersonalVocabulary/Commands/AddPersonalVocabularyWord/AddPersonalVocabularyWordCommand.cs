@@ -10,4 +10,5 @@ public sealed record AddPersonalVocabularyWordCommand(
     AgeGroup OwnerAgeGroup,
     string Word,
     string Definition,
-    string? Example) : ICommand<Guid>;
+    string? Example,
+    string? PersonalContext = null) : ICommand<Guid>;

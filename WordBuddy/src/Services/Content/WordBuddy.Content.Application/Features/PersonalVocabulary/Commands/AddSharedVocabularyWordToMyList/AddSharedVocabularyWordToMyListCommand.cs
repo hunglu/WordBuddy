@@ -8,4 +8,5 @@ namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.Add
 public sealed record AddSharedVocabularyWordToMyListCommand(
     Guid SharedWordId,
     Guid RequestingUserId,
-    AgeGroup RequestingAgeGroup) : ICommand<Guid>;
+    AgeGroup RequestingAgeGroup,
+    string? PersonalContext = null) : ICommand<Guid>;
