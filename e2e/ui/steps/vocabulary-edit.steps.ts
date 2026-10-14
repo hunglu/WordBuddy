@@ -26,8 +26,10 @@ Given('the learner has added a private word with a typo', async ({ page }) => {
 When('they edit the word and save the corrected text', async ({ page }) => {
   const card = wordCard(page, typoWord)
   await card.getByRole('button', { name: 'Edit', exact: true }).click()
-  await card.getByLabel('Word', { exact: true }).fill(fixedWord)
-  await card.getByRole('button', { name: 'Save', exact: true }).click()
+  // In edit mode the word sits in an input value, so the card no longer matches by text. Use the form's label.
+  const form = page.getByRole('form', { name: `Edit ${typoWord}` })
+  await form.getByLabel('Word', { exact: true }).fill(fixedWord)
+  await form.getByRole('button', { name: 'Save', exact: true }).click()
 })
 
 Then('the corrected word is in their vocabulary list', async ({ page }) => {
