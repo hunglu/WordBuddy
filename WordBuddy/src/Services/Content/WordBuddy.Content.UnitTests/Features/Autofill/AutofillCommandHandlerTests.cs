@@ -61,6 +61,67 @@ public class AddAutofillSenseToMyListCommandHandlerTests
     }
 
     [Fact]
+    public async Task AddAutofillSenseToMyListCommandHandler_HandleAsync_Adult_NoteStored()
+    {
+        Sense sense = Stored(AutofillTestData.CatalogSense());
+
+        await CreateHandler().HandleAsync(new AddAutofillSenseToMyListCommand(sense.Id, Guid.NewGuid(), AgeGroup.Adult, " from a song "));
+
+        _linked!.PersonalContext.Should().Be("from a song");
+    }
+
+    [Fact]
+    public async Task AddAutofillSenseToMyListCommandHandler_HandleAsync_ChildWithNote_StillRequiresApproval()
+    {
+        Sense sense = Stored(AutofillTestData.CatalogSense());
+
+        await CreateHandler().HandleAsync(new AddAutofillSenseToMyListCommand(sense.Id, Guid.NewGuid(), AgeGroup.Child, "at school"));
+
+        _linked!.RequiresChildApproval.Should().BeTrue();
+        _linked.PersonalContext.Should().Be("at school");
+    }
+
+    [Fact]
+    public async Task AddAutofillSenseToMyListCommandHandler_HandleAsync_NoteOnExistingLink_OverwritesAndSaves()
+    {
+        Sense sense = Stored(AutofillTestData.CatalogSense());
+        Guid userId = Guid.NewGuid();
+        LearnerWord link = new(Guid.NewGuid(), userId, sense, isAuthor: false);
+        _repository.Setup(r => r.GetLinkAsync(userId, sense.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(link));
+        _repository.Setup(r => r.SaveLinkAsync(link, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
+
+        await CreateHandler().HandleAsync(new AddAutofillSenseToMyListCommand(sense.Id, userId, AgeGroup.Adult, "new"));
+
+        link.PersonalContext.Should().Be("new");
+        _repository.Verify(r => r.SaveLinkAsync(link, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddAutofillSenseToMyListCommandHandler_HandleAsync_NoteTooLong_ReturnsValidationFailure()
+    {
+        Sense sense = Stored(AutofillTestData.CatalogSense());
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddAutofillSenseToMyListCommand(sense.Id, Guid.NewGuid(), AgeGroup.Adult, new string('x', 501)));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _linked.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddAutofillSenseToMyListCommandHandler_HandleAsync_Note_NeverLogged()
+    {
+        Sense sense = Stored(AutofillTestData.CatalogSense());
+        CapturingLogger<AddAutofillSenseToMyListCommandHandler> logger = new();
+        AddAutofillSenseToMyListCommandHandler handler = new(_repository.Object, new AddAutofillSenseToMyListCommandValidator(), logger);
+
+        await handler.HandleAsync(new AddAutofillSenseToMyListCommand(sense.Id, Guid.NewGuid(), AgeGroup.Child, "SECRET-NOTE-123"));
+
+        logger.Entries.Should().NotBeEmpty();
+        logger.Entries.Should().NotContain(e => e.Contains("SECRET-NOTE-123"));
+    }
+
+    [Fact]
     public async Task AddAutofillSenseToMyListCommandHandler_HandleAsync_AlreadyLinked_IsIdempotent()
     {
         Guid userId = Guid.NewGuid();

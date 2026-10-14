@@ -9,6 +9,8 @@ import { AutofillResults } from '../components/autofill/AutofillResults'
 import { SenseDetails } from '../components/autofill/SenseDetails'
 import { DeleteWordConfirmDialog, needsDeleteConfirmation } from '../components/vocabulary/DeleteWordConfirmDialog'
 import { EditWordForm } from '../components/vocabulary/EditWordForm'
+import { PersonalContextEditor } from '../components/vocabulary/PersonalContextEditor'
+import { PersonalContextField } from '../components/vocabulary/PersonalContextField'
 import {
   useAddVocabularyWord,
   useDeleteVocabularyWord,
@@ -23,6 +25,7 @@ const wordSchema = z.object({
   word: z.string().min(1, 'Word is required').max(200),
   definition: z.string().min(1, 'Definition is required').max(2000),
   example: z.string().max(500).optional(),
+  personalContext: z.string().max(500).optional(),
 })
 
 type WordFormValues = z.infer<typeof wordSchema>
@@ -74,15 +77,24 @@ export function VocabularyBuilderPage(): ReactElement {
     handleSubmit,
     reset,
     getValues,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<WordFormValues>({ resolver: zodResolver(wordSchema) })
 
   const onSubmit = handleSubmit((values) => {
     addWord.mutate(
-      { word: values.word, definition: values.definition, example: values.example || undefined },
+      {
+        word: values.word,
+        definition: values.definition,
+        example: values.example || undefined,
+        personalContext: values.personalContext?.trim() || undefined,
+      },
       { onSuccess: () => reset() },
     )
   })
+
+  const personalContext = watch('personalContext') ?? ''
 
   const onAutofill = (): void => {
     const typed = getValues('word').trim()
@@ -133,7 +145,11 @@ export function VocabularyBuilderPage(): ReactElement {
           {errors.word && <p className="mt-1 text-sm text-wb-danger">{errors.word.message}</p>}
         </div>
 
-        <AutofillResults word={autofillWord} />
+        <AutofillResults
+          word={autofillWord}
+          personalContext={personalContext}
+          onAdded={() => setValue('personalContext', '')}
+        />
 
         <div>
           <label htmlFor="definition" className="mb-1 block text-sm font-semibold text-wb-ink">
@@ -160,6 +176,19 @@ export function VocabularyBuilderPage(): ReactElement {
           />
           {errors.example && <p className="mt-1 text-sm text-wb-danger">{errors.example.message}</p>}
         </div>
+
+        <PersonalContextField
+          id="personalContext"
+          value={personalContext}
+          error={errors.personalContext?.message}
+          {...register('personalContext')}
+        />
+
+        {addWord.isError && (
+          <p role="alert" className="text-sm text-wb-danger">
+            Couldn't add this word right now. Please try again.
+          </p>
+        )}
 
         <button
           type="submit"
@@ -205,6 +234,8 @@ export function VocabularyBuilderPage(): ReactElement {
                   }}
                 />
               )}
+
+              <PersonalContextEditor wordId={word.id} note={word.personalContext ?? null} />
 
               <div className="mt-2 flex gap-2">
                 {word.isAuthor && word.shareStatus === 'Private' && editingId !== word.id && (

@@ -72,6 +72,9 @@ public interface IVocabularyWordRepository
     /// same link was created concurrently, succeeds without adding a second one.</summary>
     Task<Result> LinkAsync(LearnerWord link, CancellationToken ct = default);
 
+    /// <summary>Persists changes made to a link previously returned by <see cref="GetLinkAsync"/>.</summary>
+    Task<Result> SaveLinkAsync(LearnerWord link, CancellationToken ct = default);
+
     /// <summary>Removes a link previously returned by <see cref="GetLinkAsync"/>.</summary>
     Task<Result> UnlinkAsync(LearnerWord link, CancellationToken ct = default);
 

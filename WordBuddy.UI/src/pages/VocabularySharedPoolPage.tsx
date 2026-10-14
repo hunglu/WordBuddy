@@ -1,6 +1,44 @@
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useId, useState, type ReactElement } from 'react'
+import { PersonalContextField } from '../components/vocabulary/PersonalContextField'
 import { useAddSharedWordToMyList, useSharedVocabularyWords } from '../hooks/useVocabulary'
+
+type AddToMyListControlsProps = Readonly<{
+  isPending: boolean
+  onAdd: (personalContext?: string) => void
+}>
+
+/** "Add to My List" with an optional private note, revealed by "Add a note". */
+function AddToMyListControls({ isPending, onAdd }: AddToMyListControlsProps): ReactElement {
+  const [showNote, setShowNote] = useState(false)
+  const [note, setNote] = useState('')
+  const noteId = useId()
+
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      {showNote && (
+        <PersonalContextField id={`note-${noteId}`} value={note} onChange={(event) => setNote(event.target.value)} />
+      )}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onAdd(note.trim() || undefined)}
+          disabled={isPending}
+          className="rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
+        >
+          Add to My List
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowNote((open) => !open)}
+          className="rounded-wb-md bg-wb-primary-soft px-3 py-2 text-sm font-semibold text-wb-ink hover:bg-wb-primary-soft-hover"
+        >
+          {showNote ? 'Hide note' : 'Add a note'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function VocabularySharedPoolPage(): ReactElement {
   const { data: words, isLoading, isError } = useSharedVocabularyWords()
@@ -13,6 +51,12 @@ export function VocabularySharedPoolPage(): ReactElement {
 
       {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading the shared pool…</p>}
       {isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load the shared pool right now.</p>}
+
+      {addToMyList.isError && (
+        <p role="alert" className="mt-4 text-sm text-wb-danger">
+          Couldn't add this word right now. Please try again.
+        </p>
+      )}
 
       {words && words.length === 0 && (
         <p className="mt-8 text-lg text-wb-ink-muted">No shared words yet — check back soon!</p>
@@ -31,14 +75,10 @@ export function VocabularySharedPoolPage(): ReactElement {
                   Your word
                 </span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => addToMyList.mutate(word.id)}
-                  disabled={addToMyList.isPending}
-                  className="mt-2 self-start rounded-wb-md bg-wb-primary px-4 py-2 text-sm font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
-                >
-                  Add to My List
-                </button>
+                <AddToMyListControls
+                  isPending={addToMyList.isPending}
+                  onAdd={(personalContext) => addToMyList.mutate({ id: word.id, personalContext })}
+                />
               )}
             </div>
           ))}

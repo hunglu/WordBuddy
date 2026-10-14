@@ -1,4 +1,3 @@
-using System.Reflection;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -24,13 +23,10 @@ public class GetSensesByIdsQueryHandlerTests
             .Setup(r => r.GetForReviewAsync(_callerId, It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<SenseReviewCandidate>>(candidates));
 
-    /// <summary><see cref="LearnerWord.PersonalContext"/> has no writer yet; set it for the test only.</summary>
     private static LearnerWord LinkWithContext(Guid userId, Sense sense, string context)
     {
         LearnerWord link = new(Guid.NewGuid(), userId, sense, isAuthor: false);
-        typeof(LearnerWord)
-            .GetProperty(nameof(LearnerWord.PersonalContext), BindingFlags.Public | BindingFlags.Instance)!
-            .SetValue(link, context);
+        link.SetPersonalContext(context);
         return link;
     }
 

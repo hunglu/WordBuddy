@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Content.Application.Extensions;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Shared.Kernel;
@@ -68,12 +69,24 @@ public sealed class AddSharedVocabularyWordToMyListCommandHandler : ICommandHand
         Result<LearnerWord> existingLink = await _repository.GetLinkAsync(command.RequestingUserId, source.Id, ct);
         if (existingLink.IsSuccess)
         {
+            Result noteSaved = await _repository.ApplyNoteToExistingLinkAsync(existingLink.Value, command.PersonalContext, _logger, ct);
+            if (noteSaved.IsFailure)
+            {
+                return Result.Failure<Guid>(noteSaved.Error);
+            }
+
             _logger.LogInformation("AddSharedVocabularyWordToMyListCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", source.Id, true);
             return Result.Success(source.Id);
         }
 
         bool isAuthor = source.OwnerUserId == command.RequestingUserId;
         LearnerWord link = new(Guid.NewGuid(), command.RequestingUserId, source.Id, isAuthor);
+
+        Result noteResult = link.SetPersonalContext(command.PersonalContext);
+        if (noteResult.IsFailure)
+        {
+            return Result.Failure<Guid>(noteResult.Error);
+        }
 
         Result linkResult = await _repository.LinkAsync(link, ct);
         if (linkResult.IsFailure)

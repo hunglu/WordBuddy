@@ -54,6 +54,8 @@ public static class PersonalVocabularyWordMapper
                 link.AddedAtUtc,
                 IsAuthor: false);
 
+        dto = dto with { PersonalContext = link.PersonalContext };
+
         if (word.IsAwaitingChildApproval(callerAgeGroup, link))
         {
             return WithDetails(dto with { Definition = string.Empty, Example = null, AwaitingApproval = true }, SenseDetails.Empty(word.Origin));

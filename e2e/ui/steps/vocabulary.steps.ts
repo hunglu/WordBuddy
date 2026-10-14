@@ -26,7 +26,7 @@ When('they add a new vocabulary word', async ({ page }) => {
   await page.getByRole('link', { name: /My Vocabulary/i }).click()
   await expect(page).toHaveURL(/\/vocabulary$/)
 
-  await page.getByLabel('Word').fill(addedWord)
+  await page.getByLabel('Word', { exact: true }).fill(addedWord)
   await page.getByLabel('Definition').fill('A word added by the personal vocabulary E2E test.')
   await page.getByLabel('Example (optional)').fill('This is an example sentence.')
   await page.getByRole('button', { name: /add word/i }).click()

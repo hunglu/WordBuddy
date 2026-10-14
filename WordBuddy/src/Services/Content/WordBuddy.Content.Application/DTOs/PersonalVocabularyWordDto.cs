@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using WordBuddy.Content.Domain;
 
 namespace WordBuddy.Content.Application.DTOs;
@@ -12,6 +13,8 @@ namespace WordBuddy.Content.Application.DTOs;
 /// word. <see langword="false"/> everywhere else, and for words handed over to the system owner.</param>
 /// <param name="AwaitingApproval">Child callers only: an auto-filled word not approved yet. Then the
 /// definition is empty and no example, media or enrichment is sent.</param>
+/// <param name="PersonalContext">The caller's own private note on the word. Left out of the JSON when null. Set only on caller-scoped
+/// views ("mine", recall check); never on the pool or moderation lists.</param>
 /// <remarks>Fields after <paramref name="IsMine"/> were added by WB-25 (auto-fill); old JSON stays intact.</remarks>
 public sealed record PersonalVocabularyWordDto(
     Guid Id,
@@ -37,4 +40,5 @@ public sealed record PersonalVocabularyWordDto(
     IReadOnlyList<string>? TopicTags = null,
     string? RegisterNote = null,
     SenseOrigin Origin = SenseOrigin.Manual,
-    bool AwaitingApproval = false);
+    bool AwaitingApproval = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PersonalContext = null);

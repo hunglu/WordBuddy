@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 using WordBuddy.Content.Api.Authorization;
 using WordBuddy.Content.Api.Extensions;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Content.Api.Models;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Features.Autofill.Commands.AddAutofillSenseToMyList;
 using WordBuddy.Content.Application.Features.Autofill.Commands.ApproveChildWord;
@@ -55,10 +57,13 @@ public sealed class VocabularyAutofillController : ControllerBase
     /// <summary>Adds an auto-filled sense to the caller's list. Idempotent; returns the sense id.</summary>
     [Authorize(Policy = SupportLinkPolicies.ChildHasSupporter)]
     [HttpPost("autofill/{senseId:guid}/add-to-mine")]
-    public async Task<IActionResult> AddToMine(Guid senseId, CancellationToken ct)
+    public async Task<IActionResult> AddToMine(
+        Guid senseId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] AddToMyListRequest? request,
+        CancellationToken ct)
     {
         Result<Guid> result = await _addToMine.HandleAsync(
-            new AddAutofillSenseToMyListCommand(senseId, User.GetUserId(), User.GetAgeGroup()), ct);
+            new AddAutofillSenseToMyListCommand(senseId, User.GetUserId(), User.GetAgeGroup(), request?.PersonalContext), ct);
         if (result.IsFailure)
         {
             return result.ToProblemResult(this);

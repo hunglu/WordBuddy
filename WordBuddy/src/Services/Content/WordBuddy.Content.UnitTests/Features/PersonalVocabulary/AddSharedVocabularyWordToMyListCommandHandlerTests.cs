@@ -130,4 +130,65 @@ public class AddSharedVocabularyWordToMyListCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         VerifyNoLink();
     }
+
+    [Theory]
+    [InlineData(AgeGroup.Adult)]
+    [InlineData(AgeGroup.Child)]
+    public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_Note_StoredOnNewLink(AgeGroup ageGroup)
+    {
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        SetupSource(source);
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), ageGroup, " met in class "));
+
+        result.IsSuccess.Should().BeTrue();
+        _repository.Verify(
+            r => r.LinkAsync(It.Is<LearnerWord>(l => l.PersonalContext == "met in class"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_NoteOnExistingLink_OverwritesAndSaves()
+    {
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        SetupSource(source);
+        Guid requesterId = Guid.NewGuid();
+        LearnerWord link = new(Guid.NewGuid(), requesterId, source, isAuthor: false);
+        link.SetPersonalContext("old");
+        _repository.Setup(r => r.GetLinkAsync(requesterId, source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(link));
+        _repository.Setup(r => r.SaveLinkAsync(link, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
+
+        await CreateHandler().HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, requesterId, AgeGroup.Adult, "new"));
+
+        link.PersonalContext.Should().Be("new");
+        _repository.Verify(r => r.SaveLinkAsync(link, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_NoteTooLong_ReturnsValidationFailure()
+    {
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        SetupSource(source);
+
+        Result<Guid> result = await CreateHandler().HandleAsync(
+            new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), AgeGroup.Adult, new string('x', 501)));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        VerifyNoLink();
+    }
+
+    [Fact]
+    public async Task AddSharedVocabularyWordToMyListCommandHandler_HandleAsync_Note_NeverLogged()
+    {
+        Sense source = TestWords.Shared(Guid.NewGuid(), visibleToChildren: true);
+        SetupSource(source);
+        CapturingLogger<AddSharedVocabularyWordToMyListCommandHandler> logger = new();
+        AddSharedVocabularyWordToMyListCommandHandler handler = new(_repository.Object, _validator, logger);
+
+        await handler.HandleAsync(new AddSharedVocabularyWordToMyListCommand(source.Id, Guid.NewGuid(), AgeGroup.Child, "SECRET-NOTE-123"));
+
+        logger.Entries.Should().NotBeEmpty();
+        logger.Entries.Should().NotContain(e => e.Contains("SECRET-NOTE-123"));
+    }
 }

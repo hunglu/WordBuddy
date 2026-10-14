@@ -3,7 +3,7 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-48_edit-own-vocabulary-word
+last-updated-by: WB-49_personal-context-on-learner-word
 ---
 
 # Vocabulary storage
@@ -107,6 +107,13 @@ erDiagram
   | Concurrent add (`PersonalVocabularyWord.ConcurrentAdd`) | 409 |
 
   Children and adults can both edit their own private words.
+- **Personal note** (`LearnerWords.PersonalContext`, max 500 chars) is private to the caller:
+  - Optional `personalContext` on all add flows: own word, shared pool (`add-to-mine`, optional body) and auto-fill.
+  - `PUT /api/vocabulary/{id}/personal-context` sets or clears it (204). Over 500 chars → 400 `LearnerWord.PersonalContextTooLong`. No link → 404.
+  - Returned only in the caller's own list (`GET /mine`, check) and review exercises. Never in the shared pool or moderation lists.
+  - An existing note is never overwritten by a duplicate add or a lost concurrent add.
+  - The note text is never logged.
+  - Same for Child and Adult. A Child's note stays private to the child.
 - **Concurrency.** Simultaneous identical add / adopt calls resolve to the same word or link — no 500.
 - **Child vs adult:**
   - A Child cannot request sharing (`CanShareVocabulary`, 403).
@@ -131,6 +138,7 @@ erDiagram
 | GET | `/api/vocabulary/mine` | Content | authenticated |
 | POST | `/api/vocabulary/{id}/share` | Content | `CanShareVocabulary` (not Child, or admin) |
 | PUT | `/api/vocabulary/{id}` | Content | authenticated (owner, `Private` only) |
+| PUT | `/api/vocabulary/{id}/personal-context` | Content | authenticated (own link) |
 | DELETE | `/api/vocabulary/{id}[?confirm=true]` | Content | authenticated |
 | GET | `/api/vocabulary/shared` | Content | authenticated (Child: child-visible only) |
 | POST | `/api/vocabulary/shared/{id}/add-to-mine` | Content | authenticated (Child: child-visible only) |
@@ -142,6 +150,8 @@ erDiagram
 
 - `/vocabulary` (My words): the Share action appears only when `isAuthor` is `true`. Adopted and system words show no Share button.
 - Deleting an own `Shared` or `PendingReview` word opens a confirm dialog (see `vocabulary-builder.md`).
+- `/vocabulary`: the add form has an optional "Where did you meet this word?" note with the hint "Only you can see this note.". Each card shows the note with Add / Edit / Clear.
+- `/vocabulary/shared`: each card has an "Add a note" toggle before **Add to My List**.
 - `/vocabulary/shared`: own words show a "Your word" badge instead of **Add to My List**.
 
 ## Pending changes
@@ -156,3 +166,4 @@ None.
 - `WB-25_vocabulary-autofill` (#25, PR #37) — `Senses.Origin` + enrichment fields, `LearnerWords` child approval columns, lexeme POS/IPA/audio from auto-fill
 - `WB-27_learning-groups` (#27, PR #39) — `LearnerWords.AddedBy = Supporter` is now written by group assignment (`AddedByUserId` = the supporter, also the `LearnerWordAdded.AddedBy`); `GroupWordAssignments` history and `LearnerGroupMemberProjections` tables; see `learning-groups.md`
 - `WB-48_edit-own-vocabulary-word` (#48, PR #52) — owner-only in-place edit of `Private` senses (`PUT /api/vocabulary/{id}`); sense id kept; audio cleared on word change, image kept
+- `WB-49_personal-context-on-learner-word` (#49, PR #53) — optional personal note on every add flow; `PUT /api/vocabulary/{id}/personal-context`; note on `GET /mine`; UI field and editor

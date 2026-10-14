@@ -34,7 +34,7 @@ public sealed class LearnerWord : Entity
     public Guid? AddedByUserId { get; private set; }
 
     /// <summary>The learner's own note on where they met the word. Private: never logged, shared
-    /// or put in an event. Always <see langword="null"/> today.</summary>
+    /// or put in an event. <see langword="null"/> when the learner wrote none.</summary>
     public string? PersonalContext { get; private set; }
 
     /// <summary>Set when a Child linked an auto-filled sense that children may not see yet. Lists
@@ -46,6 +46,22 @@ public sealed class LearnerWord : Entity
 
     /// <summary>The supporter who approved the word for this child.</summary>
     public Guid? ChildApprovedByUserId { get; private set; }
+
+    /// <summary>Sets or clears the learner's note. The text is trimmed; blank clears it. Longer than
+    /// <see cref="PersonalContextMaxLength"/> returns a validation error (the message never holds the text).</summary>
+    public Result SetPersonalContext(string? text)
+    {
+        string? trimmed = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        if (trimmed is not null && trimmed.Length > PersonalContextMaxLength)
+        {
+            return Result.Failure(Error.Validation(
+                "LearnerWord.PersonalContextTooLong",
+                $"The personal note must be at most {PersonalContextMaxLength} characters."));
+        }
+
+        PersonalContext = trimmed;
+        return Result.Success();
+    }
 
     /// <summary>Marks the link as waiting for a supporter or admin approval.</summary>
     public void RequireChildApproval()
