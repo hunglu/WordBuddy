@@ -25,6 +25,7 @@ using WordBuddy.Content.Application.Features.Media.Queries.GetMediaAsset;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddPersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.AddSharedVocabularyWordToMyList;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.DeletePersonalVocabularyWord;
+using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.UpdatePersonalVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.ModerateSharedVocabularyWord;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RepublishLearnerWords;
 using WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.RequestShareVocabularyWord;
@@ -87,6 +88,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<AddSharedVocabularyWordToMyListCommand, Guid>, AddSharedVocabularyWordToMyListCommandHandler>();
         services.AddScoped<IValidator<AddSharedVocabularyWordToMyListCommand>, AddSharedVocabularyWordToMyListCommandValidator>();
 
+        services.AddScoped<ICommandHandler<UpdatePersonalVocabularyWordCommand>, UpdatePersonalVocabularyWordCommandHandler>();
+        services.AddScoped<IValidator<UpdatePersonalVocabularyWordCommand>, UpdatePersonalVocabularyWordCommandValidator>();
         services.AddScoped<ICommandHandler<DeletePersonalVocabularyWordCommand>, DeletePersonalVocabularyWordCommandHandler>();
         services.AddScoped<IValidator<DeletePersonalVocabularyWordCommand>, DeletePersonalVocabularyWordCommandValidator>();
 

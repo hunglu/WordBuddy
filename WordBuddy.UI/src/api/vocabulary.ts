@@ -20,6 +20,13 @@ export async function addVocabularyWord(payload: AddVocabularyWordPayload): Prom
   return data
 }
 
+export type UpdateVocabularyWordPayload = AddVocabularyWordPayload
+
+/** Edits my own `Private` word in place (same id). 409 = duplicate or not editable. */
+export async function updateMyWord(id: string, payload: UpdateVocabularyWordPayload): Promise<void> {
+  await apiClient.put(`/vocabulary/${id}`, payload)
+}
+
 export async function getMyVocabularyWords(): Promise<PersonalVocabularyWord[]> {
   const { data } = await apiClient.get<PersonalVocabularyWord[]>('/vocabulary/mine')
   return data

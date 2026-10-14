@@ -1,5 +1,7 @@
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces;
@@ -332,8 +334,51 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
     {
         _logger.LogDebug("Updating Sense with Id={WordId}", word.Id);
 
-        await _dbContext.SaveChangesAsync(ct);
-        return Result.Success();
+        bool lexemeRetried = false;
+        while (true)
+        {
+            try
+            {
+                await _dbContext.SaveChangesAsync(ct);
+                return Result.Success();
+            }
+            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            {
+                // A concurrent edit or add gave the same owner a sense with this content hash first
+                // (UX_Senses_ContentHash_OwnerUserId_Learner).
+                _logger.LogWarning("Update of WordId={WordId} hit a duplicate content hash", word.Id);
+                return Result.Failure(Error.Conflict(
+                    "PersonalVocabularyWord.Duplicate", "You already have this word."));
+            }
+            catch (DbUpdateException ex) when (IsLexemeForeignKeyViolation(ex))
+            {
+                // Detach first: GetOrCreateLexemeAsync saves, and must not flush this sense again.
+                Detach(word);
+
+                if (lexemeRetried)
+                {
+                    _logger.LogWarning("Update of WordId={WordId} failed twice on a missing lexeme", word.Id);
+                    return Result.Failure(Error.Conflict(
+                        "PersonalVocabularyWord.ConcurrentAdd", "The word was changed concurrently. Please try again."));
+                }
+
+                // The new lexeme was deleted between lookup and save (its last sense was removed).
+                // Get or re-create it once and retry with the new id.
+                lexemeRetried = true;
+                _logger.LogInformation("Lexeme of WordId={WordId} vanished before save; retrying once", word.Id);
+
+                Result<Lexeme> lexemeResult = await GetOrCreateLexemeAsync(word.Word, ct);
+                if (lexemeResult.IsFailure)
+                {
+                    return Result.Failure(lexemeResult.Error);
+                }
+
+                // Re-attach only the sense (not its graph) with all edited values.
+                EntityEntry<Sense> entry = _dbContext.Entry(word);
+                entry.State = EntityState.Modified;
+                entry.Property(w => w.LexemeId).CurrentValue = lexemeResult.Value.Id;
+            }
+        }
     }
 
     public async Task<Result> LinkAsync(LearnerWord link, CancellationToken ct = default)
@@ -388,6 +433,27 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         await _dbContext.SaveChangesAsync(ct);
 
         return Result.Success();
+    }
+
+    public async Task<Result<bool>> DeleteLexemeIfOrphanedAsync(Guid lexemeId, CancellationToken ct = default)
+    {
+        _logger.LogDebug("Deleting Lexeme if orphaned: LexemeId={LexemeId}", lexemeId);
+
+        try
+        {
+            // Guarded in SQL: a lexeme still referenced by any sense is never deleted.
+            int deleted = await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM [Lexemes] WHERE [Id] = {lexemeId} AND NOT EXISTS (SELECT 1 FROM [Senses] WHERE [LexemeId] = {lexemeId})",
+                ct);
+
+            return Result.Success(deleted > 0);
+        }
+        catch (DbException ex)
+        {
+            // Cleanup only: callers have already saved their change, so a failure here is ignored.
+            _logger.LogWarning("Orphan lexeme cleanup failed for LexemeId={LexemeId}: {ExceptionType}; ignoring", lexemeId, ex.GetType().Name);
+            return Result.Success(false);
+        }
     }
 
     public async Task<Result<bool>> DeleteIfOrphanedAsync(Guid senseId, CancellationToken ct = default)
