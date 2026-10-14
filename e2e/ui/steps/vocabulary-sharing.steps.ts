@@ -39,7 +39,7 @@ Given('the learner has a shared word approved by a moderator', async ({ page, re
 
   await page.getByRole('link', { name: /My Vocabulary/i }).click()
   await expect(page).toHaveURL(/\/vocabulary$/)
-  await page.getByLabel('Word').fill(sharedWord)
+  await page.getByLabel('Word', { exact: true }).fill(sharedWord)
   await page.getByLabel('Definition').fill('A word shared by the vocabulary sharing E2E test.')
   await page.getByRole('button', { name: /add word/i }).click()
 

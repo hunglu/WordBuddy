@@ -281,4 +281,101 @@ public sealed class ConcurrentVocabularyAddTests
             .ToListAsync();
         notes.Should().ContainSingle().Which.Should().Be("kept note");
     }
+
+    private async Task<Sense> SeedSharedSenseAsync(Guid authorId)
+    {
+        string text = $"note-{Guid.NewGuid():N}";
+        Sense sense = Sense.CreateLearner(Guid.NewGuid(), await GetOrCreateLexemeIdAsync(text), authorId, AgeGroup.Adult, text, "def", null).Value;
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+        (await repository.AddAsync(sense, new LearnerWord(Guid.NewGuid(), authorId, sense.Id, isAuthor: true))).IsSuccess.Should().BeTrue();
+        return sense;
+    }
+
+    private async Task<string?> GetNoteAsync(Guid userId, Guid senseId)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        return await dbContext.LearnerWords
+            .Where(l => l.UserId == userId && l.SenseId == senseId)
+            .Select(l => l.PersonalContext)
+            .SingleAsync();
+    }
+
+    /// <summary>Lost race, winner stored no note: the loser's note is kept on the winning link.</summary>
+    [Fact]
+    public async Task VocabularyWordRepository_LinkAsync_DuplicateKeyWinnerHasNoNote_KeepsLoserNote()
+    {
+        Guid adopterId = Guid.NewGuid();
+        Sense sense = await SeedSharedSenseAsync(Guid.NewGuid());
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+            (await repository.LinkAsync(new LearnerWord(Guid.NewGuid(), adopterId, sense.Id, isAuthor: false))).IsSuccess.Should().BeTrue();
+        }
+
+        LearnerWord loser = new(Guid.NewGuid(), adopterId, sense.Id, isAuthor: false);
+        loser.SetPersonalContext("loser note").IsSuccess.Should().BeTrue();
+        Result result;
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+            result = await repository.LinkAsync(loser);
+        }
+
+        result.IsSuccess.Should().BeTrue();
+        (await GetNoteAsync(adopterId, sense.Id)).Should().Be("loser note");
+    }
+
+    /// <summary>Lost race, winner already has a note: the stored note is never overwritten.</summary>
+    [Fact]
+    public async Task VocabularyWordRepository_LinkAsync_DuplicateKeyWinnerHasNote_DoesNotOverwrite()
+    {
+        Guid adopterId = Guid.NewGuid();
+        Sense sense = await SeedSharedSenseAsync(Guid.NewGuid());
+        LearnerWord winner = new(Guid.NewGuid(), adopterId, sense.Id, isAuthor: false);
+        winner.SetPersonalContext("winner note").IsSuccess.Should().BeTrue();
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+            (await repository.LinkAsync(winner)).IsSuccess.Should().BeTrue();
+        }
+
+        LearnerWord loser = new(Guid.NewGuid(), adopterId, sense.Id, isAuthor: false);
+        loser.SetPersonalContext("loser note").IsSuccess.Should().BeTrue();
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+            (await repository.LinkAsync(loser)).IsSuccess.Should().BeTrue();
+        }
+
+        (await GetNoteAsync(adopterId, sense.Id)).Should().Be("winner note");
+    }
+
+    /// <summary>The link is deleted after it was loaded: saving it maps to NotFound, not a 500.</summary>
+    [Fact]
+    public async Task VocabularyWordRepository_SaveLinkAsync_LinkDeleted_ReturnsNotFound()
+    {
+        Guid userId = Guid.NewGuid();
+        Sense sense = await SeedSharedSenseAsync(userId);
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+        LearnerWord link = await dbContext.LearnerWords.AsTracking().FirstAsync(l => l.UserId == userId && l.SenseId == sense.Id);
+        link.SetPersonalContext("edited").IsSuccess.Should().BeTrue();
+
+        // Another request deletes the row behind the tracked entity.
+        using (IServiceScope other = _factory.Services.CreateScope())
+        {
+            ContentDbContext otherContext = other.ServiceProvider.GetRequiredService<ContentDbContext>();
+            await otherContext.LearnerWords.Where(l => l.Id == link.Id).ExecuteDeleteAsync();
+        }
+
+        Result result = await repository.SaveLinkAsync(link);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("PersonalVocabularyWord.NotFound");
+        result.Error.Type.Should().Be(ErrorType.NotFound);
+    }
 }

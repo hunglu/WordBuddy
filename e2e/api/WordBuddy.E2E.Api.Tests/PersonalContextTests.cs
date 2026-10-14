@@ -119,7 +119,7 @@ public sealed class PersonalContextTests
         Guid sessionId = (await session.JsonAsync())!.Value.GetProperty("sessionId").GetGuid();
 
         JsonElement exercise = await VocabularyExercises.CreateAsync(progress, token, sessionId, senseId);
-        return exercise.TryGetProperty("personalContext", out JsonElement note) && note.ValueKind == JsonValueKind.String ? note.GetString() : null;
+        return exercise.GetProperty("prompt").TryGetProperty("personalContext", out JsonElement note) && note.ValueKind == JsonValueKind.String ? note.GetString() : null;
     }
 
     private static async Task WaitForStateAsync(IAPIRequestContext progress, string token, Guid senseId)

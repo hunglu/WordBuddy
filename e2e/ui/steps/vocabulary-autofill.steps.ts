@@ -12,7 +12,7 @@ let unknownWord = ''
 When('they auto-fill the word {string}', async ({ page }, word: string) => {
   await page.getByRole('link', { name: /My Vocabulary/i }).click()
   await expect(page).toHaveURL(/\/vocabulary$/)
-  await page.getByLabel('Word').fill(word)
+  await page.getByLabel('Word', { exact: true }).fill(word)
   await page.getByRole('button', { name: 'Auto-fill' }).click()
 })
 
@@ -34,7 +34,7 @@ When('they auto-fill an unknown word', async ({ page }) => {
   unknownWord = `zzqxautofill${Date.now().toString(36).replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)])}`
   await page.getByRole('link', { name: /My Vocabulary/i }).click()
   await expect(page).toHaveURL(/\/vocabulary$/)
-  await page.getByLabel('Word').fill(unknownWord)
+  await page.getByLabel('Word', { exact: true }).fill(unknownWord)
   await page.getByRole('button', { name: 'Auto-fill' }).click()
 })
 
@@ -43,7 +43,7 @@ Then('they are told to fill in the form instead', async ({ page }) => {
 })
 
 When('they complete the manual form', async ({ page }) => {
-  await expect(page.getByLabel('Word')).toHaveValue(unknownWord)
+  await expect(page.getByLabel('Word', { exact: true })).toHaveValue(unknownWord)
   await page.getByLabel('Definition').fill('A word added after auto-fill was unavailable.')
   await page.getByRole('button', { name: /add word/i }).click()
 })
