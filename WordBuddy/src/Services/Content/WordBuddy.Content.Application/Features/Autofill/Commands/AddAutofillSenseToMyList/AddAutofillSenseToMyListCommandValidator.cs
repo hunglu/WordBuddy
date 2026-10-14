@@ -10,6 +10,7 @@ public sealed class AddAutofillSenseToMyListCommandValidator : AbstractValidator
         RuleFor(c => c.SenseId).NotEmpty();
         RuleFor(c => c.RequestingUserId).NotEmpty();
         RuleFor(c => c.RequestingAgeGroup).IsInEnum();
-        RuleFor(c => c.PersonalContext).MaximumLength(LearnerWord.PersonalContextMaxLength);
+        RuleFor(c => c.PersonalContext).Must(text => text is null || text.Trim().Length <= LearnerWord.PersonalContextMaxLength)
+            .WithMessage($"The personal note must be at most {LearnerWord.PersonalContextMaxLength} characters.");
     }
 }

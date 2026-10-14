@@ -401,6 +401,19 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
             _logger.LogInformation(
                 "Concurrent link resolved to existing link: UserId={UserId}, WordId={WordId}",
                 link.UserId, link.SenseId);
+
+            // Keep the note of the losing request when the winner stored none (e.g. a double click).
+            if (link.PersonalContext is not null)
+            {
+                LearnerWord? winner = await _dbContext.LearnerWords
+                    .AsTracking()
+                    .FirstOrDefaultAsync(l => l.UserId == link.UserId && l.SenseId == link.SenseId, ct);
+                if (winner is not null && winner.PersonalContext is null)
+                {
+                    winner.SetPersonalContext(link.PersonalContext);
+                    return await SaveLinkAsync(winner, ct);
+                }
+            }
         }
 
         return Result.Success();
@@ -409,8 +422,22 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
     public async Task<Result> SaveLinkAsync(LearnerWord link, CancellationToken ct = default)
     {
         _logger.LogDebug("Saving LearnerWord: UserId={UserId}, WordId={WordId}", link.UserId, link.SenseId);
-        await _dbContext.SaveChangesAsync(ct);
-        return Result.Success();
+
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // The link was deleted (or changed) by another request in the meantime.
+            Detach(link);
+            _logger.LogWarning(
+                "Saving LearnerWord hit a concurrency conflict: UserId={UserId}, WordId={WordId}",
+                link.UserId, link.SenseId);
+            return Result.Failure(Error.NotFound(
+                "PersonalVocabularyWord.NotFound", $"Word {link.SenseId} was not found."));
+        }
     }
 
     /// <summary>SQL Server 2601 (unique index) / 2627 (unique constraint) duplicate-key errors.</summary>

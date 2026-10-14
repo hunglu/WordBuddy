@@ -77,6 +77,7 @@ export function VocabularyBuilderPage(): ReactElement {
     handleSubmit,
     reset,
     getValues,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<WordFormValues>({ resolver: zodResolver(wordSchema) })
@@ -144,7 +145,11 @@ export function VocabularyBuilderPage(): ReactElement {
           {errors.word && <p className="mt-1 text-sm text-wb-danger">{errors.word.message}</p>}
         </div>
 
-        <AutofillResults word={autofillWord} personalContext={personalContext} />
+        <AutofillResults
+          word={autofillWord}
+          personalContext={personalContext}
+          onAdded={() => setValue('personalContext', '')}
+        />
 
         <div>
           <label htmlFor="definition" className="mb-1 block text-sm font-semibold text-wb-ink">

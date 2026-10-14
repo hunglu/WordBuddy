@@ -12,6 +12,7 @@ public sealed class AddPersonalVocabularyWordCommandValidator : AbstractValidato
         RuleFor(c => c.Word).NotEmpty().MaximumLength(200);
         RuleFor(c => c.Definition).NotEmpty().MaximumLength(2000);
         RuleFor(c => c.Example).MaximumLength(500);
-        RuleFor(c => c.PersonalContext).MaximumLength(LearnerWord.PersonalContextMaxLength);
+        RuleFor(c => c.PersonalContext).Must(text => text is null || text.Trim().Length <= LearnerWord.PersonalContextMaxLength)
+            .WithMessage($"The personal note must be at most {LearnerWord.PersonalContextMaxLength} characters.");
     }
 }

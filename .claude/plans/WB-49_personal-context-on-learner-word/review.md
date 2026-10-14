@@ -34,3 +34,15 @@ Verified with no finding:
 - E2E UI test: written, not run, and the Child-hint scenario is missing (finding 7).
 - Out-of-scope code: none. The `addWord.isError` and `addToMyList.isError` messages are small additions that match the UI rules.
 - Out-of-scope side effect: the line-ending conversion (finding 1).
+
+## Fix round 1 — response
+
+| # | Status | What was done |
+|---|---|---|
+| 1 | Fixed | Every touched file now has the EOL it has on `main`: existing LF files stay LF, existing CRLF files (7 UI/Content files that were already CRLF on `main`) stay CRLF, new files are LF. `git diff --shortstat main`: 1697 ins / 40 del (tracked files; the new extension file is untracked); with `--ignore-cr-at-eol`: same. No `.gitattributes`, no git config change. |
+| 2 | Fixed | New `VocabularyWordRepositoryExtensions.ApplyNoteToExistingLinkAsync` replaces the 3 copies. Failure paths log `{ErrorCode}` only, never the note. |
+| 3 | Fixed | `SaveLinkAsync` catches `DbUpdateConcurrencyException`, detaches the link and returns `Error.NotFound("PersonalVocabularyWord.NotFound")`. |
+| 4 | Fixed | On a unique violation in `LinkAsync`, the winning link is reloaded; if it has no note, the losing request's note is saved on it. A stored note is never overwritten by the race. |
+| 5 | Fixed | `AutofillResults` has an `onAdded` callback; the add form clears the note field after an auto-fill add. |
+| 6 | Fixed | The 4 validators check `Trim().Length <= 500`. New unit test: 10 spaces + 495 chars succeeds. |
+| 7 | Deferred | No Child scenario. A child needs a linked supporter to reach My Vocabulary, and no existing UI E2E step sets that up. `tasks.md` line reworded to claim Adult coverage only. E2E suites still not run (`/test`). |

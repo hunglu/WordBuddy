@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Content.Application.Extensions;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Shared.Kernel;
@@ -54,20 +55,10 @@ public sealed class AddAutofillSenseToMyListCommandHandler : ICommandHandler<Add
         Result<LearnerWord> existing = await _repository.GetLinkAsync(command.RequestingUserId, sense.Id, ct);
         if (existing.IsSuccess)
         {
-            if (!string.IsNullOrWhiteSpace(command.PersonalContext))
+            Result noteSaved = await _repository.ApplyNoteToExistingLinkAsync(existing.Value, command.PersonalContext, _logger, ct);
+            if (noteSaved.IsFailure)
             {
-                LearnerWord current = existing.Value;
-                Result updateNote = current.SetPersonalContext(command.PersonalContext);
-                if (updateNote.IsFailure)
-                {
-                    return Result.Failure<Guid>(updateNote.Error);
-                }
-
-                Result saveNote = await _repository.SaveLinkAsync(current, ct);
-                if (saveNote.IsFailure)
-                {
-                    return Result.Failure<Guid>(saveNote.Error);
-                }
+                return Result.Failure<Guid>(noteSaved.Error);
             }
 
             _logger.LogInformation("AddAutofillSenseToMyListCommand succeeded: SenseId={SenseId}, AlreadyLinked={AlreadyLinked}", sense.Id, true);

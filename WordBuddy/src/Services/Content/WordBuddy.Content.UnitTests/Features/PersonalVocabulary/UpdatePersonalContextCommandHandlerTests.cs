@@ -77,6 +77,18 @@ public class UpdatePersonalContextCommandHandlerTests
     }
 
     [Fact]
+    public async Task UpdatePersonalContextCommandHandler_HandleAsync_PaddedTextWithin500AfterTrim_Succeeds()
+    {
+        LearnerWord link = SetupLink();
+
+        Result result = await CreateHandler().HandleAsync(
+            new UpdatePersonalContextCommand(_sense.Id, _userId, new string(' ', 10) + new string('x', 495)));
+
+        result.IsSuccess.Should().BeTrue();
+        link.PersonalContext.Should().HaveLength(495);
+    }
+
+    [Fact]
     public async Task UpdatePersonalContextCommandHandler_HandleAsync_TooLong_ReturnsValidationFailure()
     {
         LearnerWord link = SetupLink("old");

@@ -42,6 +42,6 @@
 - [x] Integration: user B never sees A's note (`/shared`, `/senses`, `/mine`). — same file
 - [x] Integration: concurrent identical add with a note keeps the note. — `IntegrationTests/ConcurrentVocabularyAddTests.cs`
 - [x] E2E API: add with note → Progress review exercise carries `personalContext`. — `e2e/api/WordBuddy.E2E.Api.Tests/PersonalContextTests.cs` (written and built, NOT run: needs full stack)
-- [x] E2E UI: learner adds a word with a note, edits it on My words, clears it; Child sees the "Only you" hint. — `e2e/ui/features/vocabulary-personal-context.feature` + steps (written, NOT run; Child-hint scenario not written, see report)
+- [x] E2E UI: learner (Adult) adds a word with a note, edits it on My words, clears it; the add form shows the "Only you can see this note" hint. — `e2e/ui/features/vocabulary-personal-context.feature` + steps (written, NOT run). No Child scenario: a child needs a linked supporter to reach My Vocabulary and no existing step sets that up; deferred.
 
 Notes: `PersonalVocabularyWordDto.PersonalContext` has `JsonIgnore(WhenWritingNull)` so old JSON shapes stay intact. Extra files: `UnitTests/CapturingLogger.cs`, `Api/Models/AddToMyListRequest.cs`, `Api/Models/UpdatePersonalContextRequest.cs`.

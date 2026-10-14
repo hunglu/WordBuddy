@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Content.Application.Extensions;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Shared.Kernel;
@@ -133,19 +134,10 @@ public sealed class AddPersonalVocabularyWordCommandHandler : ICommandHandler<Ad
         Result<LearnerWord> linkResult = await _repository.GetLinkAsync(command.OwnerUserId, existing.Id, ct);
         if (linkResult.IsSuccess)
         {
-            if (!string.IsNullOrWhiteSpace(command.PersonalContext))
+            Result noteSaved = await _repository.ApplyNoteToExistingLinkAsync(linkResult.Value, command.PersonalContext, _logger, ct);
+            if (noteSaved.IsFailure)
             {
-                Result updateNote = linkResult.Value.SetPersonalContext(command.PersonalContext);
-                if (updateNote.IsFailure)
-                {
-                    return Result.Failure<Guid>(updateNote.Error);
-                }
-
-                Result saveNote = await _repository.SaveLinkAsync(linkResult.Value, ct);
-                if (saveNote.IsFailure)
-                {
-                    return Result.Failure<Guid>(saveNote.Error);
-                }
+                return Result.Failure<Guid>(noteSaved.Error);
             }
 
             _logger.LogInformation("AddPersonalVocabularyWordCommand succeeded: WordId={WordId}, AlreadyLinked={AlreadyLinked}", existing.Id, true);
