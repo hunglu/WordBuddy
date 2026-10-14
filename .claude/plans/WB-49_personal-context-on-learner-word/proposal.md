@@ -1,14 +1,14 @@
 ---
 title: WB-49_Personal context on learner word
-status: implemented
+status: reviewed
 type: change
 issue: 49
 pr: 53              # set by /code when it opens the pull request
 affects: docs/features/vocabulary.md
 supersedes: none
-version: 5.0
+version: 6.0
 created: 2026-10-13T18:12:59+07:00
-updated: 2026-10-14T14:06:08+07:00
+updated: 2026-10-14T14:12:36+07:00
 ---
 
 ## Problem

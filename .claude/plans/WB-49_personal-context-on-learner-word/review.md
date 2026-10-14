@@ -1,11 +1,49 @@
 # Review: WB-49 Personal context on learner word
 
-PR: #53 · Round 1 · Reviewed commit: c0aca60 · 2026-10-14T13:55:57+07:00
+PR: #53 · Round 2 · Reviewed commit: 25d4e52 · 2026-10-14T14:12:02+07:00
 
 ## Verdict
-Changes requested — the logic and privacy are sound, but the commit converts about 30 existing files from LF to CRLF.
+Approve — the line-ending churn is gone and all 6 nits are fixed or knowingly deferred; no new blocker or major.
 
 ## Findings
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | nit | `VocabularyWordRepository.cs:405-416`, `:429-440` | The two new error paths have no direct test: the "keep loser note" branch of `LinkAsync`, and the `DbUpdateConcurrencyException` → NotFound mapping of `SaveLinkAsync`. `ConcurrentIdenticalAddWithNote_KeepsNote` hits them only by chance. Failure: a later refactor breaks them silently. | `/test`: add an integration test per path (pre-insert the winning link, then call `LinkAsync`; delete the link, then call `SaveLinkAsync`). |
+| 2 | nit | `e2e/ui/features/vocabulary-personal-context.feature` | Carried from round 1 (#7): no Child UI scenario; E2E API and UI suites not run. `tasks.md` now claims Adult coverage only, so the plan is honest. | `/test`: run both suites; add the Child hint scenario once a "child with linked supporter" step exists. |
+
+## Round 1 fixes — verified
+
+| R1 # | Result | Evidence |
+|---|---|---|
+| 1 major — EOL churn | Fixed | `git diff --shortstat origin/main...25d4e52` = `--ignore-cr-at-eol` = 50 files, +1738/−40. `git ls-files --eol`: new files LF; files CRLF on `main` stay CRLF. |
+| 2 — duplicated block | Fixed | `VocabularyWordRepositoryExtensions.ApplyNoteToExistingLinkAsync` used by the 3 handlers. Both failure logs carry `{ErrorCode}` only. |
+| 3 — `SaveLinkAsync` 500 | Fixed | `VocabularyWordRepository.cs:429` catches `DbUpdateConcurrencyException`, detaches, returns `PersonalVocabularyWord.NotFound` → 404. |
+| 4 — race drops note | Fixed | `LinkAsync` detaches the loser, reloads the winner tracked, sets the note only when the winner has none. A stored note is never overwritten. |
+| 5 — auto-fill reuses note | Fixed | `AutofillResults` `onAdded` → `setValue('personalContext', '')` in `VocabularyBuilderPage.tsx:151`. |
+| 6 — untrimmed length | Fixed | 4 validators use `Trim().Length <= 500`; message has no note text. New test `PaddedTextWithin500AfterTrim_Succeeds`. |
+| 7 — Child E2E | Deferred | See finding 2. |
+
+## Checked with no finding
+- **Privacy:** no new log line, `Error` message or validation message contains the note. New logs carry `UserId`, `WordId`, `ErrorCode` only. Reads are unchanged from round 1 (note only in `ToDto(LearnerWord, AgeGroup)`, caller-scoped).
+- **Child vs adult:** no policy or flow change. A child's awaiting-approval link can receive the race note; it is the child's own link, so no leak.
+- **Conventions:** `Result` everywhere, no `var` with unclear type, XML docs on the new public extension, structured logging, no `.Result`/`.Wait()`.
+- **Builds/tests (re-run by reviewer):** Content unit tests 365/365 pass; `tsc -b` passes. Integration tests not re-run (140 pass per `/code`).
+- **Database:** no migration, so no diagram change.
+
+## Plan conformance
+- Backend 1–13, frontend 14–21, unit and integration tests: all present.
+- E2E API and UI: written, not run (finding 2).
+- Out-of-scope code: none. The extension class and the race/concurrency handling come from round 1 findings.
+
+## Previous rounds
+
+### Round 1
+PR: #53 · Round 1 · Reviewed commit: c0aca60 · 2026-10-14T13:55:57+07:00
+
+#### Verdict
+Changes requested — the logic and privacy are sound, but the commit converts about 30 existing files from LF to CRLF.
+
+#### Findings
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | major | `WordBuddy.UI/src/types/index.ts` (whole file), `PersonalVocabularyController.cs`, `PersonalVocabularyWordMapper.cs`, `LearnerWord.cs`, the 3 add handlers/validators/commands, `useVocabulary.ts`, `useAutofill.ts`, `AutofillResults.tsx`, `VocabularySharedPoolPage.tsx`, 5 test files | Line endings changed from LF (main) to CRLF on every touched existing file. The PR shows +4208/−2628; the real change is +1620/−40 (`git diff --ignore-cr-at-eol`). Failure: `git blame` is lost on these files, and every open branch that touches them (for example WB-50 on Content and `types/index.ts`) gets whole-file merge conflicts. New files are also CRLF, unlike the rest of the repo. | Convert all files in this diff back to LF (for example `dos2unix <files>`), then check that `git diff --stat origin/main...` matches the `--ignore-cr-at-eol` numbers. Check the editor / `core.autocrlf` setting that caused it. |
@@ -26,7 +64,7 @@ Verified with no finding:
 - **UI rules:** TanStack Query only, no `any`/`enum`, `wb-` tokens only, Framer Motion for the editor, and `isError` handled on every new mutation. `tsc -b` passes.
 - **Database:** no migration, so no diagram change is needed.
 
-## Plan conformance
+#### Plan conformance
 - Backend tasks 1–13: all present in the diff.
 - Frontend tasks 14–21: all present.
 - Unit and integration tests: present (364 unit / 140 integration passing, per `/code`).
@@ -35,7 +73,7 @@ Verified with no finding:
 - Out-of-scope code: none. The `addWord.isError` and `addToMyList.isError` messages are small additions that match the UI rules.
 - Out-of-scope side effect: the line-ending conversion (finding 1).
 
-## Fix round 1 — response
+#### Fix round 1 — response
 
 | # | Status | What was done |
 |---|---|---|
