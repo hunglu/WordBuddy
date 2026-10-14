@@ -1,14 +1,14 @@
 ---
 title: WB-50_Lexeme admin view
-status: implemented
+status: changes-requested
 type: new
 issue: 50
-pr: none            # set by /code when it opens the pull request
+pr: 54              # set by /code when it opens the pull request
 affects: docs/features/lexeme-admin.md
 supersedes: none
-version: 4.0
+version: 5.0
 created: 2026-10-13T18:12:59+07:00
-updated: 2026-10-14T17:00:53+07:00
+updated: 2026-10-14T17:18:42+07:00
 ---
 
 ## Problem
