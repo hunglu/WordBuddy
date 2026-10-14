@@ -3,7 +3,7 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-27_learning-groups
+last-updated-by: WB-48_edit-own-vocabulary-word
 ---
 
 # Vocabulary storage
@@ -94,6 +94,19 @@ erDiagram
 
   No link → 404. The former author can re-adopt a handed-over word; the new link has `isAuthor = false`.
 - **Share** is author-only. A non-author gets 409 (`PersonalVocabularyWord.InvalidShareRequest`). System words cannot be shared.
+- **Edit** (`PUT /api/vocabulary/{id}`) is owner-only and only for a `Private` sense. It changes word, definition and example in place:
+  - The sense id stays the same, so Progress history is kept.
+  - Audio is cleared when the word changes. The image is kept.
+
+  | Case | Status |
+  | --- | --- |
+  | Not the caller's word (no link / not mine) | 404 |
+  | System word or another owner's word | 403 |
+  | `PendingReview`, `Shared` or `Rejected` sense | 409 |
+  | Same word + definition + example already exists | 409 |
+  | Concurrent add (`PersonalVocabularyWord.ConcurrentAdd`) | 409 |
+
+  Children and adults can both edit their own private words.
 - **Concurrency.** Simultaneous identical add / adopt calls resolve to the same word or link — no 500.
 - **Child vs adult:**
   - A Child cannot request sharing (`CanShareVocabulary`, 403).
@@ -117,6 +130,7 @@ erDiagram
 | POST | `/api/vocabulary` | Content | authenticated |
 | GET | `/api/vocabulary/mine` | Content | authenticated |
 | POST | `/api/vocabulary/{id}/share` | Content | `CanShareVocabulary` (not Child, or admin) |
+| PUT | `/api/vocabulary/{id}` | Content | authenticated (owner, `Private` only) |
 | DELETE | `/api/vocabulary/{id}[?confirm=true]` | Content | authenticated |
 | GET | `/api/vocabulary/shared` | Content | authenticated (Child: child-visible only) |
 | POST | `/api/vocabulary/shared/{id}/add-to-mine` | Content | authenticated (Child: child-visible only) |
@@ -141,3 +155,4 @@ None.
 - `WB-16_vocabulary-lexeme-sense-model` (#16, PR #17) — `VocabularyWords` split into `Lexemes` + `Senses` (same ids); `LearnerWords` (`AddedBy`, `PersonalContext`), `LessonSenses`, `SenseTranslations`; API JSON unchanged
 - `WB-25_vocabulary-autofill` (#25, PR #37) — `Senses.Origin` + enrichment fields, `LearnerWords` child approval columns, lexeme POS/IPA/audio from auto-fill
 - `WB-27_learning-groups` (#27, PR #39) — `LearnerWords.AddedBy = Supporter` is now written by group assignment (`AddedByUserId` = the supporter, also the `LearnerWordAdded.AddedBy`); `GroupWordAssignments` history and `LearnerGroupMemberProjections` tables; see `learning-groups.md`
+- `WB-48_edit-own-vocabulary-word` (#48, PR #52) — owner-only in-place edit of `Private` senses (`PUT /api/vocabulary/{id}`); sense id kept; audio cleared on word change, image kept

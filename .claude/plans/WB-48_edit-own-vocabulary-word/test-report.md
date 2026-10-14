@@ -1,6 +1,6 @@
 # Test report: WB-48 Edit own vocabulary word
 
-**Verdict: Not merged — E2E UI suite has failures unrelated to WB-48 (Run 2).** All WB-48 tests pass.
+**Verdict: Approved — merged into main (Run 3).** All suites green.
 
 ## Run 1 — 2026-10-14 (stopped, services down)
 
@@ -63,3 +63,35 @@ Stack up (Content `PUT` unauthenticated → 401, UI → 200). HEAD `253cce8`, `o
 ### Verdict
 
 Not merged — E2E UI suite not fully green (guard 3). All WB-48 scenarios pass. Fix: start Content with `SupportLinks__UnlinkOverrideWaitDays=0` and re-run `/test`, or Sam decides to accept the unrelated failures.
+
+
+---
+
+## Run 3 — 2026-10-14
+
+HEAD `7437cbd`, `origin/main` already merged. Identity ran with `SupportLinks__UnlinkOverrideWaitDays=0` via a local compose override outside the repo. An earlier attempt put it on Content by mistake; that attempt made no commit. Suites ran one after the other.
+
+### Merge guard
+
+| Guard | Result |
+| --- | --- |
+| 1. Review Approve, `72b21d1` ancestor of HEAD | ✅ |
+| 2. Paths changed since review (vs reviewed code + main) | ✅ `proposal.md`, `review.md`, `test-report.md`, `e2e/ui/steps/vocabulary-edit.steps.ts` |
+| 3. Every suite zero failures | ✅ |
+
+### Results
+
+| Suite | Result |
+| --- | --- |
+| Content unit | ✅ 331 passed |
+| Content integration | ✅ 129 passed |
+| E2E API | ✅ 68 passed |
+| E2E UI (`npm test`) | ✅ 48 passed |
+
+### Failures
+
+None.
+
+### Verdict
+
+Approved — merged into main
