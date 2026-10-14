@@ -53,6 +53,10 @@ internal sealed class LocalFileStorageService : IFileStorageService
         return relativePath.Replace('\\', '/');
     }
 
+    // Windows paths ignore case; Linux paths do not, so the guard must not either.
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
     public Task<bool> DeleteAsync(string relativePath, CancellationToken ct = default)
     {
         string basePath = Path.GetFullPath(_settings.BasePath);
@@ -60,7 +64,7 @@ internal sealed class LocalFileStorageService : IFileStorageService
         string baseWithSeparator = basePath.EndsWith(Path.DirectorySeparatorChar) ? basePath : basePath + Path.DirectorySeparatorChar;
 
         // Path-traversal guard: only files strictly inside the storage folder may be deleted.
-        if (!absolutePath.StartsWith(baseWithSeparator, StringComparison.OrdinalIgnoreCase))
+        if (!absolutePath.StartsWith(baseWithSeparator, PathComparison))
         {
             _logger.LogWarning("Refused to delete a media file outside the storage folder");
             return Task.FromResult(false);

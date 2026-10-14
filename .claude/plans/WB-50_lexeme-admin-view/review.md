@@ -50,3 +50,17 @@ The application code is sound. `AdminOnly` covers all 5 endpoints. The guarded a
   - `@types/node` in `e2e/ui` — OK;
   - placeholder `docs/features/lexeme-admin.md` — OK, `/test` fills it.
 - No EF migration, so no database diagram update is needed.
+
+## Fix round 1 — response
+
+| # | Status | Fix |
+|---|---|---|
+| 1 | Fixed | `nginx.conf`: `client_max_body_size 6m;` in `/api/vocabulary`. `k8s/ingress.yaml`: annotation `proxy-body-size: 50m` with a comment (one Ingress, so it covers all paths and `/api/media`). Not applied to a cluster. |
+| 2 | Fixed | `docker-compose.yml`: default `:-7` (matches `appsettings.json` and `SupportLinkOptions`). `.env.example` lists the variable with a comment. `.env` not read. |
+| 3 | Fixed | `LocalFileStorageService`: `Ordinal` on Linux, `OrdinalIgnoreCase` on Windows. Existing traversal test kept (it runs on Windows here, so the Linux branch is not run). |
+| 4 | Deferred (accepted) | Needs two admins on one lexeme and locale at the same moment. A safe fix needs a lock or a retry. Last write wins, as elsewhere. Recovery: upload again. |
+| 5 | Fixed | UI accepts `audio/mp3` and `audio/mpeg`. The validator accepts the alias too; the file is stored and served as `audio/mpeg`. New integration test for the alias. |
+| 6 | Fixed | `LexemeForm`: the Zod field is `'' \| PartOfSpeech` as input and a transform rejects `''`, so the output is a real `PartOfSpeech`. Cast removed. |
+| 7 | Fixed | New integration test: old asset with another `Url` → upload → old row and old file gone, new row linked. |
+
+Checks: Content build 0 errors; unit 415 pass; integration 184 pass; `npm run build` OK. nginx syntax not checked (no nginx or docker used).

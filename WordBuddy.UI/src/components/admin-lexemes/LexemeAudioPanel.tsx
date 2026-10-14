@@ -30,7 +30,7 @@ function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactE
     const file: File | undefined = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    if (file.type !== 'audio/mpeg') {
+    if (file.type !== 'audio/mpeg' && file.type !== 'audio/mp3') {
       setFileError('Choose an MP3 file.')
       return
     }
@@ -62,7 +62,7 @@ function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactE
         ref={fileInput}
         id={uploadId}
         type="file"
-        accept="audio/mpeg"
+        accept="audio/mpeg,audio/mp3"
         className="sr-only"
         aria-label={`Upload ${label} audio`}
         onChange={onFile}

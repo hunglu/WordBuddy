@@ -38,7 +38,15 @@ function toLines(text: string): string[] {
 }
 
 const lexemeSchema = z.object({
-  partOfSpeech: z.enum(PARTS_OF_SPEECH, { error: 'Choose a part of speech' }),
+  // '' is the honest "nothing chosen" state of the select; the transform rejects it, so the
+  // submitted value is always a real PartOfSpeech.
+  partOfSpeech: z.union([z.enum(PARTS_OF_SPEECH), z.literal('')]).transform((value, ctx) => {
+    if (value === '') {
+      ctx.addIssue({ code: 'custom', message: 'Choose a part of speech' })
+      return z.NEVER
+    }
+    return value
+  }),
   ipaUk: z.string().trim().max(IPA_MAX, `IPA can have up to ${IPA_MAX} characters`),
   ipaUs: z.string().trim().max(IPA_MAX, `IPA can have up to ${IPA_MAX} characters`),
   syllables: z.string().trim().max(SYLLABLES_MAX, `Syllables can have up to ${SYLLABLES_MAX} characters`),
@@ -59,13 +67,14 @@ const lexemeSchema = z.object({
     ),
 })
 
-type LexemeFormValues = z.infer<typeof lexemeSchema>
+type LexemeFormInput = z.input<typeof lexemeSchema>
+type LexemeFormValues = z.output<typeof lexemeSchema>
 
 /** Form values for a loaded lexeme. */
-function toFormValues(lexeme: AdminLexemeDetail): LexemeFormValues {
+function toFormValues(lexeme: AdminLexemeDetail): LexemeFormInput {
   return {
     // A lexeme can still be without a part of speech; the form asks the admin to choose one.
-    partOfSpeech: lexeme.partOfSpeech ?? ('' as PartOfSpeech),
+    partOfSpeech: lexeme.partOfSpeech ?? '',
     ipaUk: lexeme.ipaUk ?? '',
     ipaUs: lexeme.ipaUs ?? '',
     syllables: lexeme.syllables ?? '',
@@ -97,7 +106,7 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
     register,
     handleSubmit,
     formState: { errors, isDirty },
-  } = useForm<LexemeFormValues>({
+  } = useForm<LexemeFormInput, unknown, LexemeFormValues>({
     resolver: zodResolver(lexemeSchema),
     // Fills the form when the lexeme loads and resets it to the saved values after every save.
     values: toFormValues(lexeme),

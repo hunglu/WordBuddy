@@ -12,7 +12,8 @@ public sealed class UploadLexemeAudioCommandValidator : AbstractValidator<Upload
             .Must(l => l is Lexeme.UkLocale or Lexeme.UsLocale)
             .WithMessage($"Locale must be '{Lexeme.UkLocale}' or '{Lexeme.UsLocale}'.");
         RuleFor(c => c.ContentType)
-            .Must(t => string.Equals(t, UploadLexemeAudioCommand.AllowedContentType, StringComparison.OrdinalIgnoreCase))
+            .Must(t => string.Equals(t, UploadLexemeAudioCommand.AllowedContentType, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(t, UploadLexemeAudioCommand.AliasContentType, StringComparison.OrdinalIgnoreCase))
             .WithMessage($"Content type must be {UploadLexemeAudioCommand.AllowedContentType}.");
         RuleFor(c => c.Length)
             .InclusiveBetween(1, UploadLexemeAudioCommand.MaxBytes)

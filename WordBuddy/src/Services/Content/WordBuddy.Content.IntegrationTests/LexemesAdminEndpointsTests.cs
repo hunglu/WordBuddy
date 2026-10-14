@@ -385,6 +385,49 @@ public sealed class LexemesAdminEndpointsTests
         rows.Should().Be(1);
     }
 
+    [Fact]
+    public async Task LexemesAdmin_UploadAudio_Mp3Alias_Returns200()
+    {
+        HttpClient admin = await AdminAsync();
+        Lexeme lexeme = await SeedLexemeAsync($"{Token()}word");
+
+        HttpResponseMessage response = await admin.PutAsync($"{Base}/{lexeme.Id}/audio/en-GB", Mp3([1, 2], "audio/mp3"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        File.Exists(AudioPath(lexeme.Id, "en-GB")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task LexemesAdmin_UploadAudio_OldAssetWithOtherUrl_ReplacesRowAndDeletesOldFile()
+    {
+        HttpClient admin = await AdminAsync();
+        Lexeme lexeme = await SeedLexemeAsync($"{Token()}word");
+        string oldRelative = $"audio/old-{Guid.NewGuid():N}.mp3";
+        string oldFile = Path.Combine(StorageBase, "audio", Path.GetFileName(oldRelative));
+        Directory.CreateDirectory(Path.GetDirectoryName(oldFile)!);
+        await File.WriteAllBytesAsync(oldFile, [7]);
+        Guid oldId = Guid.NewGuid();
+        await WithDbAsync(async db =>
+        {
+            Lexeme tracked = await db.Lexemes.AsTracking().SingleAsync(l => l.Id == lexeme.Id);
+            db.MediaAssets.Add(new MediaAsset(oldId, MediaAssetType.Audio, oldRelative));
+            tracked.AttachAudio("en-GB", oldId);
+            await db.SaveChangesAsync();
+            return 0;
+        });
+
+        HttpResponseMessage response = await admin.PutAsync($"{Base}/{lexeme.Id}/audio/en-GB", Mp3([1, 2, 3]));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        MediaAssetDto created = (await response.Content.ReadFromJsonAsync<MediaAssetDto>(JsonOptions))!;
+        created.Id.Should().NotBe(oldId);
+        (await WithDbAsync(db => db.MediaAssets.AnyAsync(a => a.Id == oldId))).Should().BeFalse();
+        (await WithDbAsync(db => db.MediaAssets.AnyAsync(a => a.Id == created.Id))).Should().BeTrue();
+        File.Exists(oldFile).Should().BeFalse();
+        File.Exists(AudioPath(lexeme.Id, "en-GB")).Should().BeTrue();
+        (await WithDbAsync(db => db.Lexemes.Where(l => l.Id == lexeme.Id).Select(l => l.UkAudioAssetId).SingleAsync())).Should().Be(created.Id);
+    }
+
     [Theory]
     [InlineData("en-GB", "audio/wav")]
     [InlineData("en-AU", "audio/mpeg")]

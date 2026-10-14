@@ -15,6 +15,9 @@ public sealed record UploadLexemeAudioCommand(
     /// <summary>Largest accepted file (5 MB).</summary>
     public const long MaxBytes = 5 * 1024 * 1024;
 
-    /// <summary>The only accepted content type.</summary>
+    /// <summary>The canonical content type; files are stored and served as this.</summary>
     public const string AllowedContentType = "audio/mpeg";
+
+    /// <summary>Alias some browsers and operating systems report for MP3 files.</summary>
+    public const string AliasContentType = "audio/mp3";
 }

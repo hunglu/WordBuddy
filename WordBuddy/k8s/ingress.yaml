@@ -7,6 +7,10 @@ kind: Ingress
 metadata:
   name: wordbuddy-ingress
   namespace: wordbuddy
+  annotations:
+    # ingress-nginx allows 1 MB bodies by default. One Ingress serves every path, so this applies
+    # to all of them: 50m covers /api/media uploads, and the 5 MB lexeme audio PUT under /api/vocabulary.
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
 spec:
   ingressClassName: nginx
   rules:
