@@ -127,6 +127,112 @@ public sealed class Lexeme : Entity
         return Result.Success();
     }
 
+    /// <summary>Maximum length of <see cref="IpaUk"/> and <see cref="IpaUs"/> (column limit).</summary>
+    public const int IpaMaxLength = 100;
+
+    /// <summary>Maximum length of <see cref="Syllables"/> (column limit).</summary>
+    public const int SyllablesMaxLength = 200;
+
+    /// <summary>Maximum number of <see cref="WordForms"/>.</summary>
+    public const int MaxWordForms = 20;
+
+    /// <summary>Maximum length of one word form.</summary>
+    public const int WordFormMaxLength = 100;
+
+    /// <summary>Highest allowed <see cref="FrequencyRank"/>.</summary>
+    public const int FrequencyRankMax = 1_000_000;
+
+    /// <summary>Admin correction: replaces every dictionary field with the given values (unlike
+    /// <see cref="Enrich"/>, which keeps old values). Empty strings become <see langword="null"/>;
+    /// word forms are trimmed and de-duplicated (case-insensitive). A value that is too long or out
+    /// of range fails with <c>Validation</c> and changes nothing — it is never truncated.
+    /// <see cref="Lemma"/> and <see cref="NormalizedLemma"/> do not change.</summary>
+    public Result Correct(
+        PartOfSpeech partOfSpeech,
+        string? ipaUk,
+        string? ipaUs,
+        string? syllables,
+        IReadOnlyList<string>? wordForms,
+        CefrLevel? cefrLevel,
+        int? frequencyRank)
+    {
+        if (!Enum.IsDefined(partOfSpeech))
+        {
+            return Result.Failure(Error.Validation("Lexeme.InvalidPartOfSpeech", "The part of speech is not valid."));
+        }
+
+        if (cefrLevel is not null && !Enum.IsDefined(cefrLevel.Value))
+        {
+            return Result.Failure(Error.Validation("Lexeme.InvalidCefrLevel", "The CEFR level is not valid."));
+        }
+
+        string? newIpaUk = Blank(ipaUk);
+        string? newIpaUs = Blank(ipaUs);
+        string? newSyllables = Blank(syllables);
+
+        if (newIpaUk?.Length > IpaMaxLength || newIpaUs?.Length > IpaMaxLength)
+        {
+            return Result.Failure(Error.Validation(
+                "Lexeme.IpaTooLong", $"An IPA transcription may have at most {IpaMaxLength} characters."));
+        }
+
+        if (newSyllables?.Length > SyllablesMaxLength)
+        {
+            return Result.Failure(Error.Validation(
+                "Lexeme.SyllablesTooLong", $"Syllables may have at most {SyllablesMaxLength} characters."));
+        }
+
+        if (frequencyRank is < 1 or > FrequencyRankMax)
+        {
+            return Result.Failure(Error.Validation(
+                "Lexeme.InvalidFrequencyRank", $"The frequency rank must be between 1 and {FrequencyRankMax}."));
+        }
+
+        List<string> forms = (wordForms ?? [])
+            .Where(f => !string.IsNullOrWhiteSpace(f))
+            .Select(f => f.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (forms.Count > MaxWordForms || forms.Any(f => f.Length > WordFormMaxLength))
+        {
+            return Result.Failure(Error.Validation(
+                "Lexeme.InvalidWordForms",
+                $"At most {MaxWordForms} word forms are allowed, each at most {WordFormMaxLength} characters."));
+        }
+
+        PartOfSpeech = partOfSpeech;
+        IpaUk = newIpaUk;
+        IpaUs = newIpaUs;
+        Syllables = newSyllables;
+        WordForms = forms;
+        CefrLevel = cefrLevel;
+        FrequencyRank = frequencyRank;
+        return Result.Success();
+    }
+
+    /// <summary>Unlinks the pronunciation of <paramref name="locale"/> (<see cref="UkLocale"/> or
+    /// <see cref="UsLocale"/>) and returns the id of the asset that was linked, or <see langword="null"/>
+    /// when nothing was linked. Any other locale fails with <c>Lexeme.InvalidAudioLocale</c>.</summary>
+    public Result<Guid?> DetachAudio(string locale)
+    {
+        switch (locale)
+        {
+            case UkLocale:
+                Guid? oldUk = UkAudioAssetId;
+                UkAudioAssetId = null;
+                UkAudio = null;
+                return Result.Success(oldUk);
+            case UsLocale:
+                Guid? oldUs = UsAudioAssetId;
+                UsAudioAssetId = null;
+                UsAudio = null;
+                return Result.Success(oldUs);
+            default:
+                return Result.Failure<Guid?>(Error.Validation(
+                    "Lexeme.InvalidAudioLocale", $"Audio locale must be '{UkLocale}' or '{UsLocale}'."));
+        }
+    }
+
     /// <summary>Links a pronunciation asset: <see cref="UkLocale"/> or <see cref="UsLocale"/>.
     /// Any other locale fails validation.</summary>
     public Result AttachAudio(string locale, Guid assetId)
@@ -168,6 +274,8 @@ public sealed class Lexeme : Entity
         Lemma = match;
         return Result.Success();
     }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string? Clean(string? value, int maxLength)
     {

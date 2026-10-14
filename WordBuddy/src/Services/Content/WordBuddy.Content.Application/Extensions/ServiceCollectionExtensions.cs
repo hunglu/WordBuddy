@@ -38,6 +38,11 @@ using WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetShare
 using WordBuddy.Content.Application.Features.Groups.Commands.ApplyLearnerGroupEvent;
 using WordBuddy.Content.Application.Features.Groups.Commands.AssignWordsToGroup;
 using WordBuddy.Content.Application.Features.Groups.Queries.GetGroupWordAssignments;
+using WordBuddy.Content.Application.Features.LexemesAdmin.Commands.RemoveLexemeAudio;
+using WordBuddy.Content.Application.Features.LexemesAdmin.Commands.UpdateLexeme;
+using WordBuddy.Content.Application.Features.LexemesAdmin.Commands.UploadLexemeAudio;
+using WordBuddy.Content.Application.Features.LexemesAdmin.Queries.GetAdminLexemeDetail;
+using WordBuddy.Content.Application.Features.LexemesAdmin.Queries.GetAdminLexemes;
 using WordBuddy.Content.Application.Features.SupportLinks.Commands.ApplySupportLinkEvent;
 
 namespace WordBuddy.Content.Application.Extensions;
@@ -118,6 +123,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<AssignWordsToGroupCommand, GroupWordAssignmentResultDto>, AssignWordsToGroupCommandHandler>();
         services.AddScoped<IValidator<AssignWordsToGroupCommand>, AssignWordsToGroupCommandValidator>();
         services.AddScoped<IQueryHandler<GetGroupWordAssignmentsQuery, IReadOnlyList<GroupWordAssignmentDto>>, GetGroupWordAssignmentsQueryHandler>();
+
+        services.AddScoped<IQueryHandler<GetAdminLexemesQuery, AdminLexemePageDto>, GetAdminLexemesQueryHandler>();
+        services.AddScoped<IValidator<GetAdminLexemesQuery>, GetAdminLexemesQueryValidator>();
+        services.AddScoped<IQueryHandler<GetAdminLexemeDetailQuery, AdminLexemeDetailDto>, GetAdminLexemeDetailQueryHandler>();
+        services.AddScoped<IValidator<GetAdminLexemeDetailQuery>, GetAdminLexemeDetailQueryValidator>();
+        services.AddScoped<ICommandHandler<UpdateLexemeCommand>, UpdateLexemeCommandHandler>();
+        services.AddScoped<IValidator<UpdateLexemeCommand>, UpdateLexemeCommandValidator>();
+        services.AddScoped<ICommandHandler<UploadLexemeAudioCommand, MediaAssetDto>, UploadLexemeAudioCommandHandler>();
+        services.AddScoped<IValidator<UploadLexemeAudioCommand>, UploadLexemeAudioCommandValidator>();
+        services.AddScoped<ICommandHandler<RemoveLexemeAudioCommand>, RemoveLexemeAudioCommandHandler>();
+        services.AddScoped<IValidator<RemoveLexemeAudioCommand>, RemoveLexemeAudioCommandValidator>();
 
         services.AddScoped<AutofillCatalogWriter>();
         services.AddScoped<IQueryHandler<LookupAutofillQuery, AutofillResultDto>, LookupAutofillQueryHandler>();

@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGroupWordRepository, GroupWordRepository>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IAutofillRepository, AutofillRepository>();
+        services.AddScoped<ILexemeAdminRepository, LexemeAdminRepository>();
 
         services.AddAutofillClients(configuration, isDevelopment);
 

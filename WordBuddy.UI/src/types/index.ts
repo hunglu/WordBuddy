@@ -728,3 +728,80 @@ export interface ChallengeBoard {
   myScore: number | null
   entries: ChallengeBoardEntry[]
 }
+
+// ── Admin lexemes (WB-50) ───────────────────────────────────────────────────
+
+/** CEFR level of a headword (backend `CefrLevel`). */
+export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'
+
+/** Pronunciation locale of a lexeme: British or American. */
+export type AudioLocale = 'en-GB' | 'en-US'
+
+/** One row of the admin lexeme list (`GET /vocabulary/admin/lexemes`). Counts only: no learner text. */
+export interface AdminLexemeListItem {
+  id: string
+  lemma: string
+  partOfSpeech: PartOfSpeech | null
+  ipaUk: string | null
+  ipaUs: string | null
+  cefrLevel: CefrLevel | null
+  frequencyRank: number | null
+  hasUkAudio: boolean
+  hasUsAudio: boolean
+  catalogSenseCount: number
+  privateLearnerSenseCount: number
+}
+
+/** One page of the admin lexeme list. */
+export interface AdminLexemePage {
+  items: AdminLexemeListItem[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
+/** A catalog sense of a lexeme (system word or shared-pool word), read-only. */
+export interface AdminLexemeSense {
+  id: string
+  word: string
+  definition: string
+  example: string | null
+  source: VocabularySource
+  shareStatus: VocabularyShareStatus
+  origin: SenseOrigin
+  visibleToChildren: boolean
+  createdAtUtc: string
+}
+
+/** A lexeme in the admin editor (`GET /vocabulary/admin/lexemes/{id}`). */
+export interface AdminLexemeDetail extends AdminLexemeListItem {
+  syllables: string | null
+  wordForms: string[]
+  audioUkUrl: string | null
+  audioUsUrl: string | null
+  /** Stream a file with `/api/media/{assetId}`. */
+  audioUkAssetId: string | null
+  audioUsAssetId: string | null
+  createdAtUtc: string
+  senses: AdminLexemeSense[]
+}
+
+/** Filters and paging of the admin lexeme list. */
+export interface AdminLexemeFilters {
+  search?: string
+  partOfSpeech?: PartOfSpeech
+  cefrLevel?: CefrLevel
+  page: number
+  pageSize: number
+}
+
+/** Body of `PUT /vocabulary/admin/lexemes/{id}`: replaces the dictionary fields. */
+export interface UpdateLexemeValues {
+  partOfSpeech: PartOfSpeech
+  ipaUk: string | null
+  ipaUs: string | null
+  syllables: string | null
+  wordForms: string[]
+  cefrLevel: CefrLevel | null
+  frequencyRank: number | null
+}
