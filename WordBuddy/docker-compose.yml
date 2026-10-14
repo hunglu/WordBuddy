@@ -78,6 +78,7 @@ services:
       Messaging__RabbitMq__Host: rabbitmq
       Messaging__RabbitMq__Username: ${RABBITMQ_USER}
       Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      SupportLinks__UnlinkOverrideWaitDays: ${SupportLinks__UnlinkOverrideWaitDays}
       # Optional tuning (defaults in appsettings.json), e.g.:
       # Messaging__Outbox__QueryDelayMs: 1000
       # Messaging__Retry__IntervalsMs__0: 200

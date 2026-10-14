@@ -22,6 +22,11 @@ independence model this follows.
 | DELETE | `/api/vocabulary/{id}?confirm=true` | Bearer | Removes a word from the caller's list (see delete rule below) |
 | GET | `/api/vocabulary/shared` | Bearer | Community word pool; `isMine` is `true` only on the caller's own words |
 | POST | `/api/vocabulary/admin/learner-words/republish` | Bearer, `AdminOnly` | Backfill: republishes `LearnerWordAdded` for every learner link; returns `{ published }` |
+| GET | `/api/vocabulary/admin/lexemes` | Bearer, `AdminOnly` | Pages lexemes; `?search=` matches any part of the word (prefix matches first), `?partOfSpeech=`, `?cefrLevel=`, `?page=`, `?pageSize=` (1-100, default 25) |
+| GET | `/api/vocabulary/admin/lexemes/{id}` | Bearer, `AdminOnly` | One lexeme with audio and catalog senses; private learner senses are only counted |
+| PUT | `/api/vocabulary/admin/lexemes/{id}` | Bearer, `AdminOnly` | Replaces the dictionary fields (POS required); `409` if a sibling already has that POS |
+| PUT | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` | Bearer, `AdminOnly` | Uploads one MP3 (`file`, max 5 MB) for `en-GB` or `en-US` |
+| DELETE | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` | Bearer, `AdminOnly` | Unlinks the audio; the file and the `MediaAsset` row are deleted only when nothing else uses them |
 
 There are no internal (service-to-service) endpoints. The vocabulary id remap table and the
 `/internal/vocabulary-remaps` routes were removed (migration `DropVocabularyWordIdRemaps`).

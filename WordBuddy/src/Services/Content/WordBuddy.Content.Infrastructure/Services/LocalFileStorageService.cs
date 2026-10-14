@@ -53,6 +53,29 @@ internal sealed class LocalFileStorageService : IFileStorageService
         return relativePath.Replace('\\', '/');
     }
 
+    public Task<bool> DeleteAsync(string relativePath, CancellationToken ct = default)
+    {
+        string basePath = Path.GetFullPath(_settings.BasePath);
+        string absolutePath = Path.GetFullPath(Path.Combine(basePath, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        string baseWithSeparator = basePath.EndsWith(Path.DirectorySeparatorChar) ? basePath : basePath + Path.DirectorySeparatorChar;
+
+        // Path-traversal guard: only files strictly inside the storage folder may be deleted.
+        if (!absolutePath.StartsWith(baseWithSeparator, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Refused to delete a media file outside the storage folder");
+            return Task.FromResult(false);
+        }
+
+        if (!File.Exists(absolutePath))
+        {
+            return Task.FromResult(false);
+        }
+
+        File.Delete(absolutePath);
+        _logger.LogInformation("Deleted media file: RelativePath={RelativePath}", relativePath);
+        return Task.FromResult(true);
+    }
+
     public Task<Stream> GetAsync(string relativePath, CancellationToken ct = default)
     {
         string absolutePath = Path.Combine(_settings.BasePath, relativePath.Replace('/', Path.DirectorySeparatorChar));

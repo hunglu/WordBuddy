@@ -15,6 +15,8 @@ import { ChallengeBoardPage } from './pages/ChallengeBoardPage'
 import { ChallengesPage } from './pages/ChallengesPage'
 import { AdminLessonEditorPage } from './pages/AdminLessonEditorPage'
 import { AdminLessonsPage } from './pages/AdminLessonsPage'
+import { AdminLexemeEditorPage } from './pages/AdminLexemeEditorPage'
+import { AdminLexemesPage } from './pages/AdminLexemesPage'
 import { AdminSupportLinksPage } from './pages/AdminSupportLinksPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
@@ -82,6 +84,8 @@ function AnimatedRoutes(): ReactElement {
           <Route path="/admin/lessons" element={<AdminLessonsPage />} />
           <Route path="/admin/lessons/new" element={<AdminLessonEditorPage />} />
           <Route path="/admin/lessons/:id" element={<AdminLessonEditorPage />} />
+          <Route path="/admin/lexemes" element={<AdminLexemesPage />} />
+          <Route path="/admin/lexemes/:id" element={<AdminLexemeEditorPage />} />
           <Route path="/admin/support-links" element={<AdminSupportLinksPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>

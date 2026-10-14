@@ -12,4 +12,9 @@ public interface IFileStorageService
 
     /// <summary>Opens the file at <paramref name="relativePath"/> for reading.</summary>
     Task<Stream> GetAsync(string relativePath, CancellationToken ct = default);
+
+    /// <summary>Deletes the file at <paramref name="relativePath"/>. Returns <see langword="true"/> when
+    /// a file was deleted, and <see langword="false"/> when the file did not exist or the path was
+    /// refused (outside the storage folder).</summary>
+    Task<bool> DeleteAsync(string relativePath, CancellationToken ct = default);
 }
