@@ -165,7 +165,7 @@ public class UpdatePersonalVocabularyWordCommandHandlerTests
     }
 
     [Fact]
-    public async Task UpdatePersonalVocabularyWordCommandHandler_HandleAsync_SaveConflict_ReturnsConflictAndKeepsLexeme()
+    public async Task UpdatePersonalVocabularyWordCommandHandler_HandleAsync_SaveConflict_ReturnsConflictAndCleansNewLexeme()
     {
         Guid userId = Guid.NewGuid();
         Sense sense = TestWords.Learner(userId);
@@ -178,7 +178,8 @@ public class UpdatePersonalVocabularyWordCommandHandlerTests
         Result result = await CreateHandler().HandleAsync(new UpdatePersonalVocabularyWordCommand(sense.Id, userId, "pear", "a fruit", null));
 
         result.Error.Type.Should().Be(ErrorType.Conflict);
-        _repository.Verify(r => r.DeleteLexemeIfOrphanedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repository.Verify(r => r.DeleteLexemeIfOrphanedAsync(newLexeme.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _repository.Verify(r => r.DeleteLexemeIfOrphanedAsync(It.Is<Guid>(g => g != newLexeme.Id), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]

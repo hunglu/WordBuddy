@@ -118,6 +118,13 @@ public sealed class UpdatePersonalVocabularyWordCommandHandler : ICommandHandler
             _logger.LogWarning(
                 "UpdatePersonalVocabularyWordCommand failed to persist: {ErrorCode} — {ErrorDescription}",
                 updateResult.Error.Code, updateResult.Error.Description);
+
+            if (lexemeId != oldLexemeId)
+            {
+                // The new lexeme is already saved; remove it if nothing references it (guarded delete).
+                await _repository.DeleteLexemeIfOrphanedAsync(lexemeId, ct);
+            }
+
             return updateResult;
         }
 

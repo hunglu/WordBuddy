@@ -111,6 +111,43 @@ public sealed class ConcurrentVocabularyAddTests
         senses.Should().Be(1);
     }
 
+    /// <summary>Forces the 547 branch of <c>UpdateAsync</c>: the edited sense points at a lexeme that
+    /// does not exist (deleted in between). The repository re-creates the lexeme once and the update succeeds.</summary>
+    [Fact]
+    public async Task VocabularyWordRepository_UpdateAsync_MissingLexeme_RecreatesLexemeAndSucceeds()
+    {
+        Guid ownerId = Guid.NewGuid();
+        string word = $"before-{Guid.NewGuid():N}";
+        string newWord = $"after-{Guid.NewGuid():N}";
+        Sense created = Sense.CreateLearner(Guid.NewGuid(), await GetOrCreateLexemeIdAsync(word), ownerId, AgeGroup.Adult, word, "def", null).Value;
+
+        using (IServiceScope addScope = _factory.Services.CreateScope())
+        {
+            IVocabularyWordRepository addRepository = addScope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+            (await addRepository.AddAsync(created, new LearnerWord(Guid.NewGuid(), ownerId, created.Id, isAuthor: true))).IsSuccess.Should().BeTrue();
+        }
+
+        Result result;
+        using (IServiceScope scope = _factory.Services.CreateScope())
+        {
+            ContentDbContext dbContext = scope.ServiceProvider.GetRequiredService<ContentDbContext>();
+            IVocabularyWordRepository repository = scope.ServiceProvider.GetRequiredService<IVocabularyWordRepository>();
+            Sense sense = await dbContext.Senses.AsTracking().FirstAsync(s => s.Id == created.Id);
+
+            // A lexeme id that does not exist, as if its last sense was deleted after the lookup.
+            sense.EditLearnerContent(ownerId, Guid.NewGuid(), newWord, "new def", null).IsSuccess.Should().BeTrue();
+            result = await repository.UpdateAsync(sense);
+        }
+
+        result.IsSuccess.Should().BeTrue();
+        using IServiceScope verifyScope = _factory.Services.CreateScope();
+        ContentDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<ContentDbContext>();
+        Sense stored = await verifyContext.Senses.Include(s => s.Lexeme).FirstAsync(s => s.Id == created.Id);
+        stored.Word.Should().Be(newWord);
+        stored.Definition.Should().Be("new def");
+        stored.Lexeme!.NormalizedLemma.Should().Be(Sense.NormalizeWord(newWord));
+    }
+
     [Fact]
     public async Task AddPersonalVocabularyWord_ParallelIdenticalAdds_AllSucceedWithOneWordAndOneLink()
     {

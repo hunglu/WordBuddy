@@ -1,14 +1,14 @@
 ---
 title: WB-48_Edit own vocabulary word
-status: changes-requested
+status: implemented
 type: change
 issue: 48
 pr: 52            # set by /code when it opens the pull request
 affects: docs/features/vocabulary.md
 supersedes: none
-version: 2.0
+version: 3.0
 created: 2026-10-13T18:12:59+07:00
-updated: 2026-10-14T07:50:00+07:00
+updated: 2026-10-14T08:25:38+07:00
 ---
 
 ## Problem

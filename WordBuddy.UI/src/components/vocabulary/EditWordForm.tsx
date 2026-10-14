@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import axios from 'axios'
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { problemCode } from '../../api/supportLinks'
 import { useUpdateMyWord } from '../../hooks/useVocabulary'
 import type { PersonalVocabularyWord } from '../../types'
 
@@ -39,10 +39,15 @@ export function EditWordForm({ word, onClose }: EditWordFormProps): ReactElement
     )
   })
 
-  const isConflict = axios.isAxiosError(updateWord.error) && updateWord.error.response?.status === 409
-  const errorMessage = isConflict
-    ? 'You already have this word.'
-    : "Couldn't save your changes right now. Please try again."
+  const code = problemCode(updateWord.error)
+  let errorMessage = "Couldn't save your changes right now. Please try again."
+  if (code === 'Sense.NotEditable') {
+    errorMessage = 'This word can no longer be edited. It was shared in the meantime.'
+  } else if (code === 'PersonalVocabularyWord.Duplicate') {
+    errorMessage = 'You already have this word.'
+  } else if (code === 'PersonalVocabularyWord.ConcurrentAdd') {
+    errorMessage = 'The word changed at the same time. Please try again.'
+  }
 
   return (
     <motion.form
