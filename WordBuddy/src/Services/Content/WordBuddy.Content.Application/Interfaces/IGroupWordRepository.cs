@@ -14,8 +14,8 @@ public interface IGroupWordRepository
     Task<IReadOnlySet<(Guid UserId, Guid SenseId)>> GetExistingLinksAsync(
         IReadOnlyCollection<Guid> userIds, IReadOnlyCollection<Guid> senseIds, CancellationToken ct = default);
 
-    /// <summary>Returns the assignments of a group, newest first (read-only).</summary>
-    Task<IReadOnlyList<GroupWordAssignment>> GetAssignmentsAsync(Guid groupId, CancellationToken ct = default);
+    /// <summary>Returns one page of the assignments of a group, newest first (read-only).</summary>
+    Task<PagedResult<GroupWordAssignment>> GetAssignmentsAsync(Guid groupId, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Stages new learner links.</summary>
     Task AddLinksAsync(IReadOnlyCollection<LearnerWord> links, CancellationToken ct = default);

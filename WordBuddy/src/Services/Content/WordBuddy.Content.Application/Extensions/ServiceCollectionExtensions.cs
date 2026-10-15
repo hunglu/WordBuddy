@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Shared.Kernel;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Features.Autofill;
 using WordBuddy.Content.Application.Features.Autofill.Commands.AddAutofillSenseToMyList;
@@ -72,7 +73,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<DetachLessonSenseCommand>, DetachLessonSenseCommandValidator>();
         services.AddScoped<ICommandHandler<ReorderLessonSensesCommand>, ReorderLessonSensesCommandHandler>();
         services.AddScoped<IValidator<ReorderLessonSensesCommand>, ReorderLessonSensesCommandValidator>();
-        services.AddScoped<IQueryHandler<GetAdminLessonsQuery, IReadOnlyList<AdminLessonDto>>, GetAdminLessonsQueryHandler>();
+        services.AddScoped<IValidator<GetAdminLessonsQuery>, GetAdminLessonsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetAdminLessonsQuery, PagedResult<AdminLessonDto>>, GetAdminLessonsQueryHandler>();
         services.AddScoped<IQueryHandler<GetAdminLessonDetailQuery, AdminLessonDetailDto>, GetAdminLessonDetailQueryHandler>();
         services.AddScoped<IQueryHandler<SearchLessonSensesQuery, IReadOnlyList<AdminSenseSearchResultDto>>, SearchLessonSensesQueryHandler>();
         services.AddScoped<IValidator<SearchLessonSensesQuery>, SearchLessonSensesQueryValidator>();
@@ -101,8 +103,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<DeletePersonalVocabularyWordCommand>, DeletePersonalVocabularyWordCommandHandler>();
         services.AddScoped<IValidator<DeletePersonalVocabularyWordCommand>, DeletePersonalVocabularyWordCommandValidator>();
 
-        services.AddScoped<IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetMyVocabularyWordsQueryHandler>();
-        services.AddScoped<IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetSharedVocabularyWordsQueryHandler>();
+        services.AddScoped<IValidator<GetMyVocabularyWordsQuery>, GetMyVocabularyWordsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetMyVocabularyWordsQuery, PagedResult<PersonalVocabularyWordDto>>, GetMyVocabularyWordsQueryHandler>();
+        services.AddScoped<IValidator<GetSharedVocabularyWordsQuery>, GetSharedVocabularyWordsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetSharedVocabularyWordsQuery, PagedResult<PersonalVocabularyWordDto>>, GetSharedVocabularyWordsQueryHandler>();
 
         services.AddScoped<IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetRandomVocabularyWordsForCheckQueryHandler>();
         services.AddScoped<IValidator<GetRandomVocabularyWordsForCheckQuery>, GetRandomVocabularyWordsForCheckQueryValidator>();
@@ -110,7 +114,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQueryHandler<GetSensesByIdsQuery, IReadOnlyList<SenseReviewDto>>, GetSensesByIdsQueryHandler>();
         services.AddScoped<IValidator<GetSensesByIdsQuery>, GetSensesByIdsQueryValidator>();
 
-        services.AddScoped<IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>>, GetPendingVocabularyModerationQueryHandler>();
+        services.AddScoped<IValidator<GetPendingVocabularyModerationQuery>, GetPendingVocabularyModerationQueryValidator>();
+        services.AddScoped<IQueryHandler<GetPendingVocabularyModerationQuery, PagedResult<PersonalVocabularyWordDto>>, GetPendingVocabularyModerationQueryHandler>();
 
         services.AddScoped<ICommandHandler<RepublishLearnerWordsCommand, RepublishLearnerWordsResult>, RepublishLearnerWordsCommandHandler>();
         services.AddScoped<IValidator<RepublishLearnerWordsCommand>, RepublishLearnerWordsCommandValidator>();
@@ -122,9 +127,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<ApplyLearnerGroupEventCommand>, ApplyLearnerGroupEventCommandValidator>();
         services.AddScoped<ICommandHandler<AssignWordsToGroupCommand, GroupWordAssignmentResultDto>, AssignWordsToGroupCommandHandler>();
         services.AddScoped<IValidator<AssignWordsToGroupCommand>, AssignWordsToGroupCommandValidator>();
-        services.AddScoped<IQueryHandler<GetGroupWordAssignmentsQuery, IReadOnlyList<GroupWordAssignmentDto>>, GetGroupWordAssignmentsQueryHandler>();
+        services.AddScoped<IValidator<GetGroupWordAssignmentsQuery>, GetGroupWordAssignmentsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetGroupWordAssignmentsQuery, PagedResult<GroupWordAssignmentDto>>, GetGroupWordAssignmentsQueryHandler>();
 
-        services.AddScoped<IQueryHandler<GetAdminLexemesQuery, AdminLexemePageDto>, GetAdminLexemesQueryHandler>();
+        services.AddScoped<IQueryHandler<GetAdminLexemesQuery, PagedResult<AdminLexemeListItemDto>>, GetAdminLexemesQueryHandler>();
         services.AddScoped<IValidator<GetAdminLexemesQuery>, GetAdminLexemesQueryValidator>();
         services.AddScoped<IQueryHandler<GetAdminLexemeDetailQuery, AdminLexemeDetailDto>, GetAdminLexemeDetailQueryHandler>();
         services.AddScoped<IValidator<GetAdminLexemeDetailQuery>, GetAdminLexemeDetailQueryValidator>();
@@ -142,7 +148,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<AddAutofillSenseToMyListCommand, Guid>, AddAutofillSenseToMyListCommandHandler>();
         services.AddScoped<IValidator<AddAutofillSenseToMyListCommand>, AddAutofillSenseToMyListCommandValidator>();
 
-        services.AddScoped<IQueryHandler<GetPendingChildApprovalsQuery, IReadOnlyList<ChildApprovalDto>>, GetPendingChildApprovalsQueryHandler>();
+        services.AddScoped<IValidator<GetPendingChildApprovalsQuery>, GetPendingChildApprovalsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetPendingChildApprovalsQuery, PagedResult<ChildApprovalDto>>, GetPendingChildApprovalsQueryHandler>();
 
         services.AddScoped<ICommandHandler<ApproveChildWordCommand>, ApproveChildWordCommandHandler>();
         services.AddScoped<IValidator<ApproveChildWordCommand>, ApproveChildWordCommandValidator>();

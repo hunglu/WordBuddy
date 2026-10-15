@@ -23,6 +23,8 @@ public sealed class Sense : Entity
     public const int MaxExamples = 3;
 
     /// <summary>Maximum length of <see cref="RegisterNote"/>.</summary>
+    public const int WordMaxLength = 200;
+
     public const int RegisterNoteMaxLength = 200;
 
     /// <summary>Maximum number of items in each enrichment list.</summary>

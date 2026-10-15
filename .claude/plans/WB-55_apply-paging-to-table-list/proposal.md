@@ -1,14 +1,14 @@
 ---
 title: WB-55_Apply paging to table/list
-status: idea
+status: done
 type: new
 issue: 55
-pr: none            # set by /code when it opens the pull request
+pr: 57
 affects: docs/features/WB-55_apply-paging-to-table-list.md
 supersedes: none
-version: 1.0
+version: 4.0
 created: 2026-10-14T21:29:15+07:00
-updated: 2026-10-14T21:29:15+07:00
+updated: 2026-10-15T16:39:35+07:00
 ---
 
 ## Problem

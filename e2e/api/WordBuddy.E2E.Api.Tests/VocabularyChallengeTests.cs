@@ -96,7 +96,10 @@ public sealed class VocabularyChallengeTests
         string raw = await boardResponse.TextAsync();
         JsonElement board = JsonDocument.Parse(raw).RootElement;
 
-        JsonElement entries = board.GetProperty("entries");
+        JsonElement paged = board.GetProperty("entries");
+        paged.GetProperty("page").GetInt32().Should().Be(1);
+        paged.GetProperty("totalCount").GetInt32().Should().Be(paged.GetProperty("items").GetArrayLength(), "a child board is one page");
+        JsonElement entries = paged.GetProperty("items");
         entries.GetArrayLength().Should().BeInRange(1, 6, "own row plus the top 5");
         JsonElement mine = entries.EnumerateArray().Single(e => e.GetProperty("isMe").GetBoolean());
         mine.GetProperty("name").GetString().Should().Be(alias);
@@ -112,6 +115,13 @@ public sealed class VocabularyChallengeTests
 
         raw.Should().NotContain("E2E Child Real").And.NotContain(child.Email).And.NotContain(child.Id.ToString());
         raw.Should().NotContainEquivalentOf("userId");
+
+        // Paging is ignored for a child: page 2 still returns page 1 (top 5 plus own row).
+        IAPIResponse page2 = await c.Progress.GetAsync($"/api/progress/challenges/{challengeId}/board?page=2&pageSize=1", new APIRequestContextOptions { Headers = Auth(child.Token) });
+        page2.Status.Should().Be(200, await page2.TextAsync());
+        JsonElement page2Entries = (await page2.JsonAsync())!.Value.GetProperty("entries");
+        page2Entries.GetProperty("page").GetInt32().Should().Be(1);
+        page2Entries.GetProperty("items").GetArrayLength().Should().Be(entries.GetArrayLength());
     }
 
     [Fact]
@@ -167,7 +177,7 @@ public sealed class VocabularyChallengeTests
     {
         IAPIResponse response = await progress.GetAsync("/api/progress/challenges", new APIRequestContextOptions { Headers = Auth(token) });
         response.Status.Should().Be(200, await response.TextAsync());
-        return (await response.JsonAsync())!.Value.Clone();
+        return (await response.JsonAsync())!.Value.GetProperty("items").Clone();
     }
 
     private static async Task LinkAsync(IAPIRequestContext identity, string childToken, string supporterToken)

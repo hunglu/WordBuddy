@@ -24,14 +24,14 @@ public sealed class LexemesAdminController : ControllerBase
     // 5 MB file plus multipart overhead.
     private const long MaxRequestBytes = UploadLexemeAudioCommand.MaxBytes + 1024 * 1024;
 
-    private readonly IQueryHandler<GetAdminLexemesQuery, AdminLexemePageDto> _getLexemes;
+    private readonly IQueryHandler<GetAdminLexemesQuery, PagedResult<AdminLexemeListItemDto>> _getLexemes;
     private readonly IQueryHandler<GetAdminLexemeDetailQuery, AdminLexemeDetailDto> _getLexemeDetail;
     private readonly ICommandHandler<UpdateLexemeCommand> _updateLexeme;
     private readonly ICommandHandler<UploadLexemeAudioCommand, MediaAssetDto> _uploadAudio;
     private readonly ICommandHandler<RemoveLexemeAudioCommand> _removeAudio;
 
     public LexemesAdminController(
-        IQueryHandler<GetAdminLexemesQuery, AdminLexemePageDto> getLexemes,
+        IQueryHandler<GetAdminLexemesQuery, PagedResult<AdminLexemeListItemDto>> getLexemes,
         IQueryHandler<GetAdminLexemeDetailQuery, AdminLexemeDetailDto> getLexemeDetail,
         ICommandHandler<UpdateLexemeCommand> updateLexeme,
         ICommandHandler<UploadLexemeAudioCommand, MediaAssetDto> uploadAudio,
@@ -51,10 +51,10 @@ public sealed class LexemesAdminController : ControllerBase
         [FromQuery] PartOfSpeech? partOfSpeech,
         [FromQuery] CefrLevel? cefrLevel,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = GetAdminLexemesQuery.DefaultPageSize,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
         CancellationToken ct = default)
     {
-        Result<AdminLexemePageDto> result = await _getLexemes.HandleAsync(
+        Result<PagedResult<AdminLexemeListItemDto>> result = await _getLexemes.HandleAsync(
             new GetAdminLexemesQuery(search, partOfSpeech, cefrLevel, page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }

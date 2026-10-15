@@ -1,6 +1,7 @@
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Domain;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.LexemesAdmin.Queries.GetAdminLexemes;
 
@@ -10,11 +11,4 @@ public sealed record GetAdminLexemesQuery(
     PartOfSpeech? PartOfSpeech,
     CefrLevel? CefrLevel,
     int Page = 1,
-    int PageSize = GetAdminLexemesQuery.DefaultPageSize) : IQuery<AdminLexemePageDto>
-{
-    /// <summary>Page size when the caller gives none.</summary>
-    public const int DefaultPageSize = 25;
-
-    /// <summary>Largest allowed page size.</summary>
-    public const int MaxPageSize = 100;
-}
+    int PageSize = Paging.DefaultPageSize) : IQuery<PagedResult<AdminLexemeListItemDto>>;

@@ -1,32 +1,46 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Domain.SupportLinks;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Identity.Application.Features.SupportLinks.Queries.GetUnlinkRequestsForAdmin;
 
-public sealed class GetUnlinkRequestsForAdminQueryHandler : IQueryHandler<GetUnlinkRequestsForAdminQuery, IReadOnlyList<AdminUnlinkRequestDto>>
+public sealed class GetUnlinkRequestsForAdminQueryHandler : IQueryHandler<GetUnlinkRequestsForAdminQuery, PagedResult<AdminUnlinkRequestDto>>
 {
     private readonly ISupportLinkRepository _links;
+    private readonly IValidator<GetUnlinkRequestsForAdminQuery> _validator;
     private readonly ILogger<GetUnlinkRequestsForAdminQueryHandler> _logger;
 
-    public GetUnlinkRequestsForAdminQueryHandler(ISupportLinkRepository links, ILogger<GetUnlinkRequestsForAdminQueryHandler> logger)
+    public GetUnlinkRequestsForAdminQueryHandler(
+        ISupportLinkRepository links,
+        IValidator<GetUnlinkRequestsForAdminQuery> validator,
+        ILogger<GetUnlinkRequestsForAdminQueryHandler> logger)
     {
         _links = links;
+        _validator = validator;
         _logger = logger;
     }
 
-    public async Task<Result<IReadOnlyList<AdminUnlinkRequestDto>>> HandleAsync(GetUnlinkRequestsForAdminQuery query, CancellationToken ct = default)
+    public async Task<Result<PagedResult<AdminUnlinkRequestDto>>> HandleAsync(GetUnlinkRequestsForAdminQuery query, CancellationToken ct = default)
     {
-        _logger.LogInformation("GetUnlinkRequestsForAdminQuery started");
+        _logger.LogInformation("GetUnlinkRequestsForAdminQuery started: Page={Page}, PageSize={PageSize}", query.Page, query.PageSize);
 
-        IReadOnlyList<UnlinkRequest> requests = await _links.GetEscalatedUnlinkRequestsAsync(ct);
-        IReadOnlyList<SupportLink> links = await _links.GetLinksByIdsAsync(requests.Select(r => r.LinkId).ToList(), ct);
+        ValidationResult validation = await _validator.ValidateAsync(query, ct);
+        if (!validation.IsValid)
+        {
+            _logger.LogWarning("GetUnlinkRequestsForAdminQuery validation failed: {Errors}", validation.ToString());
+            return Result.Failure<PagedResult<AdminUnlinkRequestDto>>(Error.Validation("GetUnlinkRequestsForAdmin.Validation", validation.ToString()));
+        }
+
+        PagedResult<UnlinkRequest> requests = await _links.GetEscalatedUnlinkRequestsAsync(query.Page, query.PageSize, ct);
+        IReadOnlyList<SupportLink> links = await _links.GetLinksByIdsAsync(requests.Items.Select(r => r.LinkId).ToList(), ct);
         Dictionary<Guid, SupportLink> linkById = links.ToDictionary(l => l.Id);
 
-        IReadOnlyList<AdminUnlinkRequestDto> result = requests
+        List<AdminUnlinkRequestDto> items = requests.Items
             .Where(r => linkById.ContainsKey(r.LinkId))
             .Select(r => new AdminUnlinkRequestDto(
                 r.Id,
@@ -40,7 +54,7 @@ public sealed class GetUnlinkRequestsForAdminQueryHandler : IQueryHandler<GetUnl
                 r.EscalatedAtUtc))
             .ToList();
 
-        _logger.LogInformation("GetUnlinkRequestsForAdminQuery succeeded: Count={Count}", result.Count);
-        return Result.Success(result);
+        _logger.LogInformation("GetUnlinkRequestsForAdminQuery succeeded: Count={Count}, TotalCount={TotalCount}", items.Count, requests.TotalCount);
+        return Result.Success(new PagedResult<AdminUnlinkRequestDto>(items, requests.Page, requests.PageSize, requests.TotalCount));
     }
 }

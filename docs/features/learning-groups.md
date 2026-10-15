@@ -3,7 +3,7 @@ feature: Learning groups
 services: Identity, Content, Progress, UI
 audience: Both
 state: shipped
-last-updated-by: WB-27_learning-groups
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Learning groups
@@ -97,6 +97,10 @@ Events (Shared.Contracts `Groups/`): `LearnerGroupMemberActivated`, `LearnerGrou
 - Children appear by alias and avatar only.
 - Every query shows an inline error; 403 shows "You do not have access to this group."
 
+## Paging (WB-55)
+
+Group lists are paged (`page`, `pageSize`; default 25, max 100). `GET /api/auth/groups` is gone. Use `GET /api/auth/groups/owned` (adult supporters; a child gets an empty page), `GET /api/auth/groups/joined`, `GET /api/auth/groups/approvals` and the new `GET /api/auth/groups/{id}/members` (owner only). `GET /api/auth/groups/{id}` returns `activeMemberCount`, `pendingMemberCount` and `memberLearnerIds` instead of `members`. `GET /api/vocabulary/groups/{groupId}/words` is paged. The Groups pages show a pager per list; the pool picker searches on the server.
+
 ## Pending changes
 
 None.
@@ -104,3 +108,4 @@ None.
 ## Change history
 
 - `WB-27_learning-groups` (#27, PR #39) — groups and members in Identity, group events, group word assignment in Content, group dashboard in Progress, Groups pages
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — server-side paging on group lists, members and group words

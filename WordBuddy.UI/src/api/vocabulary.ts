@@ -3,6 +3,8 @@ import type {
   ChildApproval,
   GroupWordAssignment,
   GroupWordAssignmentResult,
+  PageParams,
+  PagedResult,
   PersonalVocabularyWord,
   SenseReview,
   VocabularyRecallCheckWord,
@@ -34,8 +36,9 @@ export async function updatePersonalContext(id: string, personalContext: string 
   await apiClient.put(`/vocabulary/${id}/personal-context`, { personalContext })
 }
 
-export async function getMyVocabularyWords(): Promise<PersonalVocabularyWord[]> {
-  const { data } = await apiClient.get<PersonalVocabularyWord[]>('/vocabulary/mine')
+/** One page of my own words, newest first. */
+export async function getMyVocabularyWords(paging: PageParams): Promise<PagedResult<PersonalVocabularyWord>> {
+  const { data } = await apiClient.get<PagedResult<PersonalVocabularyWord>>('/vocabulary/mine', { params: paging })
   return data
 }
 
@@ -53,8 +56,14 @@ export async function deleteVocabularyWord({ id, confirm }: DeleteVocabularyWord
   await apiClient.delete(`/vocabulary/${id}`, { params: confirm ? { confirm: true } : undefined })
 }
 
-export async function getSharedVocabularyWords(): Promise<PersonalVocabularyWord[]> {
-  const { data } = await apiClient.get<PersonalVocabularyWord[]>('/vocabulary/shared')
+/** One page of the shared pool. `search` keeps words that contain the text (server side). */
+export async function getSharedVocabularyWords(
+  paging: PageParams,
+  search?: string,
+): Promise<PagedResult<PersonalVocabularyWord>> {
+  const { data } = await apiClient.get<PagedResult<PersonalVocabularyWord>>('/vocabulary/shared', {
+    params: { ...paging, search: search === undefined || search === '' ? undefined : search },
+  })
   return data
 }
 
@@ -68,8 +77,8 @@ export async function getRandomWordsForCheck(count: number): Promise<VocabularyR
   return data
 }
 
-export async function getPendingModeration(): Promise<PersonalVocabularyWord[]> {
-  const { data } = await apiClient.get<PersonalVocabularyWord[]>('/vocabulary/moderation/pending')
+export async function getPendingModeration(paging: PageParams): Promise<PagedResult<PersonalVocabularyWord>> {
+  const { data } = await apiClient.get<PagedResult<PersonalVocabularyWord>>('/vocabulary/moderation/pending', { params: paging })
   return data
 }
 
@@ -121,8 +130,10 @@ export async function addAutofillSense(senseId: string, personalContext?: string
 }
 
 /** Supporter queue: auto-filled words a learner waits on. */
-export async function getPendingApprovals(learnerId: string): Promise<ChildApproval[]> {
-  const { data } = await apiClient.get<ChildApproval[]>(`/vocabulary/learners/${learnerId}/pending-approvals`)
+export async function getPendingApprovals(learnerId: string, paging: PageParams): Promise<PagedResult<ChildApproval>> {
+  const { data } = await apiClient.get<PagedResult<ChildApproval>>(`/vocabulary/learners/${learnerId}/pending-approvals`, {
+    params: paging,
+  })
   return data
 }
 
@@ -132,8 +143,8 @@ export async function approveChildWord(learnerId: string, senseId: string): Prom
 }
 
 /** Admin queue: auto-filled words any child waits on. */
-export async function getAdminPendingApprovals(): Promise<ChildApproval[]> {
-  const { data } = await apiClient.get<ChildApproval[]>('/vocabulary/moderation/autofill-pending')
+export async function getAdminPendingApprovals(paging: PageParams): Promise<PagedResult<ChildApproval>> {
+  const { data } = await apiClient.get<PagedResult<ChildApproval>>('/vocabulary/moderation/autofill-pending', { params: paging })
   return data
 }
 
@@ -157,7 +168,7 @@ export async function assignWordsToGroup({ groupId, senseIds }: AssignWordsToGro
 }
 
 /** Assignment history of the group, newest first. Owner only. */
-export async function getGroupWordAssignments(groupId: string): Promise<GroupWordAssignment[]> {
-  const { data } = await apiClient.get<GroupWordAssignment[]>(`/vocabulary/groups/${groupId}/words`)
+export async function getGroupWordAssignments(groupId: string, paging: PageParams): Promise<PagedResult<GroupWordAssignment>> {
+  const { data } = await apiClient.get<PagedResult<GroupWordAssignment>>(`/vocabulary/groups/${groupId}/words`, { params: paging })
   return data
 }

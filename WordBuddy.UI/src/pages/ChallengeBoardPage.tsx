@@ -4,17 +4,21 @@ import { Link, useParams } from 'react-router-dom'
 import { CHALLENGE_NO_CONSENT_CODE } from '../api/challenges'
 import { problemCode, problemMessage } from '../api/supportLinks'
 import { goalText, statusLabel } from '../components/challenges/challengeUi'
+import { Pager } from '../components/Pager'
 import { avatarEmoji, cardClass } from '../components/support/supportUi'
 import { useChallengeBoard } from '../hooks/useChallenges'
+import { usePagination } from '../hooks/usePagination'
 import type { ChallengeBoard, ChallengeBoardEntry } from '../types'
 
 /**
  * `/challenges/:challengeId` — the board. The server filters it: an adult gets the full ranking, a child
- * gets their own rank and the top 5 (alias and avatar only). This page shows what it receives.
+ * gets their own rank and the top 5 on one page (alias and avatar only). This page shows what it receives.
  */
 export function ChallengeBoardPage(): ReactElement {
   const { challengeId } = useParams<{ challengeId: string }>()
-  const { data, isLoading, isError, error } = useChallengeBoard(challengeId)
+  const pagination = usePagination()
+  const { data, isLoading, isError, error } = useChallengeBoard(challengeId, pagination.params)
+  pagination.clamp(data?.entries.totalCount)
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -31,16 +35,17 @@ export function ChallengeBoardPage(): ReactElement {
         </p>
       )}
 
-      {data && <Board board={data} />}
+      {data && <Board board={data} onPageChange={pagination.setPage} />}
     </motion.div>
   )
 }
 
-type BoardProps = Readonly<{ board: ChallengeBoard }>
+type BoardProps = Readonly<{ board: ChallengeBoard; onPageChange: (page: number) => void }>
 
-function Board({ board }: BoardProps): ReactElement {
+function Board({ board, onPageChange }: BoardProps): ReactElement {
+  const entries: ChallengeBoardEntry[] = board.entries.items
   // Only the child view has a score on the own row alone; the adult view has a score on every row.
-  const showsScores = board.entries.every((entry) => entry.score !== null)
+  const showsScores = entries.every((entry) => entry.score !== null)
 
   return (
     <>
@@ -55,13 +60,24 @@ function Board({ board }: BoardProps): ReactElement {
         </p>
       )}
 
-      {board.entries.length === 0 ? (
+      {board.entries.totalCount === 0 ? (
         <p className="mt-6 text-wb-ink-muted">Nobody has joined yet.</p>
       ) : showsScores ? (
-        <ScoreTable entries={board.entries} />
+        <ScoreTable entries={entries} />
       ) : (
-        <RankList entries={board.entries} />
+        <RankList entries={entries} />
       )}
+
+      <div className="max-w-2xl">
+        <Pager
+          page={board.entries.page}
+          pageSize={board.entries.pageSize}
+          totalCount={board.entries.totalCount}
+          onPageChange={onPageChange}
+          label="Board pages"
+          itemLabel="learners"
+        />
+      </div>
     </>
   )
 }

@@ -14,7 +14,7 @@ public interface ILexemeAdminRepository
     /// <summary>Pages lexemes. <paramref name="search"/> is a "contains" match on the normalized
     /// lemma (already trimmed and upper-cased by the caller or empty); matches that start with the
     /// term come first.</summary>
-    Task<Result<AdminLexemePageDto>> SearchAsync(
+    Task<Result<PagedResult<AdminLexemeListItemDto>>> SearchAsync(
         string? search, PartOfSpeech? partOfSpeech, CefrLevel? cefrLevel, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Reads one lexeme with audio and catalog senses (no tracking). <c>NotFound</c> when unknown.</summary>

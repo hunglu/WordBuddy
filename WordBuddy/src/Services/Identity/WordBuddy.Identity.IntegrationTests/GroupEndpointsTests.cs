@@ -89,8 +89,8 @@ public sealed class GroupEndpointsTests
         added.Should().ContainSingle(r => r.Outcome == AddMemberOutcome.PendingApproval);
 
         // Only the Primary sees and decides the request.
-        List<PendingGroupApprovalDto> approvals = (await parent.Client.GetFromJsonAsync<List<PendingGroupApprovalDto>>(
-            "/api/auth/groups/approvals", Json))!;
+        List<PendingGroupApprovalDto> approvals = await PagedHttp.GetAllAsync<PendingGroupApprovalDto>(
+            parent.Client, "/api/auth/groups/approvals", Json);
         PendingGroupApprovalDto request = approvals.Should().ContainSingle(a => a.LearnerId == child.User.Id).Subject;
         (await teacher.Client.PostAsync($"/api/auth/groups/approvals/{request.MemberId}/approve", null))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -99,7 +99,10 @@ public sealed class GroupEndpointsTests
 
         // The owner sees the child by public name only.
         LearnerGroupDetailDto detail = (await teacher.Client.GetFromJsonAsync<LearnerGroupDetailDto>($"/api/auth/groups/{groupId}", Json))!;
-        detail.Members.Should().ContainSingle(m => m.LearnerId == child.User.Id && m.Status == GroupMemberStatus.Active && m.PublicName == "Child learner");
+        detail.ActiveMemberCount.Should().Be(1);
+        detail.MemberLearnerIds.Should().ContainSingle(id => id == child.User.Id);
+        List<GroupMemberDto> members = await PagedHttp.GetAllAsync<GroupMemberDto>(teacher.Client, $"/api/auth/groups/{groupId}/members", Json);
+        members.Should().ContainSingle(m => m.LearnerId == child.User.Id && m.Status == GroupMemberStatus.Active && m.PublicName == "Child learner");
 
         // A child cannot leave and cannot own a group; a non-owner cannot read the group.
         (await child.Client.PostAsync($"/api/auth/groups/{groupId}/leave", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -107,14 +110,16 @@ public sealed class GroupEndpointsTests
         (await parent.Client.GetAsync($"/api/auth/groups/{groupId}")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // The child sees the group name and owner, not other members.
-        MyGroupsDto childView = (await child.Client.GetFromJsonAsync<MyGroupsDto>("/api/auth/groups", Json))!;
-        childView.Joined.Should().ContainSingle(g => g.Id == groupId);
+        List<JoinedGroupDto> childJoined = await PagedHttp.GetAllAsync<JoinedGroupDto>(child.Client, "/api/auth/groups/joined", Json);
+        childJoined.Should().ContainSingle(g => g.Id == groupId);
+        (await PagedHttp.GetAllAsync<OwnedGroupDto>(child.Client, "/api/auth/groups/owned", Json)).Should().BeEmpty();
 
         // The support link ends: the child leaves the teacher's group.
         (await parent.Client.PostAsync($"/api/auth/support-links/{extra.Id}/unlink-request", null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await teacher.Client.PostAsync($"/api/auth/support-links/{extra.Id}/unlink-request/confirm", null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         LearnerGroupDetailDto after = (await teacher.Client.GetFromJsonAsync<LearnerGroupDetailDto>($"/api/auth/groups/{groupId}", Json))!;
-        after.Members.Should().BeEmpty();
+        after.MemberLearnerIds.Should().BeEmpty();
+        (await PagedHttp.GetAllAsync<GroupMemberDto>(teacher.Client, $"/api/auth/groups/{groupId}/members", Json)).Should().BeEmpty();
     }
 
     [Fact]
@@ -135,6 +140,61 @@ public sealed class GroupEndpointsTests
 
         (await learner.Client.PostAsync($"/api/auth/groups/{groupId}/leave", null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         LearnerGroupDetailDto detail = (await teacher.Client.GetFromJsonAsync<LearnerGroupDetailDto>($"/api/auth/groups/{groupId}", Json))!;
-        detail.Members.Should().BeEmpty();
+        detail.MemberLearnerIds.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Groups_Lists_ArePagedAndOldRouteIsGone()
+    {
+        Account teacher = await RegisterAsync("Adult", "Teacher");
+        Account learner = await RegisterAsync("Adult", "Learner");
+        await AcceptAsync(teacher.Client, (await InviteAsLearnerAsync(learner.Client)).Code);
+        Guid first = await CreateGroupAsync(teacher.Client, "Group one");
+        Guid second = await CreateGroupAsync(teacher.Client, "Group two");
+        Guid third = await CreateGroupAsync(teacher.Client, "Group three");
+        foreach (Guid id in new[] { first, second, third })
+        {
+            await AddMembersAsync(teacher.Client, id, learner.User.Id);
+        }
+
+        JsonElement ownedFirst = await PagedHttp.GetPageAsync(teacher.Client, "/api/auth/groups/owned?page=1&pageSize=2");
+        JsonElement ownedSecond = await PagedHttp.GetPageAsync(teacher.Client, "/api/auth/groups/owned?page=2&pageSize=2");
+        JsonElement joined = await PagedHttp.GetPageAsync(learner.Client, "/api/auth/groups/joined?page=1&pageSize=2");
+        JsonElement learnerOwned = await PagedHttp.GetPageAsync(learner.Client, "/api/auth/groups/owned");
+
+        ownedFirst.GetProperty("totalCount").GetInt32().Should().Be(3);
+        ownedFirst.GetProperty("items").GetArrayLength().Should().Be(2);
+        ownedSecond.GetProperty("items").GetArrayLength().Should().Be(1);
+        joined.GetProperty("totalCount").GetInt32().Should().Be(3);
+        joined.GetProperty("items").GetArrayLength().Should().Be(2);
+        learnerOwned.GetProperty("totalCount").GetInt32().Should().Be(0);
+        (await teacher.Client.GetAsync("/api/auth/groups")).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        (await teacher.Client.GetAsync("/api/auth/groups/owned?pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await teacher.Client.GetAsync("/api/auth/groups/joined?page=0")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GroupMembers_OwnerGetsPageNonOwnerForbiddenAndCommandRefreshesSnapshot()
+    {
+        Account teacher = await RegisterAsync("Adult", "Teacher");
+        Account one = await RegisterAsync("Adult", "LearnerOne");
+        Account two = await RegisterAsync("Adult", "LearnerTwo");
+        await AcceptAsync(teacher.Client, (await InviteAsLearnerAsync(one.Client)).Code);
+        await AcceptAsync(teacher.Client, (await InviteAsLearnerAsync(two.Client)).Code);
+        Guid groupId = await CreateGroupAsync(teacher.Client, "Members page");
+        await AddMembersAsync(teacher.Client, groupId, one.User.Id);
+
+        JsonElement before = await PagedHttp.GetPageAsync(teacher.Client, $"/api/auth/groups/{groupId}/members?pageSize=1");
+        (await one.Client.GetAsync($"/api/auth/groups/{groupId}/members")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AddMembersAsync(teacher.Client, groupId, two.User.Id);
+        JsonElement after = await PagedHttp.GetPageAsync(teacher.Client, $"/api/auth/groups/{groupId}/members?pageSize=1");
+        JsonElement past = await PagedHttp.GetPageAsync(teacher.Client, $"/api/auth/groups/{groupId}/members?page=9&pageSize=1");
+
+        before.GetProperty("totalCount").GetInt32().Should().Be(1);
+        after.GetProperty("totalCount").GetInt32().Should().Be(2);
+        after.GetProperty("items").GetArrayLength().Should().Be(1);
+        past.GetProperty("items").GetArrayLength().Should().Be(0);
+        past.GetProperty("totalCount").GetInt32().Should().Be(2);
+        (await teacher.Client.GetAsync($"/api/auth/groups/{groupId}/members?pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

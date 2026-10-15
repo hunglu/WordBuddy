@@ -94,11 +94,11 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         return Result.Success(link);
     }
 
-    public async Task<Result<IReadOnlyList<LearnerWord>>> GetLinkedToUserAsync(Guid userId, CancellationToken ct = default)
+    public async Task<Result<PagedResult<LearnerWord>>> GetLinkedToUserAsync(Guid userId, int page, int pageSize, CancellationToken ct = default)
     {
-        _logger.LogDebug("Querying LearnerWords for UserId={UserId}", userId);
+        _logger.LogDebug("Querying LearnerWords for UserId={UserId}, Page={Page}, PageSize={PageSize}", userId, page, pageSize);
 
-        List<LearnerWord> links = await _dbContext.LearnerWords
+        PagedResult<LearnerWord> links = await _dbContext.LearnerWords
             .AsNoTracking()
             .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UkAudio)
             .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UsAudio)
@@ -106,9 +106,10 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
             .AsSplitQuery()
             .Where(l => l.UserId == userId)
             .OrderByDescending(l => l.AddedAtUtc)
-            .ToListAsync(ct);
+            .ThenBy(l => l.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
 
-        return Result.Success<IReadOnlyList<LearnerWord>>(links);
+        return Result.Success(links);
     }
 
     public async Task<Result<IReadOnlyList<LearnerWord>>> GetRandomLinkedToUserAsync(Guid userId, int count, CancellationToken ct = default)
@@ -181,17 +182,18 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         return Result.Success<IReadOnlyList<Sense>>(words);
     }
 
-    public async Task<Result<IReadOnlyList<Sense>>> GetPendingModerationAsync(CancellationToken ct = default)
+    public async Task<Result<PagedResult<Sense>>> GetPendingModerationAsync(int page, int pageSize, CancellationToken ct = default)
     {
         _logger.LogDebug("Querying pending-moderation Senses");
 
-        List<Sense> words = await _dbContext.Senses
+        PagedResult<Sense> words = await _dbContext.Senses
             .AsNoTracking()
             .Where(w => w.ShareStatus == VocabularyShareStatus.PendingReview)
             .OrderBy(w => w.CreatedAtUtc)
-            .ToListAsync(ct);
+            .ThenBy(w => w.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
 
-        return Result.Success<IReadOnlyList<Sense>>(words);
+        return Result.Success(words);
     }
 
     public async Task<Result<Lexeme>> GetOrCreateLexemeAsync(string word, CancellationToken ct = default)

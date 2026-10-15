@@ -122,7 +122,7 @@ public sealed class ChallengeEndpointsTests
         Challenge challenge = await SeedChallengeAsync(ChallengeAudience.Adult);
         HttpClient client = Client(adult, "Adult");
 
-        List<ChallengeDto> listed = (await client.GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!;
+        IReadOnlyList<ChallengeDto> listed = (await client.GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items;
         listed.Should().ContainSingle(c => c.Id == challenge.Id && !c.Joined);
 
         (await client.PostAsync($"/api/progress/challenges/{challenge.Id}/join", null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -132,9 +132,9 @@ public sealed class ChallengeEndpointsTests
         ChallengeBoardDto board = (await client.GetFromJsonAsync<ChallengeBoardDto>($"/api/progress/challenges/{challenge.Id}/board", Json))!;
         board.MyRank.Should().Be(1);
         board.MyScore.Should().Be(20);
-        board.Entries.Should().ContainSingle().Which.Name.Should().Be("Ada");
+        board.Entries.Items.Should().ContainSingle().Which.Name.Should().Be("Ada");
 
-        ChallengeDto joined = (await client.GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!.Single(c => c.Id == challenge.Id);
+        ChallengeDto joined = (await client.GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items.Single(c => c.Id == challenge.Id);
         joined.Joined.Should().BeTrue();
         joined.MyScore.Should().Be(20);
         joined.ParticipantCount.Should().Be(1);
@@ -152,7 +152,7 @@ public sealed class ChallengeEndpointsTests
 
         ChallengeBoardDto board = (await client.GetFromJsonAsync<ChallengeBoardDto>($"/api/progress/challenges/{challenge.Id}/board", Json))!;
         board.ParticipantCount.Should().Be(0);
-        board.Entries.Should().BeEmpty();
+        board.Entries.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -260,9 +260,9 @@ public sealed class ChallengeEndpointsTests
         adultToChild.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         adultBoard.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        List<ChallengeDto> adultList = (await Client(Guid.NewGuid(), "Adult").GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!;
+        IReadOnlyList<ChallengeDto> adultList = (await Client(Guid.NewGuid(), "Adult").GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items;
         adultList.Should().NotContain(c => c.Audience == ChallengeAudience.Child);
-        List<ChallengeDto> childList = (await Client(child, "Child").GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!;
+        IReadOnlyList<ChallengeDto> childList = (await Client(child, "Child").GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items;
         childList.Should().NotContain(c => c.Audience == ChallengeAudience.Adult);
     }
 
@@ -288,7 +288,7 @@ public sealed class ChallengeEndpointsTests
         Challenge challenge = await SeedChallengeAsync(ChallengeAudience.Child);
         HttpClient client = Client(child, "Child");
 
-        (await client.GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!.Should().BeEmpty();
+        (await client.GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items.Should().BeEmpty();
         HttpResponseMessage join = await client.PostAsync($"/api/progress/challenges/{challenge.Id}/join", null);
         HttpResponseMessage board = await client.GetAsync($"/api/progress/challenges/{challenge.Id}/board");
 
@@ -333,7 +333,7 @@ public sealed class ChallengeEndpointsTests
         consent.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         HttpClient childClient = Client(child, "Child");
-        (await childClient.GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!.Should().Contain(c => c.Id == challenge.Id);
+        (await childClient.GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items.Should().Contain(c => c.Id == challenge.Id);
         (await childClient.PostAsync($"/api/progress/challenges/{challenge.Id}/join", null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         await RecomputeAsync();
 
@@ -344,11 +344,11 @@ public sealed class ChallengeEndpointsTests
 
         board.ParticipantCount.Should().Be(8);
         board.MyRank.Should().Be(8);
-        board.Entries.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 8);
-        board.Entries.Should().HaveCount(6, "top 5 plus the own row");
-        board.Entries.Count(e => e.IsMe).Should().Be(1);
-        board.Entries.Single(e => e.IsMe).Name.Should().Be("Kiwi");
-        board.Entries.Where(e => !e.IsMe).Should().OnlyContain(e => e.Score == null);
+        board.Entries.Items.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 8);
+        board.Entries.Items.Should().HaveCount(6, "top 5 plus the own row");
+        board.Entries.Items.Count(e => e.IsMe).Should().Be(1);
+        board.Entries.Items.Single(e => e.IsMe).Name.Should().Be("Kiwi");
+        board.Entries.Items.Where(e => !e.IsMe).Should().OnlyContain(e => e.Score == null);
         raw.Should().NotContain("Real Child Name").And.NotContain(child.ToString());
         foreach (Guid other in others)
         {
@@ -415,10 +415,43 @@ public sealed class ChallengeEndpointsTests
         HttpResponseMessage off = await guardianClient.PutAsJsonAsync($"/api/progress/challenges/consent/{child}", new { enabled = false });
 
         off.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await childClient.GetFromJsonAsync<List<ChallengeDto>>("/api/progress/challenges", Json))!.Should().BeEmpty();
+        (await childClient.GetFromJsonAsync<PagedResult<ChallengeDto>>("/api/progress/challenges?pageSize=100", Json))!.Items.Should().BeEmpty();
         using IServiceScope scope = _factory.Services.CreateScope();
         ProgressDbContext db = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
         (await db.ChallengeParticipants.AnyAsync(p => p.ChallengeId == challenge.Id && p.UserId == child)).Should().BeFalse();
         (await db.ChallengeConsents.AnyAsync(c => c.ChildId == child)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Challenges_List_ResponseIsPagedAndInvalidPagingReturns400()
+    {
+        HttpClient client = Client(Guid.NewGuid(), "Adult");
+        await SeedChallengeAsync(ChallengeAudience.Adult);
+
+        JsonElement page = await client.GetFromJsonAsync<JsonElement>("/api/progress/challenges?page=1&pageSize=1", Json);
+
+        page.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("items", "page", "pageSize", "totalCount");
+        page.GetProperty("items").GetArrayLength().Should().Be(1);
+        (await client.GetAsync("/api/progress/challenges?pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetAsync("/api/progress/challenges?page=0")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Challenges_Board_EntriesUseItemsKeyAndAdultCanPage()
+    {
+        Guid adult = Guid.NewGuid();
+        await SeedProfileAsync(adult, AgeGroup.Adult, alias: "Ada");
+        Challenge challenge = await SeedChallengeAsync(ChallengeAudience.Adult);
+        HttpClient client = Client(adult, "Adult");
+        await client.PostAsync($"/api/progress/challenges/{challenge.Id}/join", null);
+
+        JsonElement board = await client.GetFromJsonAsync<JsonElement>($"/api/progress/challenges/{challenge.Id}/board?page=1&pageSize=1", Json);
+        JsonElement past = await client.GetFromJsonAsync<JsonElement>($"/api/progress/challenges/{challenge.Id}/board?page=5&pageSize=1", Json);
+
+        JsonElement entries = board.GetProperty("entries");
+        entries.GetProperty("items").GetArrayLength().Should().Be(1);
+        entries.GetProperty("totalCount").GetInt32().Should().Be(1);
+        past.GetProperty("entries").GetProperty("items").GetArrayLength().Should().Be(0);
+        (await client.GetAsync($"/api/progress/challenges/{challenge.Id}/board?pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

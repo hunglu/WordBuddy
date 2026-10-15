@@ -36,37 +36,57 @@ public class LessonQueryHandlerTests
 
     // ---- Admin list
 
+    private static GetAdminLessonsQueryHandler AdminListHandler(ILessonRepository lessons) =>
+        new(lessons, new GetAdminLessonsQueryValidator(), NullLogger<GetAdminLessonsQueryHandler>.Instance);
+
     [Fact]
     public async Task GetAdminLessonsQueryHandler_HandleAsync_ReturnsDraftsAndPublishedWithSenseCount()
     {
         Lesson draft = NewLesson(AgeGroup.Child, isPublished: false, TestWords.System("Dog"), TestWords.System("Cat"));
         Lesson published = NewLesson(AgeGroup.Adult, isPublished: true);
-        _lessons.Setup(r => r.ListAllAsync(null, null, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<Lesson>>([draft, published]));
+        _lessons.Setup(r => r.ListAllAsync(null, null, null, 1, 25, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedResult<Lesson>([draft, published], 1, 25, 2)));
 
-        Result<IReadOnlyList<AdminLessonDto>> result = await new GetAdminLessonsQueryHandler(
-            _lessons.Object, NullLogger<GetAdminLessonsQueryHandler>.Instance)
+        Result<PagedResult<AdminLessonDto>> result = await AdminListHandler(_lessons.Object)
             .HandleAsync(new GetAdminLessonsQuery(null, null, null));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(2);
-        result.Value.Single(l => l.Id == draft.Id).IsPublished.Should().BeFalse();
-        result.Value.Single(l => l.Id == draft.Id).SenseCount.Should().Be(2);
-        result.Value.Single(l => l.Id == published.Id).IsPublished.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.TotalCount.Should().Be(2);
+        result.Value.Items.Single(l => l.Id == draft.Id).IsPublished.Should().BeFalse();
+        result.Value.Items.Single(l => l.Id == draft.Id).SenseCount.Should().Be(2);
+        result.Value.Items.Single(l => l.Id == published.Id).IsPublished.Should().BeTrue();
     }
 
     [Fact]
-    public async Task GetAdminLessonsQueryHandler_HandleAsync_PassesFiltersToRepository()
+    public async Task GetAdminLessonsQueryHandler_HandleAsync_PassesFiltersAndPagingToRepository()
     {
-        _lessons.Setup(r => r.ListAllAsync(LessonType.Grammar, Level.Advanced, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<Lesson>>([]));
+        Lesson lesson = NewLesson(AgeGroup.Adult, isPublished: false);
+        _lessons.Setup(r => r.ListAllAsync(LessonType.Grammar, Level.Advanced, false, 2, 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedResult<Lesson>([lesson], 2, 10, 11)));
 
-        Result<IReadOnlyList<AdminLessonDto>> result = await new GetAdminLessonsQueryHandler(
-            _lessons.Object, NullLogger<GetAdminLessonsQueryHandler>.Instance)
-            .HandleAsync(new GetAdminLessonsQuery(LessonType.Grammar, Level.Advanced, false));
+        Result<PagedResult<AdminLessonDto>> result = await AdminListHandler(_lessons.Object)
+            .HandleAsync(new GetAdminLessonsQuery(LessonType.Grammar, Level.Advanced, false, 2, 10));
 
         result.IsSuccess.Should().BeTrue();
-        _lessons.Verify(r => r.ListAllAsync(LessonType.Grammar, Level.Advanced, false, It.IsAny<CancellationToken>()), Times.Once);
+        result.Value.Page.Should().Be(2);
+        result.Value.PageSize.Should().Be(10);
+        result.Value.TotalCount.Should().Be(11);
+        _lessons.Verify(r => r.ListAllAsync(LessonType.Grammar, Level.Advanced, false, 2, 10, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetAdminLessonsQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        Result<PagedResult<AdminLessonDto>> result = await AdminListHandler(_lessons.Object)
+            .HandleAsync(new GetAdminLessonsQuery(null, null, null, page, pageSize));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _lessons.VerifyNoOtherCalls();
     }
 
     // ---- Admin detail

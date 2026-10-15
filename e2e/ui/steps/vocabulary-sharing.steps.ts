@@ -21,9 +21,9 @@ async function approveAsAdmin(request: APIRequestContext, word: string): Promise
   const { token } = (await login.json()) as { token: string }
   const headers = { Authorization: `Bearer ${token}` }
 
-  const pending = await request.get('/api/vocabulary/moderation/pending', { headers })
+  const pending = await request.get('/api/vocabulary/moderation/pending?pageSize=100', { headers })
   expect(pending.ok()).toBeTruthy()
-  const items = (await pending.json()) as { id: string; word: string }[]
+  const items = ((await pending.json()) as { items: { id: string; word: string }[] }).items
   const item = items.find((w) => w.word === word)
   expect(item, `"${word}" should be in the moderation queue`).toBeDefined()
 

@@ -2,12 +2,13 @@ import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { Pager } from '../components/Pager'
 import { cardClass, inputClass, softButtonClass } from '../components/support/supportUi'
 import { useAdminLexemes } from '../hooks/useAdminLexemes'
+import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 import type { CefrLevel, PartOfSpeech } from '../types'
 
-const PAGE_SIZE = 25
 const SEARCH_DEBOUNCE_MS = 300
 
 const PARTS_OF_SPEECH: PartOfSpeech[] = [
@@ -32,27 +33,28 @@ export function AdminLexemesPage(): ReactElement {
   const [search, setSearch] = useState('')
   const [partOfSpeech, setPartOfSpeech] = useState<PartOfSpeech | ''>('')
   const [cefrLevel, setCefrLevel] = useState<CefrLevel | ''>('')
-  const [page, setPage] = useState(1)
+  const pagination = usePagination()
+  const resetPage = pagination.reset
 
   // Wait for a pause in typing before asking the server; a new search starts at page 1.
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchText.trim())
-      setPage(1)
+      resetPage()
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [searchText])
+  }, [searchText, resetPage])
 
   const lexemes = useAdminLexemes(
     {
       search: search === '' ? undefined : search,
       partOfSpeech: partOfSpeech === '' ? undefined : partOfSpeech,
       cefrLevel: cefrLevel === '' ? undefined : cefrLevel,
-      page,
-      pageSize: PAGE_SIZE,
+      ...pagination.params,
     },
     isAdmin,
   )
+  pagination.clamp(lexemes.data?.totalCount)
 
   // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
   if (!isAdmin) {
@@ -60,7 +62,6 @@ export function AdminLexemesPage(): ReactElement {
   }
 
   const data = lexemes.data
-  const totalPages: number = data ? Math.max(1, Math.ceil(data.totalCount / data.pageSize)) : 1
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -88,7 +89,7 @@ export function AdminLexemesPage(): ReactElement {
             value={partOfSpeech}
             onChange={(e) => {
               setPartOfSpeech(e.target.value as PartOfSpeech | '')
-              setPage(1)
+              pagination.reset()
             }}
             className={`${inputClass} mt-1`}
           >
@@ -106,7 +107,7 @@ export function AdminLexemesPage(): ReactElement {
             value={cefrLevel}
             onChange={(e) => {
               setCefrLevel(e.target.value as CefrLevel | '')
-              setPage(1)
+              pagination.reset()
             }}
             className={`${inputClass} mt-1`}
           >
@@ -175,18 +176,15 @@ export function AdminLexemesPage(): ReactElement {
         </div>
       )}
 
-      {data && data.totalCount > 0 && (
-        <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-3">
-          <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className={softButtonClass}>
-            Previous
-          </button>
-          <p className="text-sm font-semibold text-wb-ink">
-            Page {data.page} of {totalPages} · {data.totalCount} lexemes
-          </p>
-          <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className={softButtonClass}>
-            Next
-          </button>
-        </nav>
+      {data && (
+        <Pager
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={data.totalCount}
+          onPageChange={pagination.setPage}
+          label="Lexeme pages"
+          itemLabel="lexemes"
+        />
       )}
     </motion.div>
   )

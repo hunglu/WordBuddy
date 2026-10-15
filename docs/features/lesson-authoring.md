@@ -3,7 +3,7 @@ feature: Lesson authoring
 services: Content | UI
 audience: Both
 state: shipped
-last-updated-by: WB-47_admin-lesson-authoring
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Lesson authoring
@@ -55,6 +55,10 @@ Create draft → attach senses → reorder → publish → learners read
 
 Admin sidebar link only. Both pages handle `isError`.
 
+## Paging (WB-55)
+
+`GET /api/lessons/admin` is paged and ordered by title, then id. The admin lessons page shows a pager; changing a filter resets to page 1.
+
 ## Pending changes
 
 None.
@@ -62,3 +66,4 @@ None.
 ## Change history
 
 - `WB-47_admin-lesson-authoring` (#47, PR #51) — admin lesson CRUD, publish, sense attach / detach / reorder, `AdminOnly` on lesson writes, child filter on lesson reads
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged admin lesson list

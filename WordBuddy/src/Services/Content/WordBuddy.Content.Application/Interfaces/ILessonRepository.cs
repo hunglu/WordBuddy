@@ -11,7 +11,7 @@ public interface ILessonRepository
 
     /// <summary>Returns drafts and published lessons (vocabulary links loaded, no tracking), optionally
     /// filtered by type, level and publish state. Ordered by title.</summary>
-    Task<Result<IReadOnlyList<Lesson>>> ListAllAsync(LessonType? type, Level? level, bool? isPublished, CancellationToken ct = default);
+    Task<Result<PagedResult<Lesson>>> ListAllAsync(LessonType? type, Level? level, bool? isPublished, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Returns a change-tracked lesson with its <see cref="Lesson.VocabularyWords"/> loaded, or
     /// <see cref="Error.NotFound"/>. Persist changes with <see cref="SaveChangesAsync"/>.</summary>

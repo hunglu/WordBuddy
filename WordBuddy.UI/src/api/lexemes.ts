@@ -1,16 +1,17 @@
 import type {
   AdminLexemeDetail,
   AdminLexemeFilters,
-  AdminLexemePage,
+  AdminLexemeListItem,
   AudioLocale,
+  PagedResult,
   UpdateLexemeValues,
 } from '../types'
 import { apiClient } from './client'
 
 // ---- Admin lexeme screen (AdminOnly on the server)
 
-export async function getAdminLexemes(filters: AdminLexemeFilters): Promise<AdminLexemePage> {
-  const { data } = await apiClient.get<AdminLexemePage>('/vocabulary/admin/lexemes', { params: filters })
+export async function getAdminLexemes(filters: AdminLexemeFilters): Promise<PagedResult<AdminLexemeListItem>> {
+  const { data } = await apiClient.get<PagedResult<AdminLexemeListItem>>('/vocabulary/admin/lexemes', { params: filters })
   return data
 }
 

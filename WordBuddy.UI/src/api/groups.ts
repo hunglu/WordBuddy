@@ -1,13 +1,30 @@
 import type {
   AddMemberResult,
+  GroupMember,
+  JoinedGroup,
   LearnerGroupDetail,
-  MyGroups,
+  OwnedGroup,
+  PageParams,
+  PagedResult,
   PendingGroupApproval,
 } from '../types'
 import { apiClient } from './client'
 
-export async function getMyGroups(): Promise<MyGroups> {
-  const { data } = await apiClient.get<MyGroups>('/auth/groups')
+/** One page of the groups the caller owns. */
+export async function getOwnedGroups(paging: PageParams): Promise<PagedResult<OwnedGroup>> {
+  const { data } = await apiClient.get<PagedResult<OwnedGroup>>('/auth/groups/owned', { params: paging })
+  return data
+}
+
+/** One page of the groups the caller joined (name and owner only). */
+export async function getJoinedGroups(paging: PageParams): Promise<PagedResult<JoinedGroup>> {
+  const { data } = await apiClient.get<PagedResult<JoinedGroup>>('/auth/groups/joined', { params: paging })
+  return data
+}
+
+/** One page of the pending and active members of a group. Owner only. */
+export async function getGroupMembers(groupId: string, paging: PageParams): Promise<PagedResult<GroupMember>> {
+  const { data } = await apiClient.get<PagedResult<GroupMember>>(`/auth/groups/${groupId}/members`, { params: paging })
   return data
 }
 
@@ -61,8 +78,8 @@ export async function leaveGroup(groupId: string): Promise<void> {
 }
 
 /** Pending child memberships waiting for the caller (as Primary supporter). */
-export async function getPendingGroupApprovals(): Promise<PendingGroupApproval[]> {
-  const { data } = await apiClient.get<PendingGroupApproval[]>('/auth/groups/approvals')
+export async function getPendingGroupApprovals(paging: PageParams): Promise<PagedResult<PendingGroupApproval>> {
+  const { data } = await apiClient.get<PagedResult<PendingGroupApproval>>('/auth/groups/approvals', { params: paging })
   return data
 }
 

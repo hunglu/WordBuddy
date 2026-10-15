@@ -84,9 +84,9 @@ internal sealed class AutofillRepository : IAutofillRepository
         }
     }
 
-    public async Task<Result<IReadOnlyList<LearnerWord>>> GetPendingLinksForLearnerAsync(Guid learnerId, CancellationToken ct = default)
+    public async Task<Result<PagedResult<LearnerWord>>> GetPendingLinksForLearnerAsync(Guid learnerId, int page, int pageSize, CancellationToken ct = default)
     {
-        List<LearnerWord> links = await _dbContext.LearnerWords
+        PagedResult<LearnerWord> links = await _dbContext.LearnerWords
             .AsNoTracking()
             .Include(l => l.Sense!).ThenInclude(s => s.Lexeme)
             .Include(l => l.Sense!).ThenInclude(s => s.Translations)
@@ -96,25 +96,27 @@ internal sealed class AutofillRepository : IAutofillRepository
                         l.Sense!.Origin == SenseOrigin.AutoFill &&
                         !l.Sense.VisibleToChildren)
             .OrderBy(l => l.AddedAtUtc)
+            .ThenBy(l => l.Id)
             .AsSplitQuery()
-            .ToListAsync(ct);
+            .ToPagedResultAsync(page, pageSize, ct);
 
-        return Result.Success<IReadOnlyList<LearnerWord>>(links);
+        return Result.Success(links);
     }
 
-    public async Task<Result<IReadOnlyList<Sense>>> GetPendingSensesForAdminAsync(CancellationToken ct = default)
+    public async Task<Result<PagedResult<Sense>>> GetPendingSensesForAdminAsync(int page, int pageSize, CancellationToken ct = default)
     {
-        List<Sense> senses = await _dbContext.Senses
+        PagedResult<Sense> senses = await _dbContext.Senses
             .AsNoTracking()
             .Include(s => s.Lexeme)
             .Include(s => s.Translations)
             .Where(s => s.Origin == SenseOrigin.AutoFill && !s.VisibleToChildren)
             .Where(s => _dbContext.LearnerWords.Any(l => l.SenseId == s.Id && l.RequiresChildApproval && l.ChildApprovedAtUtc == null))
             .OrderBy(s => s.CreatedAtUtc)
+            .ThenBy(s => s.Id)
             .AsSplitQuery()
-            .ToListAsync(ct);
+            .ToPagedResultAsync(page, pageSize, ct);
 
-        return Result.Success<IReadOnlyList<Sense>>(senses);
+        return Result.Success(senses);
     }
 
     public async Task<Result<LearnerWord>> GetTrackedLinkAsync(Guid learnerId, Guid senseId, CancellationToken ct = default)

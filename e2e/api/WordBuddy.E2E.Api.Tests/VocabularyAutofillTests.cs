@@ -303,9 +303,10 @@ public sealed class VocabularyAutofillTests
 
     private static async Task<JsonElement> GetJsonAsync(IAPIRequestContext content, string path, string token)
     {
-        IAPIResponse response = await content.GetAsync(path, new() { Headers = Auth(token) });
+        string url = path + (path.Contains('?') ? "&" : "?") + "pageSize=100";
+        IAPIResponse response = await content.GetAsync(url, new() { Headers = Auth(token) });
         response.Status.Should().Be(200, await response.TextAsync());
-        return (await response.JsonAsync())!.Value;
+        return (await response.JsonAsync())!.Value.GetProperty("items");
     }
 
     private static Dictionary<string, string> Auth(string token) => new() { ["Authorization"] = $"Bearer {token}" };

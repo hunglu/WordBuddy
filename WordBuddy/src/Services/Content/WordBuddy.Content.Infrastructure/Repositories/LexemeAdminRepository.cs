@@ -36,7 +36,7 @@ internal sealed class LexemeAdminRepository : ILexemeAdminRepository
         _logger = logger;
     }
 
-    public async Task<Result<AdminLexemePageDto>> SearchAsync(
+    public async Task<Result<PagedResult<AdminLexemeListItemDto>>> SearchAsync(
         string? search, PartOfSpeech? partOfSpeech, CefrLevel? cefrLevel, int page, int pageSize, CancellationToken ct = default)
     {
         _logger.LogDebug(
@@ -117,7 +117,7 @@ internal sealed class LexemeAdminRepository : ILexemeAdminRepository
                 r.PrivateCount))
             .ToList();
 
-        return Result.Success(new AdminLexemePageDto(items, total, page, pageSize));
+        return Result.Success(new PagedResult<AdminLexemeListItemDto>(items, page, pageSize, total));
     }
 
     public async Task<Result<LexemeDetailData>> GetDetailAsync(Guid id, CancellationToken ct = default)

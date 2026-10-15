@@ -1,5 +1,6 @@
 using FluentValidation;
 using WordBuddy.Content.Domain;
+using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.LexemesAdmin.Queries.GetAdminLexemes;
 
@@ -11,6 +12,6 @@ public sealed class GetAdminLexemesQueryValidator : AbstractValidator<GetAdminLe
         RuleFor(q => q.PartOfSpeech).IsInEnum();
         RuleFor(q => q.CefrLevel).IsInEnum();
         RuleFor(q => q.Page).GreaterThanOrEqualTo(1);
-        RuleFor(q => q.PageSize).InclusiveBetween(1, GetAdminLexemesQuery.MaxPageSize);
+        RuleFor(q => q.PageSize).InclusiveBetween(1, Paging.MaxPageSize);
     }
 }

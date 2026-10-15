@@ -112,6 +112,13 @@ Then('the lesson shows the {string} status', async ({ page }, status: string) =>
 Then('the lesson list shows the lesson as published with 1 word', async ({ page }) => {
   await page.getByRole('link', { name: '← All lessons' }).click()
   const row = page.locator('tr').filter({ hasText: lessonTitle })
+  // The list is paged and sorted by title: walk to the page that holds the new lesson.
+  const next = page.getByRole('button', { name: 'Next', exact: true })
+  await expect(page.locator('tbody tr').first()).toBeVisible()
+  for (let i = 0; i < 50 && (await row.count()) === 0 && (await next.isEnabled()); i++) {
+    await next.click()
+    await page.waitForTimeout(300)
+  }
   await expect(row.getByText('Published', { exact: true })).toBeVisible()
   await expect(row.getByRole('cell', { name: '1', exact: true })).toBeVisible()
 })

@@ -3,7 +3,7 @@ feature: Learner support links
 services: Identity, Content, Progress, UI
 audience: Both
 state: shipped
-last-updated-by: WB-24_learner-support-links
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Learner support links
@@ -104,6 +104,10 @@ stateDiagram-v2
 | `/profile` | Alias and avatar picker |
 | Lessons and vocabulary routes | Child without an active supporter sees "Add a supporter" → `/support` |
 
+## Paging (WB-55)
+
+`GET /api/auth/admin/unlink-requests` and `GET /api/auth/admin/support-links?learnerId=` are paged. The admin support-links page shows a pager for each list.
+
 ## Pending changes
 
 None.
@@ -111,3 +115,4 @@ None.
 ## Change history
 
 - `WB-24_learner-support-links` (#24) — support links, Primary approval for children, child learning gate, two-sided unlink with admin override, supporter cap, alias and avatar
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged admin unlink-request and support-link lists

@@ -22,11 +22,11 @@ namespace WordBuddy.Content.Api.Controllers;
 public sealed class GroupVocabularyController : ControllerBase
 {
     private readonly ICommandHandler<AssignWordsToGroupCommand, GroupWordAssignmentResultDto> _assign;
-    private readonly IQueryHandler<GetGroupWordAssignmentsQuery, IReadOnlyList<GroupWordAssignmentDto>> _getAssignments;
+    private readonly IQueryHandler<GetGroupWordAssignmentsQuery, PagedResult<GroupWordAssignmentDto>> _getAssignments;
 
     public GroupVocabularyController(
         ICommandHandler<AssignWordsToGroupCommand, GroupWordAssignmentResultDto> assign,
-        IQueryHandler<GetGroupWordAssignmentsQuery, IReadOnlyList<GroupWordAssignmentDto>> getAssignments)
+        IQueryHandler<GetGroupWordAssignmentsQuery, PagedResult<GroupWordAssignmentDto>> getAssignments)
     {
         _assign = assign;
         _getAssignments = getAssignments;
@@ -41,12 +41,16 @@ public sealed class GroupVocabularyController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Returns the assignment history of the group, newest first.</summary>
+    /// <summary>Returns one page of the assignment history of the group, newest first.</summary>
     [HttpGet("words")]
-    public async Task<IActionResult> GetAssignments(Guid groupId, CancellationToken ct)
+    public async Task<IActionResult> GetAssignments(
+        Guid groupId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<GroupWordAssignmentDto>> result =
-            await _getAssignments.HandleAsync(new GetGroupWordAssignmentsQuery(groupId, User.GetUserId()), ct);
+        Result<PagedResult<GroupWordAssignmentDto>> result =
+            await _getAssignments.HandleAsync(new GetGroupWordAssignmentsQuery(groupId, User.GetUserId(), page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 }

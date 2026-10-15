@@ -1,3 +1,4 @@
+using WordBuddy.Shared.Kernel;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -79,11 +80,11 @@ public sealed class LexemesAdminEndpointsTests
         return lexeme;
     }
 
-    private static async Task<AdminLexemePageDto> SearchAsync(HttpClient admin, string query)
+    private static async Task<PagedResult<AdminLexemeListItemDto>> SearchAsync(HttpClient admin, string query)
     {
         HttpResponseMessage response = await admin.GetAsync($"{Base}?{query}");
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
-        return (await response.Content.ReadFromJsonAsync<AdminLexemePageDto>(JsonOptions))!;
+        return (await response.Content.ReadFromJsonAsync<PagedResult<AdminLexemeListItemDto>>(JsonOptions))!;
     }
 
     private static async Task<AdminLexemeDetailDto> DetailAsync(HttpClient admin, Guid id) =>
@@ -163,7 +164,7 @@ public sealed class LexemesAdminEndpointsTests
         HttpClient admin = await AdminAsync();
         Lexeme middle = await SeedLexemeAsync($"big{token}wolf");
 
-        AdminLexemePageDto page = await SearchAsync(admin, $"search={token}");
+        PagedResult<AdminLexemeListItemDto> page = await SearchAsync(admin, $"search={token}");
 
         page.Items.Should().ContainSingle().Which.Id.Should().Be(middle.Id);
         page.TotalCount.Should().Be(1);
@@ -177,7 +178,7 @@ public sealed class LexemesAdminEndpointsTests
         Lexeme containsOnly = await SeedLexemeAsync($"aaa{token}");
         Lexeme prefix = await SeedLexemeAsync($"{token}zzz");
 
-        AdminLexemePageDto page = await SearchAsync(admin, $"search={token}");
+        PagedResult<AdminLexemeListItemDto> page = await SearchAsync(admin, $"search={token}");
 
         // "aaa..." would sort first alphabetically; the prefix match must still win.
         page.Items.Select(i => i.Id).Should().Equal(prefix.Id, containsOnly.Id);
@@ -195,7 +196,7 @@ public sealed class LexemesAdminEndpointsTests
         await SeedLexemeAsync(token + lookAlikeLemma);
         string term = token + literalLemma[..(literalLemma.IndexOf(special[0]) + 1)];
 
-        AdminLexemePageDto page = await SearchAsync(admin, $"search={Uri.EscapeDataString(term)}");
+        PagedResult<AdminLexemeListItemDto> page = await SearchAsync(admin, $"search={Uri.EscapeDataString(term)}");
 
         page.Items.Should().ContainSingle().Which.Id.Should().Be(literal.Id);
     }
@@ -210,12 +211,25 @@ public sealed class LexemesAdminEndpointsTests
             await SeedLexemeAsync($"{token}{suffix}");
         }
 
-        AdminLexemePageDto second = await SearchAsync(admin, $"search={token}&page=2&pageSize=2");
+        PagedResult<AdminLexemeListItemDto> second = await SearchAsync(admin, $"search={token}&page=2&pageSize=2");
 
         second.TotalCount.Should().Be(3);
         second.Items.Should().HaveCount(1);
         second.Page.Should().Be(2);
         second.PageSize.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task LexemesAdmin_Search_ResponseUsesPagedResultKeys()
+    {
+        string token = Token();
+        HttpClient admin = await AdminAsync();
+        await SeedLexemeAsync($"{token}a");
+
+        JsonElement root = JsonDocument.Parse(await admin.GetStringAsync($"{Base}?search={token}")).RootElement;
+
+        root.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("items", "page", "pageSize", "totalCount");
+        root.GetProperty("pageSize").GetInt32().Should().Be(25);
     }
 
     [Fact]
@@ -226,7 +240,7 @@ public sealed class LexemesAdminEndpointsTests
         Lexeme noun = await SeedLexemeAsync($"{token}run", PartOfSpeech.Noun);
         await SeedLexemeAsync($"{token}run", PartOfSpeech.Verb);
 
-        AdminLexemePageDto page = await SearchAsync(admin, $"search={token}&partOfSpeech=Noun");
+        PagedResult<AdminLexemeListItemDto> page = await SearchAsync(admin, $"search={token}&partOfSpeech=Noun");
 
         AdminLexemeListItemDto item = page.Items.Should().ContainSingle().Subject;
         item.Id.Should().Be(noun.Id);
@@ -347,7 +361,7 @@ public sealed class LexemesAdminEndpointsTests
         first.GetProperty("senses")[0].GetProperty("ipaUk").GetString().Should().Be("/test-uk/");
         Guid senseId = first.GetProperty("senses")[0].GetProperty("senseId").GetGuid();
         // Warm the shared-pool cache.
-        string poolBefore = await adult.GetStringAsync("/api/vocabulary/shared");
+        string poolBefore = (await PagedHttp.GetAllAsArrayAsync(adult, "/api/vocabulary/shared")).GetRawText();
         poolBefore.Should().Contain("/test-uk/");
 
         Guid lexemeId = await WithDbAsync(db => db.Senses.Where(s => s.Id == senseId).Select(s => s.LexemeId).SingleAsync());
@@ -355,7 +369,7 @@ public sealed class LexemesAdminEndpointsTests
 
         JsonElement second = JsonDocument.Parse(await adult.GetStringAsync($"/api/vocabulary/autofill?word={word}")).RootElement;
         second.GetProperty("senses")[0].GetProperty("ipaUk").GetString().Should().Be("/edited-uk/");
-        string poolAfter = await adult.GetStringAsync("/api/vocabulary/shared");
+        string poolAfter = (await PagedHttp.GetAllAsArrayAsync(adult, "/api/vocabulary/shared")).GetRawText();
         poolAfter.Should().Contain("/edited-uk/");
     }
 

@@ -38,10 +38,10 @@ public sealed class PersonalVocabularyController : ControllerBase
     private readonly ICommandHandler<DeletePersonalVocabularyWordCommand> _deleteWord;
     private readonly ICommandHandler<UpdatePersonalVocabularyWordCommand> _updateWord;
     private readonly ICommandHandler<UpdatePersonalContextCommand> _updatePersonalContext;
-    private readonly IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getMyWords;
-    private readonly IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getSharedWords;
+    private readonly IQueryHandler<GetMyVocabularyWordsQuery, PagedResult<PersonalVocabularyWordDto>> _getMyWords;
+    private readonly IQueryHandler<GetSharedVocabularyWordsQuery, PagedResult<PersonalVocabularyWordDto>> _getSharedWords;
     private readonly IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getRandomForCheck;
-    private readonly IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>> _getPendingModeration;
+    private readonly IQueryHandler<GetPendingVocabularyModerationQuery, PagedResult<PersonalVocabularyWordDto>> _getPendingModeration;
     private readonly IQueryHandler<GetSensesByIdsQuery, IReadOnlyList<SenseReviewDto>> _getSensesByIds;
     private readonly ILogger<PersonalVocabularyController> _logger;
 
@@ -53,10 +53,10 @@ public sealed class PersonalVocabularyController : ControllerBase
         ICommandHandler<DeletePersonalVocabularyWordCommand> deleteWord,
         ICommandHandler<UpdatePersonalVocabularyWordCommand> updateWord,
         ICommandHandler<UpdatePersonalContextCommand> updatePersonalContext,
-        IQueryHandler<GetMyVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getMyWords,
-        IQueryHandler<GetSharedVocabularyWordsQuery, IReadOnlyList<PersonalVocabularyWordDto>> getSharedWords,
+        IQueryHandler<GetMyVocabularyWordsQuery, PagedResult<PersonalVocabularyWordDto>> getMyWords,
+        IQueryHandler<GetSharedVocabularyWordsQuery, PagedResult<PersonalVocabularyWordDto>> getSharedWords,
         IQueryHandler<GetRandomVocabularyWordsForCheckQuery, IReadOnlyList<PersonalVocabularyWordDto>> getRandomForCheck,
-        IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>> getPendingModeration,
+        IQueryHandler<GetPendingVocabularyModerationQuery, PagedResult<PersonalVocabularyWordDto>> getPendingModeration,
         IQueryHandler<GetSensesByIdsQuery, IReadOnlyList<SenseReviewDto>> getSensesByIds,
         ILogger<PersonalVocabularyController> logger)
     {
@@ -91,11 +91,15 @@ public sealed class PersonalVocabularyController : ControllerBase
         return CreatedAtAction(nameof(GetMyWords), new { }, result.Value);
     }
 
-    /// <summary>Gets the authenticated caller's own personal vocabulary list, any share status.</summary>
+    /// <summary>Gets one page of the authenticated caller's own personal vocabulary list, any share status.</summary>
     [HttpGet("mine")]
-    public async Task<IActionResult> GetMyWords(CancellationToken ct)
+    public async Task<IActionResult> GetMyWords(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getMyWords.HandleAsync(new GetMyVocabularyWordsQuery(User.GetUserId(), User.GetAgeGroup()), ct);
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await _getMyWords.HandleAsync(
+            new GetMyVocabularyWordsQuery(User.GetUserId(), User.GetAgeGroup(), page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
@@ -148,12 +152,17 @@ public sealed class PersonalVocabularyController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Browses the community sharing pool — Child callers only ever receive
-    /// <c>VisibleToChildren</c> items, enforced at the query-handler level.</summary>
+    /// <summary>Browses one page of the community sharing pool, optionally filtered by <c>search</c>.
+    /// Child callers only ever receive <c>VisibleToChildren</c> items, enforced at the query-handler level.</summary>
     [HttpGet("shared")]
-    public async Task<IActionResult> GetSharedWords(CancellationToken ct)
+    public async Task<IActionResult> GetSharedWords(
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getSharedWords.HandleAsync(new GetSharedVocabularyWordsQuery(User.GetAgeGroup(), User.GetUserId()), ct);
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await _getSharedWords.HandleAsync(
+            new GetSharedVocabularyWordsQuery(User.GetAgeGroup(), User.GetUserId(), search, page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
@@ -208,12 +217,16 @@ public sealed class PersonalVocabularyController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Lists words awaiting moderation (admin only).</summary>
+    /// <summary>Lists one page of words awaiting moderation (admin only).</summary>
     [Authorize(Policy = "AdminOnly")]
     [HttpGet("moderation/pending")]
-    public async Task<IActionResult> GetPendingModeration(CancellationToken ct)
+    public async Task<IActionResult> GetPendingModeration(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await _getPendingModeration.HandleAsync(new GetPendingVocabularyModerationQuery(), ct);
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await _getPendingModeration.HandleAsync(
+            new GetPendingVocabularyModerationQuery(page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

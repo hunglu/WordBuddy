@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
+import { Pager } from '../components/Pager'
 import {
   cardClass,
   dangerButtonClass,
@@ -18,6 +19,7 @@ import {
   useAdminResolveUnlink,
   useAdminUnlinkRequests,
 } from '../hooks/useSupportLinks'
+import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 
 const REASON_MAX = 500
@@ -27,7 +29,10 @@ export function AdminSupportLinksPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
   const isAdmin = user?.isAdmin === true
 
-  const requests = useAdminUnlinkRequests(isAdmin)
+  const requestsPaging = usePagination()
+  const linksPaging = usePagination()
+  const requests = useAdminUnlinkRequests(requestsPaging.params, isAdmin)
+  requestsPaging.clamp(requests.data?.totalCount)
   const resolve = useAdminResolveUnlink()
   const handover = useAdminHandoverPrimary()
   const [reasonById, setReasonById] = useState<Record<string, string>>({})
@@ -35,7 +40,8 @@ export function AdminSupportLinksPage(): ReactElement {
   const [lookupId, setLookupId] = useState('')
   const [newPrimaryLinkId, setNewPrimaryLinkId] = useState('')
   const [handoverReason, setHandoverReason] = useState('')
-  const learnerLinks = useAdminLearnerSupportLinks(lookupId)
+  const learnerLinks = useAdminLearnerSupportLinks(lookupId, linksPaging.params)
+  linksPaging.clamp(learnerLinks.data?.totalCount)
 
   // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
   if (!isAdmin) {
@@ -51,10 +57,10 @@ export function AdminSupportLinksPage(): ReactElement {
         <h2 className="text-2xl font-bold text-wb-ink">Escalated unlink requests</h2>
         {requests.isLoading && <p className="mt-3 text-wb-ink-muted">Loading…</p>}
         {requests.isError && <p className="mt-3 text-wb-danger">Couldn't load unlink requests right now.</p>}
-        {requests.data && requests.data.length === 0 && <p className="mt-3 text-wb-ink-muted">Nothing waiting.</p>}
+        {requests.data && requests.data.totalCount === 0 && <p className="mt-3 text-wb-ink-muted">Nothing waiting.</p>}
 
         <div className="mt-3 flex flex-col gap-3">
-          {requests.data?.map((request) => {
+          {requests.data?.items.map((request) => {
             const reason = reasonById[request.id] ?? ''
             const canSubmit = reason.trim().length > 0 && !resolve.isPending
             return (
@@ -99,6 +105,16 @@ export function AdminSupportLinksPage(): ReactElement {
             )
           })}
         </div>
+        {requests.data && (
+          <Pager
+            page={requestsPaging.page}
+            pageSize={requestsPaging.pageSize}
+            totalCount={requests.data.totalCount}
+            onPageChange={requestsPaging.setPage}
+            label="Unlink request pages"
+            itemLabel="requests"
+          />
+        )}
         {resolve.isError && <p className="mt-2 text-sm text-wb-danger">{problemMessage(resolve.error, 'That did not work.')}</p>}
       </section>
 
@@ -109,6 +125,7 @@ export function AdminSupportLinksPage(): ReactElement {
           onSubmit={(e) => {
             e.preventDefault()
             setNewPrimaryLinkId('')
+            linksPaging.reset()
             setLookupId(learnerId.trim())
           }}
         >
@@ -124,10 +141,10 @@ export function AdminSupportLinksPage(): ReactElement {
         {learnerLinks.isError && <p className="mt-3 text-wb-danger">Couldn't load this learner's links.</p>}
         {learnerLinks.data && (
           <div className={`mt-3 ${cardClass}`}>
-            {learnerLinks.data.length === 0 && <p className="text-wb-ink-muted">No links.</p>}
+            {learnerLinks.data.totalCount === 0 && <p className="text-wb-ink-muted">No links.</p>}
             <fieldset className="flex flex-col gap-2">
               <legend className="text-sm font-semibold text-wb-ink">New Primary</legend>
-              {learnerLinks.data.map((link) => (
+              {learnerLinks.data.items.map((link) => (
                 <label key={link.id} className="flex items-center gap-2 text-sm text-wb-ink">
                   <input
                     type="radio"
@@ -141,6 +158,14 @@ export function AdminSupportLinksPage(): ReactElement {
                 </label>
               ))}
             </fieldset>
+            <Pager
+              page={linksPaging.page}
+              pageSize={linksPaging.pageSize}
+              totalCount={learnerLinks.data.totalCount}
+              onPageChange={linksPaging.setPage}
+              label="Learner link pages"
+              itemLabel="links"
+            />
             <label htmlFor="handoverReason" className="mt-3 block text-sm font-semibold text-wb-ink">
               Reason
             </label>

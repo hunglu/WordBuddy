@@ -52,9 +52,8 @@ public sealed class PersonalVocabularyEditEndpointsTests
 
     private static async Task<PersonalVocabularyWordDto?> GetMineAsync(HttpClient client, Guid id)
     {
-        List<PersonalVocabularyWordDto>? mine =
-            await client.GetFromJsonAsync<List<PersonalVocabularyWordDto>>("/api/vocabulary/mine", JsonOptions);
-        return mine!.SingleOrDefault(w => w.Id == id);
+        List<PersonalVocabularyWordDto> mine = await PagedHttp.GetAllAsync<PersonalVocabularyWordDto>(client, "/api/vocabulary/mine", JsonOptions);
+        return mine.SingleOrDefault(w => w.Id == id);
     }
 
     private async Task<Guid> SeedLinkedSystemSenseAsync(Guid userId)

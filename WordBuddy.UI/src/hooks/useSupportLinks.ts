@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   acceptInvitation,
   adminCompleteUnlink,
@@ -21,6 +21,7 @@ import {
   type HandoverPrimaryPayload,
 } from '../api/supportLinks'
 import { updateTimeZone } from '../api/auth'
+import type { PageParams } from '../types'
 
 export const SUPPORT_LINKS_KEY = ['supportLinks'] as const
 export const PENDING_APPROVALS_KEY = ['supportLinks', 'pending'] as const
@@ -127,15 +128,23 @@ export function useUpdateTimeZone() {
 
 // ── Admin ───────────────────────────────────────────────────────────────────
 
-export function useAdminUnlinkRequests(enabled = true) {
-  return useQuery({ queryKey: ADMIN_UNLINK_REQUESTS_KEY, queryFn: getAdminUnlinkRequests, enabled })
+/** One page of the unlink requests escalated to an admin. */
+export function useAdminUnlinkRequests(paging: PageParams, enabled = true) {
+  return useQuery({
+    queryKey: [...ADMIN_UNLINK_REQUESTS_KEY, paging],
+    queryFn: () => getAdminUnlinkRequests(paging),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
 }
 
-export function useAdminLearnerSupportLinks(learnerId: string) {
+/** One page of the links of one learner. */
+export function useAdminLearnerSupportLinks(learnerId: string, paging: PageParams) {
   return useQuery({
-    queryKey: ['adminSupportLinks', learnerId],
-    queryFn: () => getAdminLearnerSupportLinks(learnerId),
+    queryKey: ['adminSupportLinks', learnerId, paging],
+    queryFn: () => getAdminLearnerSupportLinks(learnerId, paging),
     enabled: learnerId.length > 0,
+    placeholderData: keepPreviousData,
   })
 }
 

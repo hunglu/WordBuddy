@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getChallengeBoard,
   joinChallenge,
@@ -6,21 +6,28 @@ import {
   listChallenges,
   setChildChallengeConsent,
 } from '../api/challenges'
+import type { PageParams } from '../types'
 
 export const CHALLENGES_KEY = ['challenges'] as const
 
-/** Open and running challenges of the caller audience. */
-export function useChallenges() {
-  return useQuery({ queryKey: CHALLENGES_KEY, queryFn: listChallenges, retry: false })
+/** One page of the open and running challenges of the caller audience. */
+export function useChallenges(paging: PageParams) {
+  return useQuery({
+    queryKey: [...CHALLENGES_KEY, 'list', paging],
+    queryFn: () => listChallenges(paging),
+    retry: false,
+    placeholderData: keepPreviousData,
+  })
 }
 
-/** The board of one challenge, filtered by the server for the caller. */
-export function useChallengeBoard(id: string | undefined) {
+/** One page of the board of one challenge, filtered by the server for the caller. */
+export function useChallengeBoard(id: string | undefined, paging: PageParams) {
   return useQuery({
-    queryKey: [...CHALLENGES_KEY, 'board', id],
-    queryFn: () => getChallengeBoard(id!), // runs only when `enabled` (id is defined)
+    queryKey: [...CHALLENGES_KEY, 'board', id, paging],
+    queryFn: () => getChallengeBoard(id!, paging), // runs only when `enabled` (id is defined)
     enabled: id !== undefined,
     retry: false,
+    placeholderData: keepPreviousData,
   })
 }
 

@@ -569,6 +569,24 @@ export interface LearnerDashboard {
   gaming: DashboardGamingSignals
 }
 
+// ── Paging (WB-55) ──────────────────────────────────────────────────────────
+
+/** One page of a list. Mirrors `PagedResult<T>` of the backend (`WordBuddy.Shared.Kernel`). */
+export interface PagedResult<T> {
+  items: T[]
+  /** 1-based page number that was served. */
+  page: number
+  pageSize: number
+  /** Number of items across all pages, after filters. */
+  totalCount: number
+}
+
+/** Query params of every paged list endpoint. */
+export interface PageParams {
+  page: number
+  pageSize: number
+}
+
 // ── Learning groups (WB-27) ─────────────────────────────────────────────────
 
 export type GroupMemberStatus = 'PendingPrimaryApproval' | 'Active' | 'Removed'
@@ -584,13 +602,16 @@ export interface GroupMember {
   addedAtUtc: string
 }
 
-/** From `GET /api/auth/groups/{id}` (owner only). */
+/** From `GET /api/auth/groups/{id}` (owner only). The members come from the paged members endpoint. */
 export interface LearnerGroupDetail {
   id: string
   ownerId: string
   name: string
   createdAtUtc: string
-  members: GroupMember[]
+  activeMemberCount: number
+  pendingMemberCount: number
+  /** Pending and active learners (ids only), for hiding them in the add-member picker. */
+  memberLearnerIds: string[]
 }
 
 export interface OwnedGroup {
@@ -607,11 +628,6 @@ export interface JoinedGroup {
   name: string
   ownerName: string
   ownerAvatarId: string | null
-}
-
-export interface MyGroups {
-  owned: OwnedGroup[]
-  joined: JoinedGroup[]
 }
 
 export type AddMemberOutcome = 'Added' | 'PendingApproval' | 'Rejected'
@@ -726,7 +742,8 @@ export interface ChallengeBoard {
   participantCount: number
   myRank: number | null
   myScore: number | null
-  entries: ChallengeBoardEntry[]
+  /** One page of rows. A child always gets one page (top 5 and own row). */
+  entries: PagedResult<ChallengeBoardEntry>
 }
 
 // ── Admin lexemes (WB-50) ───────────────────────────────────────────────────
@@ -750,14 +767,6 @@ export interface AdminLexemeListItem {
   hasUsAudio: boolean
   catalogSenseCount: number
   privateLearnerSenseCount: number
-}
-
-/** One page of the admin lexeme list. */
-export interface AdminLexemePage {
-  items: AdminLexemeListItem[]
-  totalCount: number
-  page: number
-  pageSize: number
 }
 
 /** A catalog sense of a lexeme (system word or shared-pool word), read-only. */

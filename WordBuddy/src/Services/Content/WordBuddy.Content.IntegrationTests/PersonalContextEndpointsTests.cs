@@ -48,7 +48,7 @@ public sealed class PersonalContextEndpointsTests
     /// <summary>The note on "mine" for one word, or null when missing or empty.</summary>
     private static async Task<string?> MineNoteAsync(HttpClient client, Guid id)
     {
-        JsonElement mine = await ReadJsonAsync(await client.GetAsync("/api/vocabulary/mine"));
+        JsonElement mine = await PagedHttp.GetAllAsArrayAsync(client, "/api/vocabulary/mine");
         JsonElement item = mine.EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == id);
         return item.TryGetProperty("personalContext", out JsonElement note) && note.ValueKind == JsonValueKind.String
             ? note.GetString()
@@ -164,9 +164,9 @@ public sealed class PersonalContextEndpointsTests
         HttpClient other = Client(Guid.NewGuid());
         (await other.PostAsync($"/api/vocabulary/shared/{id}/add-to-mine", content: null)).StatusCode.Should().Be(HttpStatusCode.Created);
 
-        string shared = await (await other.GetAsync("/api/vocabulary/shared")).Content.ReadAsStringAsync();
+        string shared = (await PagedHttp.GetAllAsArrayAsync(other, "/api/vocabulary/shared")).GetRawText();
         string senses = await (await other.GetAsync($"/api/vocabulary/senses?ids={id}")).Content.ReadAsStringAsync();
-        string mine = await (await other.GetAsync("/api/vocabulary/mine")).Content.ReadAsStringAsync();
+        string mine = (await PagedHttp.GetAllAsArrayAsync(other, "/api/vocabulary/mine")).GetRawText();
 
         shared.Should().NotContain("SECRET-NOTE-123");
         senses.Should().NotContain("SECRET-NOTE-123");

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addSharedWordToMyList,
   addVocabularyWord,
@@ -14,23 +14,38 @@ import {
   type UpdateVocabularyWordPayload,
 } from '../api/vocabulary'
 import { getVocabularyRecallProgress, submitVocabularyRecallCheck } from '../api/progress'
-import type { VocabularyRecallResultItem } from '../types'
+import type { PageParams, VocabularyRecallResultItem } from '../types'
 
 const MY_WORDS_KEY = ['vocabulary', 'mine']
 const SHARED_WORDS_KEY = ['vocabulary', 'shared']
 const PENDING_MODERATION_KEY = ['vocabulary', 'moderation', 'pending']
 const RECALL_PROGRESS_KEY = ['progress', 'vocabulary-recall']
 
-export function useMyVocabularyWords() {
-  return useQuery({ queryKey: MY_WORDS_KEY, queryFn: getMyVocabularyWords })
+/** One page of my own words. */
+export function useMyVocabularyWords(paging: PageParams) {
+  return useQuery({
+    queryKey: [...MY_WORDS_KEY, paging],
+    queryFn: () => getMyVocabularyWords(paging),
+    placeholderData: keepPreviousData,
+  })
 }
 
-export function useSharedVocabularyWords() {
-  return useQuery({ queryKey: SHARED_WORDS_KEY, queryFn: getSharedVocabularyWords })
+/** One page of the shared pool. `search` is matched on the server. */
+export function useSharedVocabularyWords(paging: PageParams, search?: string) {
+  return useQuery({
+    queryKey: [...SHARED_WORDS_KEY, search ?? '', paging],
+    queryFn: () => getSharedVocabularyWords(paging, search),
+    placeholderData: keepPreviousData,
+  })
 }
 
-export function usePendingVocabularyModeration() {
-  return useQuery({ queryKey: PENDING_MODERATION_KEY, queryFn: getPendingModeration })
+/** One page of the words waiting for moderation. */
+export function usePendingVocabularyModeration(paging: PageParams) {
+  return useQuery({
+    queryKey: [...PENDING_MODERATION_KEY, paging],
+    queryFn: () => getPendingModeration(paging),
+    placeholderData: keepPreviousData,
+  })
 }
 
 export function useVocabularyRecallProgress() {

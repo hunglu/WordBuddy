@@ -5,8 +5,10 @@ import { Link, Navigate } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
 import { ConfirmDialog } from '../components/admin-lessons/ConfirmDialog'
 import { LessonStatusBadge } from '../components/admin-lessons/LessonStatusBadge'
+import { Pager } from '../components/Pager'
 import { cardClass, dangerButtonClass, inputClass, primaryButtonClass, softButtonClass } from '../components/support/supportUi'
 import { useAdminLessons, useDeleteLesson, useSetLessonPublished } from '../hooks/useAdminLessons'
+import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 import { levelClasses } from '../theme/variants'
 import type { AdminLessonDto, Level, LessonType } from '../types'
@@ -31,6 +33,7 @@ export function AdminLessonsPage(): ReactElement {
   const [level, setLevel] = useState<Level | ''>('')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [toDelete, setToDelete] = useState<AdminLessonDto | null>(null)
+  const pagination = usePagination()
 
   const lessons = useAdminLessons(
     {
@@ -38,8 +41,10 @@ export function AdminLessonsPage(): ReactElement {
       level: level === '' ? undefined : level,
       isPublished: status === 'all' ? undefined : status === 'published',
     },
+    pagination.params,
     isAdmin,
   )
+  pagination.clamp(lessons.data?.totalCount)
   const setPublished = useSetLessonPublished()
   const remove = useDeleteLesson()
 
@@ -63,7 +68,11 @@ export function AdminLessonsPage(): ReactElement {
       <div className="mt-6 flex flex-wrap gap-3">
         <label className="text-sm font-semibold text-wb-ink">
           Type
-          <select value={type} onChange={(e) => setType(e.target.value as LessonType | '')} className={`${inputClass} mt-1`}>
+          <select value={type} onChange={(e) => {
+              setType(e.target.value as LessonType | '')
+              pagination.reset()
+            }}
+            className={`${inputClass} mt-1`}>
             <option value="">All types</option>
             {TYPES.map((t) => (
               <option key={t} value={t}>
@@ -74,7 +83,11 @@ export function AdminLessonsPage(): ReactElement {
         </label>
         <label className="text-sm font-semibold text-wb-ink">
           Level
-          <select value={level} onChange={(e) => setLevel(e.target.value as Level | '')} className={`${inputClass} mt-1`}>
+          <select value={level} onChange={(e) => {
+              setLevel(e.target.value as Level | '')
+              pagination.reset()
+            }}
+            className={`${inputClass} mt-1`}>
             <option value="">All levels</option>
             {LEVELS.map((l) => (
               <option key={l} value={l}>
@@ -85,7 +98,11 @@ export function AdminLessonsPage(): ReactElement {
         </label>
         <label className="text-sm font-semibold text-wb-ink">
           Status
-          <select value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)} className={`${inputClass} mt-1`}>
+          <select value={status} onChange={(e) => {
+              setStatus(e.target.value as StatusFilter)
+              pagination.reset()
+            }}
+            className={`${inputClass} mt-1`}>
             <option value="all">All</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
@@ -95,14 +112,14 @@ export function AdminLessonsPage(): ReactElement {
 
       {lessons.isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading lessons…</p>}
       {lessons.isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load lessons right now.</p>}
-      {lessons.data && lessons.data.length === 0 && <p className="mt-8 text-lg text-wb-ink-muted">No lessons match these filters.</p>}
+      {lessons.data && lessons.data.items.length === 0 && <p className="mt-8 text-lg text-wb-ink-muted">No lessons match these filters.</p>}
       {setPublished.isError && (
         <p role="alert" className="mt-4 text-sm font-semibold text-wb-danger">
           {problemMessage(setPublished.error, 'Could not change the status.')}
         </p>
       )}
 
-      {lessons.data && lessons.data.length > 0 && (
+      {lessons.data && lessons.data.items.length > 0 && (
         <div className={`mt-6 overflow-x-auto ${cardClass}`}>
           <table className="w-full text-left">
             <thead>
@@ -117,7 +134,7 @@ export function AdminLessonsPage(): ReactElement {
               </tr>
             </thead>
             <tbody>
-              {lessons.data.map((lesson) => (
+              {lessons.data.items.map((lesson) => (
                 <tr key={lesson.id} className="border-t border-wb-border-subtle">
                   <td className="py-3 pr-4 font-bold text-wb-ink">
                     <Link to={`/admin/lessons/${lesson.id}`} className="hover:underline">
@@ -156,6 +173,17 @@ export function AdminLessonsPage(): ReactElement {
             </tbody>
           </table>
         </div>
+      )}
+
+      {lessons.data && (
+        <Pager
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={lessons.data.totalCount}
+          onPageChange={pagination.setPage}
+          label="Lesson pages"
+          itemLabel="lessons"
+        />
       )}
 
       <ConfirmDialog

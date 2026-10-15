@@ -33,11 +33,12 @@ internal sealed class GroupWordRepository : IGroupWordRepository
         return pairs.ToHashSet();
     }
 
-    public async Task<IReadOnlyList<GroupWordAssignment>> GetAssignmentsAsync(Guid groupId, CancellationToken ct = default) =>
+    public async Task<PagedResult<GroupWordAssignment>> GetAssignmentsAsync(Guid groupId, int page, int pageSize, CancellationToken ct = default) =>
         await _dbContext.GroupWordAssignments
             .Where(a => a.GroupId == groupId)
             .OrderByDescending(a => a.AssignedAtUtc)
-            .ToListAsync(ct);
+            .ThenBy(a => a.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
 
     public async Task AddLinksAsync(IReadOnlyCollection<LearnerWord> links, CancellationToken ct = default) =>
         await _dbContext.LearnerWords.AddRangeAsync(links, ct);

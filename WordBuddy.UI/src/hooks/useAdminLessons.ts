@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import {
   attachLessonSense,
   createLesson,
@@ -12,7 +12,7 @@ import {
   unpublishLesson,
   updateLesson,
 } from '../api/lessons'
-import type { AdminLessonFilters } from '../types'
+import type { AdminLessonFilters, PageParams } from '../types'
 
 /** Refetches every admin and learner lesson view after a write. */
 function invalidateLessons(queryClient: QueryClient): Promise<unknown[]> {
@@ -24,8 +24,14 @@ function invalidateLessons(queryClient: QueryClient): Promise<unknown[]> {
   ])
 }
 
-export function useAdminLessons(filters: AdminLessonFilters, enabled: boolean) {
-  return useQuery({ queryKey: ['adminLessons', filters], queryFn: () => getAdminLessons(filters), enabled })
+/** One page of lessons. Keeps the previous page on screen while the next one loads. */
+export function useAdminLessons(filters: AdminLessonFilters, paging: PageParams, enabled: boolean) {
+  return useQuery({
+    queryKey: ['adminLessons', filters, paging],
+    queryFn: () => getAdminLessons(filters, paging),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
 }
 
 export function useAdminLesson(id: string | undefined, enabled: boolean) {

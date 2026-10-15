@@ -7,6 +7,8 @@ import type {
   LessonDetail,
   LessonFilters,
   LessonFormValues,
+  PageParams,
+  PagedResult,
 } from '../types'
 import { apiClient } from './client'
 
@@ -22,8 +24,8 @@ export async function getLessonDetail(id: string): Promise<LessonDetail> {
 
 // ---- Admin lesson authoring (AdminOnly on the server)
 
-export async function getAdminLessons(filters?: AdminLessonFilters): Promise<AdminLessonDto[]> {
-  const { data } = await apiClient.get<AdminLessonDto[]>('/lessons/admin', { params: filters })
+export async function getAdminLessons(filters: AdminLessonFilters, paging: PageParams): Promise<PagedResult<AdminLessonDto>> {
+  const { data } = await apiClient.get<PagedResult<AdminLessonDto>>('/lessons/admin', { params: { ...filters, ...paging } })
   return data
 }
 

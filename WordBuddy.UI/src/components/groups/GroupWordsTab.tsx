@@ -1,29 +1,49 @@
 import type { ReactElement } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { problemMessage } from '../../api/supportLinks'
 import { useAssignWordsToGroup, useGroupWordAssignments } from '../../hooks/useGroups'
+import { usePagination } from '../../hooks/usePagination'
 import { useSharedVocabularyWords } from '../../hooks/useVocabulary'
 import type { GroupWordAssignmentResult, LearnerGroupDetail } from '../../types'
+import { Pager } from '../Pager'
 import { cardClass, formatDate, inputClass, primaryButtonClass } from '../support/supportUi'
 import { NO_ACCESS_MESSAGE, inlineErrorClass, isForbidden } from './groupUi'
 
 /** Most words the server accepts in one assign call. */
 const MAX_WORDS_PER_CALL = 50
 
+/** Pause after the last key before the pool search goes to the server. */
+const SEARCH_DEBOUNCE_MS = 300
+
 type GroupWordsTabProps = Readonly<{ group: LearnerGroupDetail }>
 
 /** Words tab: pick words from the shared pool, give them to every active member, and see the history. */
 export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
-  const pool = useSharedVocabularyWords()
-  const history = useGroupWordAssignments(group.id)
-  const assign = useAssignWordsToGroup()
+  const poolPaging = usePagination()
+  const historyPaging = usePagination()
+  const resetPool = poolPaging.reset
   const [filter, setFilter] = useState<string>('')
+  const [search, setSearch] = useState<string>('')
+  const pool = useSharedVocabularyWords(poolPaging.params, search)
+  const history = useGroupWordAssignments(group.id, historyPaging.params)
+  poolPaging.clamp(pool.data?.totalCount)
+  historyPaging.clamp(history.data?.totalCount)
+  const assign = useAssignWordsToGroup()
   const [selected, setSelected] = useState<string[]>([])
   const [result, setResult] = useState<GroupWordAssignmentResult | null>(null)
 
-  const activeCount = group.members.filter((member) => member.status === 'Active').length
-  const needle = filter.trim().toLowerCase()
-  const visibleWords = (pool.data ?? []).filter((word) => needle === '' || word.word.toLowerCase().includes(needle))
+  const activeCount: number = group.activeMemberCount
+  const visibleWords = pool.data?.items ?? []
+
+  // The server does the search. Wait for a pause in typing; a new search starts at page 1.
+  // The selected words stay selected while the learner moves between pages and searches.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(filter.trim())
+      resetPool()
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [filter, resetPool])
 
   function toggle(senseId: string): void {
     setSelected((current) =>
@@ -65,7 +85,7 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
 
         {pool.isLoading && <p className="mt-2 text-wb-ink-muted">Loading words…</p>}
         {pool.isError && <p className={`mt-2 ${inlineErrorClass}`}>Couldn't load the shared words right now.</p>}
-        {pool.data && visibleWords.length === 0 && <p className="mt-2 text-wb-ink-muted">No words found.</p>}
+        {pool.data && pool.data.totalCount === 0 && <p className="mt-2 text-wb-ink-muted">No words found.</p>}
 
         {visibleWords.length > 0 && (
           <ul className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto">
@@ -87,6 +107,16 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
               </li>
             ))}
           </ul>
+        )}
+        {pool.data && (
+          <Pager
+            page={poolPaging.page}
+            pageSize={poolPaging.pageSize}
+            totalCount={pool.data.totalCount}
+            onPageChange={poolPaging.setPage}
+            label="Shared word pages"
+            itemLabel="words"
+          />
         )}
 
         <button
@@ -119,16 +149,26 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
             {isForbidden(history.error) ? NO_ACCESS_MESSAGE : "Couldn't load the history right now."}
           </p>
         )}
-        {history.data && history.data.length === 0 && <p className="mt-2 text-wb-ink-muted">No words assigned yet.</p>}
-        {history.data && history.data.length > 0 && (
+        {history.data && history.data.totalCount === 0 && <p className="mt-2 text-wb-ink-muted">No words assigned yet.</p>}
+        {history.data && history.data.items.length > 0 && (
           <ul className="mt-3 flex flex-col gap-2">
-            {history.data.map((item) => (
+            {history.data.items.map((item) => (
               <li key={item.id} className="text-wb-ink">
                 <span className="font-semibold">{item.word}</span>
                 <span className="text-sm text-wb-ink-muted"> · {formatDate(item.assignedAtUtc)}</span>
               </li>
             ))}
           </ul>
+        )}
+        {history.data && (
+          <Pager
+            page={historyPaging.page}
+            pageSize={historyPaging.pageSize}
+            totalCount={history.data.totalCount}
+            onPageChange={historyPaging.setPage}
+            label="History pages"
+            itemLabel="words"
+          />
         )}
       </section>
     </div>

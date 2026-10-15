@@ -3,7 +3,7 @@ feature: Vocabulary builder & check-up
 services: Content | Progress | UI
 audience: Both
 state: shipped
-last-updated-by: WB-28_vocabulary-answer-checking
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Vocabulary builder & check-up
@@ -143,6 +143,10 @@ Delete confirm dialog:
 
 A plain delete that returns 409 opens the dialog. Escape or a backdrop click closes it (not while pending).
 
+## Paging (WB-55)
+
+My words and the Community Word Pool show a shared pager (24 cards per page in the pool grid, 25 rows in the list). The pool has a server-side search box that resets to page 1.
+
 ## Pending changes
 
 None.
@@ -155,3 +159,4 @@ None.
 - `WB-23_vocabulary-review-exercises` (#23, PR #34) — daily review page with 3 exercises on the SRS session; `GET /api/vocabulary/senses?ids=`; optional sense image; child 15-minute cap; `/vocabulary/check` redirects to review
 - `WB-26_supporter-dashboard` (#26, PR #38) — `GET session` resumes the open session; session duration and expiry; sessions recorded for the dashboard
 - `WB-28_vocabulary-answer-checking` (#28, PR #40) — server builds exercises and checks answers; server-side response timing; `POST /api/progress/vocabulary/exercises`
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — pager on My words and the shared pool

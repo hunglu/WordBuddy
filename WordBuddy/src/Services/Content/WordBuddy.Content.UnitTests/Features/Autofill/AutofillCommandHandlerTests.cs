@@ -232,7 +232,7 @@ public class GetPendingChildApprovalsQueryHandlerTests
     private readonly Mock<IAutofillRepository> _repository = new();
 
     private GetPendingChildApprovalsQueryHandler CreateHandler() =>
-        new(_repository.Object, Mock.Of<ILogger<GetPendingChildApprovalsQueryHandler>>());
+        new(_repository.Object, new GetPendingChildApprovalsQueryValidator(), Mock.Of<ILogger<GetPendingChildApprovalsQueryHandler>>());
 
     [Fact]
     public async Task GetPendingChildApprovalsQueryHandler_HandleAsync_Supporter_ListsLearnerLinksWithHint()
@@ -241,16 +241,17 @@ public class GetPendingChildApprovalsQueryHandlerTests
         Sense sense = AutofillTestData.CatalogSense();
         LearnerWord link = new(Guid.NewGuid(), childId, sense, isAuthor: false);
         _repository
-            .Setup(r => r.GetPendingLinksForLearnerAsync(childId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWord>>([link]));
+            .Setup(r => r.GetPendingLinksForLearnerAsync(childId, 1, 25, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedResult<LearnerWord>([link], 1, 25, 1)));
 
-        Result<IReadOnlyList<ChildApprovalDto>> result = await CreateHandler().HandleAsync(new GetPendingChildApprovalsQuery(childId));
+        Result<PagedResult<ChildApprovalDto>> result = await CreateHandler().HandleAsync(new GetPendingChildApprovalsQuery(childId));
 
-        ChildApprovalDto item = result.Value.Should().ContainSingle().Subject;
+        ChildApprovalDto item = result.Value.Items.Should().ContainSingle().Subject;
         item.SenseId.Should().Be(sense.Id);
         item.LearnerId.Should().Be(childId);
         item.PartOfSpeech.Should().Be(PartOfSpeech.Noun);
-        _repository.Verify(r => r.GetPendingSensesForAdminAsync(It.IsAny<CancellationToken>()), Times.Never);
+        result.Value.TotalCount.Should().Be(1);
+        _repository.Verify(r => r.GetPendingSensesForAdminAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -258,11 +259,26 @@ public class GetPendingChildApprovalsQueryHandlerTests
     {
         Sense sense = AutofillTestData.CatalogSense();
         _repository
-            .Setup(r => r.GetPendingSensesForAdminAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<Sense>>([sense]));
+            .Setup(r => r.GetPendingSensesForAdminAsync(2, 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedResult<Sense>([sense], 2, 10, 11)));
 
-        Result<IReadOnlyList<ChildApprovalDto>> result = await CreateHandler().HandleAsync(new GetPendingChildApprovalsQuery(null));
+        Result<PagedResult<ChildApprovalDto>> result = await CreateHandler().HandleAsync(new GetPendingChildApprovalsQuery(null, 2, 10));
 
-        result.Value.Should().ContainSingle(i => i.SenseId == sense.Id && i.LearnerId == null);
+        result.Value.Items.Should().ContainSingle(i => i.SenseId == sense.Id && i.LearnerId == null);
+        result.Value.Page.Should().Be(2);
+        result.Value.TotalCount.Should().Be(11);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetPendingChildApprovalsQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        Result<PagedResult<ChildApprovalDto>> result = await CreateHandler().HandleAsync(new GetPendingChildApprovalsQuery(null, page, pageSize));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _repository.VerifyNoOtherCalls();
     }
 }

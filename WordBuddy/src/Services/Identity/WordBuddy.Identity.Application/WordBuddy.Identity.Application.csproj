@@ -9,7 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
-    <PackageReference Include="WordBuddy.Shared.Kernel" Version="1.0.1" />
+    <PackageReference Include="WordBuddy.Shared.Kernel" Version="1.1.0" />
     <PackageReference Include="WordBuddy.Shared.Application" Version="1.0.0" />
   </ItemGroup>
 

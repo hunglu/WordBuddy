@@ -118,9 +118,11 @@ internal sealed class FakeChallengeRepository : IChallengeRepository
 
     public Task<Result<Challenge>> GetTrackedByIdAsync(Guid challengeId, CancellationToken ct = default) => GetByIdAsync(challengeId, ct);
 
-    public Task<IReadOnlyList<Challenge>> GetActiveAsync(ChallengeAudience audience, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<Challenge>>(
-            [.. Challenges.Where(c => c.Audience == audience && c.Status is ChallengeStatus.Open or ChallengeStatus.Running).OrderBy(c => c.StartsAtUtc)]);
+    public Task<PagedResult<Challenge>> GetActiveAsync(ChallengeAudience audience, int page, int pageSize, CancellationToken ct = default) =>
+        Task.FromResult(Paging.Slice<Challenge>(
+            [.. Challenges.Where(c => c.Audience == audience && c.Status is ChallengeStatus.Open or ChallengeStatus.Running).OrderBy(c => c.StartsAtUtc)],
+            page,
+            pageSize));
 
     public Task<IReadOnlyList<Challenge>> GetNotFinishedTrackedAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Challenge>>([.. Challenges.Where(c => c.Status != ChallengeStatus.Finished)]);

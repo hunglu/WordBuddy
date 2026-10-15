@@ -16,6 +16,18 @@ references to any other WordBuddy service or shared project — see the root
 | PUT | `/api/auth/profile/time-zone` | Bearer | Sets or clears the caller IANA time zone (`{ "timeZoneId": "Asia/Ho_Chi_Minh" }`); unknown id → `400 User.UnknownTimeZone` |
 | PUT | `/api/auth/admin/users/{id}/guardian` | `AdminOnly` | Grants or removes the Guardian role (`{ "isGuardian": true }`); a child account → `400 User.GuardianMustBeAdult`; non-admin → `403` |
 | POST | `/api/auth/admin/learner-profiles/republish` | `AdminOnly` | One-off backfill (WB-29): publishes `LearnerProfileUpdated` for every user. Safe to rerun; returns `{ "published": n }` |
+| GET | `/api/auth/admin/unlink-requests` | `AdminOnly` | Pages escalated unlink requests (`?page=`, `?pageSize=`) |
+| GET | `/api/auth/admin/support-links?learnerId=` | `AdminOnly` | Pages the links of one learner (`?page=`, `?pageSize=`) |
+| GET | `/api/auth/groups/owned` | Bearer | Pages the groups the caller owns, with member counts (`?page=`, `?pageSize=`). Replaces `GET /api/auth/groups` (removed) |
+| GET | `/api/auth/groups/joined` | Bearer | Pages the groups the caller joined: name and owner only (`?page=`, `?pageSize=`) |
+| GET | `/api/auth/groups/approvals` | Bearer | Pages pending child memberships the caller approves as Primary (`?page=`, `?pageSize=`) |
+| GET | `/api/auth/groups/{id}` | Bearer, group owner | Group with `activeMemberCount`, `pendingMemberCount` and `memberLearnerIds` (no member list) |
+| GET | `/api/auth/groups/{id}/members` | Bearer, group owner | Pages the pending and active members by public name (`?page=`, `?pageSize=`) |
+
+Every paged route takes `?page=` (default 1, min 1) and `?pageSize=` (default 25, 1-100); other values
+return `400`. A page past the end returns `200` with empty `items` and the real `totalCount`. The body is
+`{ items, page, pageSize, totalCount }` (`WordBuddy.Shared.Kernel.PagedResult<T>`). The group snapshot is cached
+under `identity:group-snapshot:{groupId}`; group commands delete it.
 
 ### Profile event and Guardian role (WB-29)
 

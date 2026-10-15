@@ -13,7 +13,9 @@ using WordBuddy.Identity.Application.Features.Groups.Commands.RemoveGroupMember;
 using WordBuddy.Identity.Application.Features.Groups.Commands.RenameGroup;
 using WordBuddy.Identity.Application.Features.Groups.Commands.RespondToGroupMembership;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroup;
-using WordBuddy.Identity.Application.Features.Groups.Queries.GetMyGroups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroupMembers;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetJoinedGroups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetOwnedGroups;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetPendingGroupApprovals;
 using WordBuddy.Shared.Kernel;
 
@@ -29,9 +31,11 @@ namespace WordBuddy.Identity.Api.Controllers;
 [Authorize]
 public sealed class GroupsController : ControllerBase
 {
-    private readonly IQueryHandler<GetMyGroupsQuery, MyGroupsDto> _getMine;
+    private readonly IQueryHandler<GetOwnedGroupsQuery, PagedResult<OwnedGroupDto>> _getOwned;
+    private readonly IQueryHandler<GetJoinedGroupsQuery, PagedResult<JoinedGroupDto>> _getJoined;
+    private readonly IQueryHandler<GetGroupMembersQuery, PagedResult<GroupMemberDto>> _getMembers;
     private readonly IQueryHandler<GetGroupQuery, LearnerGroupDetailDto> _getGroup;
-    private readonly IQueryHandler<GetPendingGroupApprovalsQuery, IReadOnlyList<PendingGroupApprovalDto>> _getApprovals;
+    private readonly IQueryHandler<GetPendingGroupApprovalsQuery, PagedResult<PendingGroupApprovalDto>> _getApprovals;
     private readonly ICommandHandler<CreateGroupCommand, Guid> _create;
     private readonly ICommandHandler<RenameGroupCommand> _rename;
     private readonly ICommandHandler<DeleteGroupCommand> _delete;
@@ -41,9 +45,11 @@ public sealed class GroupsController : ControllerBase
     private readonly ICommandHandler<RespondToGroupMembershipCommand> _respond;
 
     public GroupsController(
-        IQueryHandler<GetMyGroupsQuery, MyGroupsDto> getMine,
+        IQueryHandler<GetOwnedGroupsQuery, PagedResult<OwnedGroupDto>> getOwned,
+        IQueryHandler<GetJoinedGroupsQuery, PagedResult<JoinedGroupDto>> getJoined,
+        IQueryHandler<GetGroupMembersQuery, PagedResult<GroupMemberDto>> getMembers,
         IQueryHandler<GetGroupQuery, LearnerGroupDetailDto> getGroup,
-        IQueryHandler<GetPendingGroupApprovalsQuery, IReadOnlyList<PendingGroupApprovalDto>> getApprovals,
+        IQueryHandler<GetPendingGroupApprovalsQuery, PagedResult<PendingGroupApprovalDto>> getApprovals,
         ICommandHandler<CreateGroupCommand, Guid> create,
         ICommandHandler<RenameGroupCommand> rename,
         ICommandHandler<DeleteGroupCommand> delete,
@@ -52,7 +58,9 @@ public sealed class GroupsController : ControllerBase
         ICommandHandler<LeaveGroupCommand> leave,
         ICommandHandler<RespondToGroupMembershipCommand> respond)
     {
-        _getMine = getMine;
+        _getOwned = getOwned;
+        _getJoined = getJoined;
+        _getMembers = getMembers;
         _getGroup = getGroup;
         _getApprovals = getApprovals;
         _create = create;
@@ -64,24 +72,54 @@ public sealed class GroupsController : ControllerBase
         _respond = respond;
     }
 
-    /// <summary>Returns groups the caller owns and groups the caller joined (name and owner only).</summary>
-    [HttpGet]
-    public async Task<IActionResult> GetMine(CancellationToken ct)
+    /// <summary>Returns one page of the groups the caller owns, with member counts.</summary>
+    [HttpGet("owned")]
+    public async Task<IActionResult> GetOwned(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<MyGroupsDto> result = await _getMine.HandleAsync(new GetMyGroupsQuery(User.GetUserId()), ct);
+        Result<PagedResult<OwnedGroupDto>> result = await _getOwned.HandleAsync(new GetOwnedGroupsQuery(User.GetUserId(), page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Returns pending child memberships waiting for the caller (as Primary supporter).</summary>
+    /// <summary>Returns one page of the groups the caller joined (name and owner only).</summary>
+    [HttpGet("joined")]
+    public async Task<IActionResult> GetJoined(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
+    {
+        Result<PagedResult<JoinedGroupDto>> result = await _getJoined.HandleAsync(new GetJoinedGroupsQuery(User.GetUserId(), page, pageSize), ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Returns one page of the pending child memberships waiting for the caller (as Primary supporter).</summary>
     [HttpGet("approvals")]
-    public async Task<IActionResult> GetApprovals(CancellationToken ct)
+    public async Task<IActionResult> GetApprovals(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<PendingGroupApprovalDto>> result =
-            await _getApprovals.HandleAsync(new GetPendingGroupApprovalsQuery(User.GetUserId()), ct);
+        Result<PagedResult<PendingGroupApprovalDto>> result =
+            await _getApprovals.HandleAsync(new GetPendingGroupApprovalsQuery(User.GetUserId(), page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Returns a group with its members. Owner only.</summary>
+    /// <summary>Returns one page of the pending and active members of a group. Owner only.</summary>
+    [HttpGet("{id:guid}/members")]
+    public async Task<IActionResult> GetMembers(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
+    {
+        Result<PagedResult<GroupMemberDto>> result =
+            await _getMembers.HandleAsync(new GetGroupMembersQuery(id, User.GetUserId(), page, pageSize), ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Returns a group with its member counts and learner ids. Owner only.</summary>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetGroup(Guid id, CancellationToken ct)
     {

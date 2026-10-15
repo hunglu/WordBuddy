@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addAutofillSense,
   approveAutofillForChildren,
@@ -7,6 +7,7 @@ import {
   getPendingApprovals,
   lookupAutofill,
 } from '../api/vocabulary'
+import type { PageParams } from '../types'
 
 const MY_WORDS_KEY = ['vocabulary', 'mine']
 const SHARED_WORDS_KEY = ['vocabulary', 'shared']
@@ -36,11 +37,12 @@ export function useAddAutofillSense() {
   })
 }
 
-/** Supporter queue of one learner. */
-export function usePendingApprovals(learnerId: string) {
+/** One page of the supporter queue of one learner. */
+export function usePendingApprovals(learnerId: string, paging: PageParams) {
   return useQuery({
-    queryKey: ['vocabulary', 'pending-approvals', learnerId],
-    queryFn: () => getPendingApprovals(learnerId),
+    queryKey: ['vocabulary', 'pending-approvals', learnerId, paging],
+    queryFn: () => getPendingApprovals(learnerId, paging),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -56,9 +58,13 @@ export function useApproveChildWord(learnerId: string) {
   })
 }
 
-/** Admin queue of auto-filled words waiting for child approval. */
-export function useAdminPendingApprovals() {
-  return useQuery({ queryKey: ADMIN_PENDING_KEY, queryFn: getAdminPendingApprovals })
+/** One page of the admin queue of auto-filled words waiting for child approval. */
+export function useAdminPendingApprovals(paging: PageParams) {
+  return useQuery({
+    queryKey: [...ADMIN_PENDING_KEY, paging],
+    queryFn: () => getAdminPendingApprovals(paging),
+    placeholderData: keepPreviousData,
+  })
 }
 
 /** Admin approval: the word becomes visible to every child. */

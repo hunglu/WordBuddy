@@ -22,6 +22,9 @@ public interface ISupportLinkRepository
     /// <summary>Returns links of a learner (read-only, admin view).</summary>
     Task<IReadOnlyList<SupportLink>> GetLearnerLinksAsync(Guid learnerId, CancellationToken ct = default);
 
+    /// <summary>Returns one page of the links of a learner, oldest first (read-only, admin view).</summary>
+    Task<PagedResult<SupportLink>> GetLearnerLinksPagedAsync(Guid learnerId, int page, int pageSize, CancellationToken ct = default);
+
     /// <summary>Whether the learner has at least one active supporter.</summary>
     Task<bool> HasActiveSupporterAsync(Guid learnerId, CancellationToken ct = default);
 
@@ -55,8 +58,8 @@ public interface ISupportLinkRepository
     /// <summary>Returns open unlink requests of the given links (read-only).</summary>
     Task<IReadOnlyList<UnlinkRequest>> GetOpenUnlinkRequestsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default);
 
-    /// <summary>Returns unlink requests escalated to an admin (read-only).</summary>
-    Task<IReadOnlyList<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(CancellationToken ct = default);
+    /// <summary>Returns one page of the unlink requests escalated to an admin, oldest first (read-only).</summary>
+    Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Returns links by id (read-only).</summary>
     Task<IReadOnlyList<SupportLink>> GetLinksByIdsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default);

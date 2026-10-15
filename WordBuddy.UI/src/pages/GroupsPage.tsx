@@ -6,8 +6,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { problemMessage } from '../api/supportLinks'
 import { inlineErrorClass } from '../components/groups/groupUi'
+import { Pager } from '../components/Pager'
 import { avatarEmoji, cardClass, inputClass, primaryButtonClass, softButtonClass } from '../components/support/supportUi'
-import { useCreateGroup, useLeaveGroup, useMyGroups } from '../hooks/useGroups'
+import { useCreateGroup, useJoinedGroups, useLeaveGroup, useOwnedGroups } from '../hooks/useGroups'
+import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 
 const createGroupSchema = z.object({
@@ -23,7 +25,16 @@ type CreateGroupFormValues = z.infer<typeof createGroupSchema>
 export function GroupsPage(): ReactElement {
   const navigate = useNavigate()
   const isChild = useAuthStore((state) => state.user?.ageGroup === 'Child')
-  const { data, isLoading, isError, error } = useMyGroups()
+  const ownedPaging = usePagination()
+  const joinedPaging = usePagination()
+  // A child owns no group, so the owned list is not asked for.
+  const owned = useOwnedGroups(ownedPaging.params, !isChild)
+  const joined = useJoinedGroups(joinedPaging.params)
+  ownedPaging.clamp(owned.data?.totalCount)
+  joinedPaging.clamp(joined.data?.totalCount)
+  const isLoading: boolean = owned.isLoading || joined.isLoading
+  const isError: boolean = owned.isError || joined.isError
+  const error: unknown = owned.error ?? joined.error
   const createGroup = useCreateGroup()
   const leaveGroup = useLeaveGroup()
 
@@ -73,14 +84,14 @@ export function GroupsPage(): ReactElement {
         </form>
       )}
 
-      {data && !isChild && (
+      {owned.data && !isChild && (
         <section className="mt-8" aria-label="My groups">
           <h2 className="text-2xl font-bold text-wb-ink">My groups</h2>
-          {data.owned.length === 0 ? (
+          {owned.data.totalCount === 0 ? (
             <p className="mt-2 text-wb-ink-muted">You have no groups yet.</p>
           ) : (
             <div className="mt-3 flex flex-col gap-3">
-              {data.owned.map((group) => (
+              {owned.data.items.map((group) => (
                 <Link key={group.id} to={`/groups/${group.id}`} className={`${cardClass} block hover:bg-wb-hover-tint`}>
                   <p className="text-xl font-bold text-wb-ink">{group.name}</p>
                   <p className="text-sm text-wb-ink-muted">
@@ -91,17 +102,25 @@ export function GroupsPage(): ReactElement {
               ))}
             </div>
           )}
+          <Pager
+            page={ownedPaging.page}
+            pageSize={ownedPaging.pageSize}
+            totalCount={owned.data.totalCount}
+            onPageChange={ownedPaging.setPage}
+            label="My groups pages"
+            itemLabel="groups"
+          />
         </section>
       )}
 
-      {data && (
+      {joined.data && (
         <section className="mt-8" aria-label="Groups I joined">
           <h2 className="text-2xl font-bold text-wb-ink">Groups I joined</h2>
-          {data.joined.length === 0 ? (
+          {joined.data.totalCount === 0 ? (
             <p className="mt-2 text-wb-ink-muted">You are not in a group.</p>
           ) : (
             <div className="mt-3 flex flex-col gap-3">
-              {data.joined.map((group) => (
+              {joined.data.items.map((group) => (
                 <div key={group.id} className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}>
                   <div>
                     <p className="text-xl font-bold text-wb-ink">{group.name}</p>
@@ -124,6 +143,14 @@ export function GroupsPage(): ReactElement {
               ))}
             </div>
           )}
+          <Pager
+            page={joinedPaging.page}
+            pageSize={joinedPaging.pageSize}
+            totalCount={joined.data.totalCount}
+            onPageChange={joinedPaging.setPage}
+            label="Joined groups pages"
+            itemLabel="groups"
+          />
           {leaveGroup.isError && (
             <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(leaveGroup.error, 'Could not leave the group.')}</p>
           )}

@@ -38,11 +38,25 @@ internal sealed class LearnerGroupRepository : ILearnerGroupRepository
     public Task<int> CountGroupsByOwnerAsync(Guid ownerId, CancellationToken ct = default) =>
         _dbContext.LearnerGroups.CountAsync(g => g.OwnerId == ownerId && g.DeletedAtUtc == null, ct);
 
-    public async Task<IReadOnlyList<LearnerGroup>> GetGroupsByOwnerAsync(Guid ownerId, CancellationToken ct = default) =>
+    public async Task<PagedResult<LearnerGroup>> GetGroupsByOwnerPagedAsync(Guid ownerId, int page, int pageSize, CancellationToken ct = default) =>
         await _dbContext.LearnerGroups
             .Where(g => g.OwnerId == ownerId && g.DeletedAtUtc == null)
             .OrderBy(g => g.CreatedAtUtc)
-            .ToListAsync(ct);
+            .ThenBy(g => g.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
+
+    public async Task<PagedResult<LearnerGroup>> GetJoinedGroupsPagedAsync(Guid learnerId, int page, int pageSize, CancellationToken ct = default)
+    {
+        IQueryable<Guid> joinedGroupIds = _dbContext.LearnerGroupMembers
+            .Where(m => m.LearnerId == learnerId && m.Status == GroupMemberStatus.Active)
+            .Select(m => m.GroupId);
+
+        return await _dbContext.LearnerGroups
+            .Where(g => g.DeletedAtUtc == null && joinedGroupIds.Contains(g.Id))
+            .OrderBy(g => g.CreatedAtUtc)
+            .ThenBy(g => g.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
+    }
 
     public async Task<IReadOnlyList<LearnerGroupMember>> GetOpenMembersAsync(IReadOnlyCollection<Guid> groupIds, CancellationToken ct = default) =>
         await _dbContext.LearnerGroupMembers
@@ -52,11 +66,6 @@ internal sealed class LearnerGroupRepository : ILearnerGroupRepository
     public async Task<IReadOnlyList<LearnerGroupMember>> GetOpenMembersTrackedAsync(Guid groupId, CancellationToken ct = default) =>
         await _dbContext.LearnerGroupMembers.AsTracking()
             .Where(m => m.GroupId == groupId && m.Status != GroupMemberStatus.Removed)
-            .ToListAsync(ct);
-
-    public async Task<IReadOnlyList<LearnerGroupMember>> GetActiveMembershipsOfLearnerAsync(Guid learnerId, CancellationToken ct = default) =>
-        await _dbContext.LearnerGroupMembers
-            .Where(m => m.LearnerId == learnerId && m.Status == GroupMemberStatus.Active)
             .ToListAsync(ct);
 
     public async Task<Result<LearnerGroupMember>> GetMemberTrackedAsync(Guid memberId, CancellationToken ct = default)
@@ -84,7 +93,7 @@ internal sealed class LearnerGroupRepository : ILearnerGroupRepository
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<LearnerGroupMember>> GetPendingForPrimaryAsync(Guid primarySupporterId, CancellationToken ct = default)
+    public async Task<PagedResult<LearnerGroupMember>> GetPendingForPrimaryAsync(Guid primarySupporterId, int page, int pageSize, CancellationToken ct = default)
     {
         IQueryable<Guid> childIds = _dbContext.SupportLinks
             .Where(l => l.SupporterId == primarySupporterId && l.IsPrimary && l.Status == SupportLinkStatus.Active)
@@ -96,7 +105,8 @@ internal sealed class LearnerGroupRepository : ILearnerGroupRepository
                 && childIds.Contains(m.LearnerId)
                 && liveGroupIds.Contains(m.GroupId))
             .OrderBy(m => m.AddedAtUtc)
-            .ToListAsync(ct);
+            .ThenBy(m => m.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
     }
 
     public async Task AddGroupAsync(LearnerGroup group, CancellationToken ct = default) =>

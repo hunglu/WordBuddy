@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { problemMessage } from '../../api/supportLinks'
-import { useAddGroupMembers, useRemoveGroupMember } from '../../hooks/useGroups'
+import { useAddGroupMembers, useGroupMembers, useRemoveGroupMember } from '../../hooks/useGroups'
+import { usePagination } from '../../hooks/usePagination'
 import { useSupportLinks } from '../../hooks/useSupportLinks'
 import type { AddMemberResult, LearnerGroupDetail } from '../../types'
+import { Pager } from '../Pager'
 import { avatarEmoji, cardClass, dangerButtonClass, primaryButtonClass } from '../support/supportUi'
 import { addOutcomeLabel, inlineErrorClass, memberStatusLabel } from './groupUi'
 
@@ -12,12 +14,15 @@ type GroupMembersTabProps = Readonly<{ group: LearnerGroupDetail }>
 /** Members of a group: list with pending badge and remove, plus adding learners the owner actively supports. */
 export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
   const links = useSupportLinks()
+  const pagination = usePagination()
+  const members = useGroupMembers(group.id, pagination.params)
+  pagination.clamp(members.data?.totalCount)
   const addMembers = useAddGroupMembers()
   const removeMember = useRemoveGroupMember()
   const [selected, setSelected] = useState<string[]>([])
   const [results, setResults] = useState<AddMemberResult[]>([])
 
-  const memberIds = new Set(group.members.map((member) => member.learnerId))
+  const memberIds = new Set(group.memberLearnerIds)
   const candidates = (links.data?.asSupporter ?? []).filter(
     (link) => link.status === 'Active' && !memberIds.has(link.learnerId),
   )
@@ -44,11 +49,14 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
     <div className="flex flex-col gap-6">
       <section className={cardClass} aria-label="Members">
         <h2 className="text-xl font-bold text-wb-ink">Members</h2>
-        {group.members.length === 0 ? (
+        {members.isLoading && <p className="mt-2 text-wb-ink-muted">Loading the members…</p>}
+        {members.isError && <p className={`mt-2 ${inlineErrorClass}`}>Couldn't load the members right now.</p>}
+        {members.data && members.data.totalCount === 0 && (
           <p className="mt-2 text-wb-ink-muted">No members yet. Add learners you support below.</p>
-        ) : (
+        )}
+        {members.data && members.data.items.length > 0 && (
           <ul className="mt-3 flex flex-col gap-2">
-            {group.members.map((member) => (
+            {members.data.items.map((member) => (
               <li key={member.memberId} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-wb-ink">
                   <span className="text-2xl" aria-hidden="true">
@@ -72,6 +80,16 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
               </li>
             ))}
           </ul>
+        )}
+        {members.data && (
+          <Pager
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalCount={members.data.totalCount}
+            onPageChange={pagination.setPage}
+            label="Member pages"
+            itemLabel="members"
+          />
         )}
         {removeMember.isError && (
           <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(removeMember.error, 'Could not remove the member.')}</p>

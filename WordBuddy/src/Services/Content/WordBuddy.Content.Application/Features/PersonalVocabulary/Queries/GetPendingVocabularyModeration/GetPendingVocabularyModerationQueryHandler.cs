@@ -1,39 +1,55 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Queries.GetPendingVocabularyModeration;
 
-public sealed class GetPendingVocabularyModerationQueryHandler : IQueryHandler<GetPendingVocabularyModerationQuery, IReadOnlyList<PersonalVocabularyWordDto>>
+public sealed class GetPendingVocabularyModerationQueryHandler : IQueryHandler<GetPendingVocabularyModerationQuery, PagedResult<PersonalVocabularyWordDto>>
 {
     private readonly IVocabularyWordRepository _repository;
+    private readonly IValidator<GetPendingVocabularyModerationQuery> _validator;
     private readonly ILogger<GetPendingVocabularyModerationQueryHandler> _logger;
 
-    public GetPendingVocabularyModerationQueryHandler(IVocabularyWordRepository repository, ILogger<GetPendingVocabularyModerationQueryHandler> logger)
+    public GetPendingVocabularyModerationQueryHandler(
+        IVocabularyWordRepository repository,
+        IValidator<GetPendingVocabularyModerationQuery> validator,
+        ILogger<GetPendingVocabularyModerationQueryHandler> logger)
     {
         _repository = repository;
+        _validator = validator;
         _logger = logger;
     }
 
-    public async Task<Result<IReadOnlyList<PersonalVocabularyWordDto>>> HandleAsync(GetPendingVocabularyModerationQuery query, CancellationToken ct = default)
+    public async Task<Result<PagedResult<PersonalVocabularyWordDto>>> HandleAsync(GetPendingVocabularyModerationQuery query, CancellationToken ct = default)
     {
-        _logger.LogInformation("GetPendingVocabularyModerationQuery started");
+        _logger.LogInformation("GetPendingVocabularyModerationQuery started: Page={Page}, PageSize={PageSize}", query.Page, query.PageSize);
 
-        Result<IReadOnlyList<Sense>> wordsResult = await _repository.GetPendingModerationAsync(ct);
+        ValidationResult validation = await _validator.ValidateAsync(query, ct);
+        if (!validation.IsValid)
+        {
+            _logger.LogWarning("GetPendingVocabularyModerationQuery validation failed: {Errors}", validation.ToString());
+            return Result.Failure<PagedResult<PersonalVocabularyWordDto>>(
+                Error.Validation("GetPendingVocabularyModeration.Validation", validation.ToString()));
+        }
+
+        Result<PagedResult<Sense>> wordsResult = await _repository.GetPendingModerationAsync(query.Page, query.PageSize, ct);
         if (wordsResult.IsFailure)
         {
             _logger.LogWarning(
                 "GetPendingVocabularyModerationQuery repository failure: {ErrorCode} — {ErrorDescription}",
                 wordsResult.Error.Code, wordsResult.Error.Description);
-            return Result.Failure<IReadOnlyList<PersonalVocabularyWordDto>>(wordsResult.Error);
+            return Result.Failure<PagedResult<PersonalVocabularyWordDto>>(wordsResult.Error);
         }
 
-        IReadOnlyList<PersonalVocabularyWordDto> dtos = wordsResult.Value.Select(PersonalVocabularyWordMapper.ToDto).ToList();
+        PagedResult<Sense> words = wordsResult.Value;
+        List<PersonalVocabularyWordDto> dtos = words.Items.Select(PersonalVocabularyWordMapper.ToDto).ToList();
 
-        _logger.LogInformation("GetPendingVocabularyModerationQuery succeeded: Count={Count}", dtos.Count);
-        return Result.Success(dtos);
+        _logger.LogInformation("GetPendingVocabularyModerationQuery succeeded: Count={Count}, TotalCount={TotalCount}", dtos.Count, words.TotalCount);
+        return Result.Success(new PagedResult<PersonalVocabularyWordDto>(dtos, words.Page, words.PageSize, words.TotalCount));
     }
 }

@@ -1,3 +1,4 @@
+using WordBuddy.Shared.Kernel;
 using WordBuddy.Progress.Domain.Challenges;
 
 namespace WordBuddy.Progress.Application.DTOs;
@@ -56,7 +57,7 @@ public sealed record ChallengeBoardEntryDto(int? Rank, string Name, string? Avat
 /// <param name="ParticipantCount">All participants.</param>
 /// <param name="MyRank">The caller rank, or null.</param>
 /// <param name="MyScore">The caller score, or null.</param>
-/// <param name="Entries">Board rows in rank order.</param>
+/// <param name="Entries">One page of board rows in rank order. For a child it is always one page.</param>
 public sealed record ChallengeBoardDto(
     Guid ChallengeId,
     string Name,
@@ -67,4 +68,4 @@ public sealed record ChallengeBoardDto(
     int ParticipantCount,
     int? MyRank,
     int? MyScore,
-    IReadOnlyList<ChallengeBoardEntryDto> Entries);
+    PagedResult<ChallengeBoardEntryDto> Entries);

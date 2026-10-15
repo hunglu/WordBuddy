@@ -44,17 +44,21 @@ internal sealed class GroupHandlerFixture
                 GroupRows.Where(g => !g.IsDeleted && ids.Contains(g.Id)).ToList());
         Groups.Setup(g => g.CountGroupsByOwnerAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid owner, CancellationToken _) => GroupRows.Count(g => !g.IsDeleted && g.OwnerId == owner));
-        Groups.Setup(g => g.GetGroupsByOwnerAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid owner, CancellationToken _) => GroupRows.Where(g => !g.IsDeleted && g.OwnerId == owner).ToList());
+        Groups.Setup(g => g.GetGroupsByOwnerPagedAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid owner, int page, int size, CancellationToken _) =>
+                PageOf(GroupRows.Where(g => !g.IsDeleted && g.OwnerId == owner).ToList(), page, size));
+        Groups.Setup(g => g.GetJoinedGroupsPagedAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid learner, int page, int size, CancellationToken _) =>
+            {
+                HashSet<Guid> joined = MemberRows.Where(m => m.LearnerId == learner && m.IsActive).Select(m => m.GroupId).ToHashSet();
+                return PageOf(GroupRows.Where(g => !g.IsDeleted && joined.Contains(g.Id)).ToList(), page, size);
+            });
         Groups.Setup(g => g.GetOpenMembersAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyCollection<Guid> ids, CancellationToken _) =>
                 MemberRows.Where(m => ids.Contains(m.GroupId) && m.Status != GroupMemberStatus.Removed).ToList());
         Groups.Setup(g => g.GetOpenMembersTrackedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid id, CancellationToken _) =>
                 MemberRows.Where(m => m.GroupId == id && m.Status != GroupMemberStatus.Removed).ToList());
-        Groups.Setup(g => g.GetActiveMembershipsOfLearnerAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid learner, CancellationToken _) =>
-                MemberRows.Where(m => m.LearnerId == learner && m.IsActive).ToList());
         Groups.Setup(g => g.GetMemberTrackedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid id, CancellationToken _) =>
                 MemberRows.FirstOrDefault(m => m.Id == id) is { } member
@@ -73,12 +77,15 @@ internal sealed class GroupHandlerFixture
                     .Where(m => m.LearnerId == learner && m.Status != GroupMemberStatus.Removed && ownerGroups.Contains(m.GroupId))
                     .ToList();
             });
-        Groups.Setup(g => g.GetPendingForPrimaryAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid primary, CancellationToken _) =>
-                MemberRows
-                    .Where(m => m.Status == GroupMemberStatus.PendingPrimaryApproval
-                        && Primaries.TryGetValue(m.LearnerId, out Guid p) && p == primary)
-                    .ToList());
+        Groups.Setup(g => g.GetPendingForPrimaryAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid primary, int page, int size, CancellationToken _) =>
+                PageOf(
+                    MemberRows
+                        .Where(m => m.Status == GroupMemberStatus.PendingPrimaryApproval
+                            && Primaries.TryGetValue(m.LearnerId, out Guid p) && p == primary)
+                        .ToList(),
+                    page,
+                    size));
         Groups.Setup(g => g.AddGroupAsync(It.IsAny<LearnerGroup>(), It.IsAny<CancellationToken>()))
             .Callback<LearnerGroup, CancellationToken>((group, _) => GroupRows.Add(group))
             .Returns(Task.CompletedTask);
@@ -99,6 +106,8 @@ internal sealed class GroupHandlerFixture
             .Callback<Guid, Guid, DateTime, CancellationToken>((group, _, _, _) => Deleted.Add(group))
             .Returns(Task.CompletedTask);
     }
+
+    private static PagedResult<T> PageOf<T>(List<T> rows, int page, int size) => Paging.Slice(rows, page, size);
 
     private Result<LearnerGroup> FindGroup(Guid id) =>
         GroupRows.FirstOrDefault(g => g.Id == id && !g.IsDeleted) is { } group

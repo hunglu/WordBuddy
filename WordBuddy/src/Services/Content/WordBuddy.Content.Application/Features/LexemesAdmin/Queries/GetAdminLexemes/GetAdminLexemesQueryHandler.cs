@@ -9,7 +9,7 @@ using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Application.Features.LexemesAdmin.Queries.GetAdminLexemes;
 
-public sealed class GetAdminLexemesQueryHandler : IQueryHandler<GetAdminLexemesQuery, AdminLexemePageDto>
+public sealed class GetAdminLexemesQueryHandler : IQueryHandler<GetAdminLexemesQuery, PagedResult<AdminLexemeListItemDto>>
 {
     private readonly ILexemeAdminRepository _repository;
     private readonly IValidator<GetAdminLexemesQuery> _validator;
@@ -25,7 +25,7 @@ public sealed class GetAdminLexemesQueryHandler : IQueryHandler<GetAdminLexemesQ
         _logger = logger;
     }
 
-    public async Task<Result<AdminLexemePageDto>> HandleAsync(GetAdminLexemesQuery query, CancellationToken ct = default)
+    public async Task<Result<PagedResult<AdminLexemeListItemDto>>> HandleAsync(GetAdminLexemesQuery query, CancellationToken ct = default)
     {
         _logger.LogInformation(
             "GetAdminLexemesQuery started: HasSearch={HasSearch}, PartOfSpeech={PartOfSpeech}, CefrLevel={CefrLevel}, Page={Page}, PageSize={PageSize}",
@@ -35,13 +35,13 @@ public sealed class GetAdminLexemesQueryHandler : IQueryHandler<GetAdminLexemesQ
         if (!validation.IsValid)
         {
             _logger.LogWarning("GetAdminLexemesQuery validation failed: {Errors}", validation.ToString());
-            return Result.Failure<AdminLexemePageDto>(Error.Validation("GetAdminLexemes.Validation", validation.ToString()));
+            return Result.Failure<PagedResult<AdminLexemeListItemDto>>(Error.Validation("GetAdminLexemes.Validation", validation.ToString()));
         }
 
         // Same normalization as the NormalizedLemma column: trim spaces + upper-case.
         string? term = string.IsNullOrWhiteSpace(query.Search) ? null : Sense.NormalizeWord(query.Search);
 
-        Result<AdminLexemePageDto> result = await _repository.SearchAsync(
+        Result<PagedResult<AdminLexemeListItemDto>> result = await _repository.SearchAsync(
             term, query.PartOfSpeech, query.CefrLevel, query.Page, query.PageSize, ct);
         if (result.IsFailure)
         {
