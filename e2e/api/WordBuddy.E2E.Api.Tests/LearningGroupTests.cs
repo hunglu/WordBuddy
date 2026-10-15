@@ -48,7 +48,7 @@ public sealed class LearningGroupTests
         StatusOf(pendingGroup, s.ChildId).Should().Be("PendingPrimaryApproval");
 
         // Only the child's Primary sees and answers the request.
-        (await GetApprovalsAsync(c.Identity, s.SupporterToken)).GetArrayLength().Should().Be(0);
+        (await GetApprovalsAsync(c.Identity, s.SupporterToken)).GetProperty("totalCount").GetInt32().Should().Be(0);
         Guid memberId = await FindApprovalAsync(c.Identity, s.PrimaryToken, groupId);
         IAPIResponse approve = await c.Identity.PostAsync($"/api/auth/groups/approvals/{memberId}/approve", Options(s.PrimaryToken));
         approve.Status.Should().Be(204, await approve.TextAsync());
@@ -83,7 +83,7 @@ public sealed class LearningGroupTests
         // The assignment history lists the assigned words, owner only.
         IAPIResponse history = await c.Content.GetAsync($"/api/vocabulary/groups/{groupId}/words", Options(s.SupporterToken));
         history.Status.Should().Be(200, await history.TextAsync());
-        (await history.JsonAsync())!.Value.EnumerateArray()
+        (await history.JsonAsync())!.Value.GetProperty("items").EnumerateArray()
             .Select(a => a.GetProperty("senseId").GetGuid()).Should().Contain(s.SafeWordId);
     }
 
@@ -263,7 +263,7 @@ public sealed class LearningGroupTests
 
     private static async Task<JsonElement> GetGroupAsync(IAPIRequestContext identity, string token, Guid groupId)
     {
-        IAPIResponse response = await identity.GetAsync($"/api/auth/groups/{groupId}", Options(token));
+        IAPIResponse response = await identity.GetAsync($"/api/auth/groups/{groupId}/members?page=1&pageSize=100", Options(token));
         response.Status.Should().Be(200, await response.TextAsync());
         return (await response.JsonAsync())!.Value.Clone();
     }
@@ -278,7 +278,7 @@ public sealed class LearningGroupTests
     private static async Task<Guid> FindApprovalAsync(IAPIRequestContext identity, string primaryToken, Guid groupId)
     {
         JsonElement approvals = await GetApprovalsAsync(identity, primaryToken);
-        JsonElement match = approvals.EnumerateArray().Single(a => a.GetProperty("groupId").GetGuid() == groupId);
+        JsonElement match = approvals.GetProperty("items").EnumerateArray().Single(a => a.GetProperty("groupId").GetGuid() == groupId);
         return match.GetProperty("memberId").GetGuid();
     }
 
@@ -306,16 +306,16 @@ public sealed class LearningGroupTests
     {
         IAPIResponse response = await content.GetAsync("/api/vocabulary/mine", Options(token));
         response.Status.Should().Be(200, await response.TextAsync());
-        return (await response.JsonAsync())!.Value.EnumerateArray().Select(w => w.GetProperty("id").GetGuid()).ToList();
+        return (await response.JsonAsync())!.Value.GetProperty("items").EnumerateArray().Select(w => w.GetProperty("id").GetGuid()).ToList();
     }
 
     private static string OutcomeOf(JsonElement results, Guid learnerId) =>
         results.EnumerateArray().Single(r => r.GetProperty("learnerId").GetGuid() == learnerId).GetProperty("outcome").GetString()!;
 
-    /// <summary>Member status in a group detail, or "Absent" when the learner is not listed.</summary>
+    /// <summary>Member status in the paged members response, or "Absent" when the learner is not listed.</summary>
     private static string StatusOf(JsonElement group, Guid learnerId)
     {
-        foreach (JsonElement member in group.GetProperty("members").EnumerateArray())
+        foreach (JsonElement member in group.GetProperty("items").EnumerateArray())
         {
             if (member.GetProperty("learnerId").GetGuid() == learnerId)
             {

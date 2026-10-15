@@ -51,7 +51,7 @@ public sealed class EditVocabularyWordTests
             edit.Status.Should().Be(204, await edit.TextAsync());
 
             IAPIResponse mine = await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions { Headers = Auth(token) });
-            JsonElement edited = (await mine.JsonAsync())!.Value.EnumerateArray()
+            JsonElement edited = (await mine.JsonAsync())!.Value.GetProperty("items").EnumerateArray()
                 .Single(w => w.GetProperty("id").GetGuid() == senseId);
             edited.GetProperty("word").GetString().Should().Be(fixedWord);
 

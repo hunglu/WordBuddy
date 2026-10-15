@@ -140,9 +140,9 @@ Given('an active support link with an escalated unlink request', async ({ reques
   const login = await request.post('/api/auth/login', { data: { email: adminEmail, password: adminPassword } })
   expect(login.ok(), await login.text()).toBeTruthy()
   const { token: adminToken } = (await login.json()) as { token: string }
-  const list = await request.get('/api/auth/admin/unlink-requests', { headers: auth(adminToken) })
+  const list = await request.get('/api/auth/admin/unlink-requests?pageSize=100', { headers: auth(adminToken) })
   expect(list.ok(), await list.text()).toBeTruthy()
-  const requests = (await list.json()) as { id: string; linkId: string }[]
+  const requests = ((await list.json()) as { items: { id: string; linkId: string }[] }).items
   escalatedRequestId = requests.find((r) => r.linkId === escalatedLinkId)!.id
 })
 

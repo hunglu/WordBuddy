@@ -101,8 +101,8 @@ public sealed class PersonalContextTests
 
     private static async Task<string?> MineNoteAsync(IAPIRequestContext content, string token, Guid senseId)
     {
-        IAPIResponse mine = await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions { Headers = Auth(token) });
-        JsonElement item = (await mine.JsonAsync())!.Value.EnumerateArray().Single(w => w.GetProperty("id").GetGuid() == senseId);
+        IAPIResponse mine = await content.GetAsync("/api/vocabulary/mine?pageSize=100", new APIRequestContextOptions { Headers = Auth(token) });
+        JsonElement item = (await mine.JsonAsync())!.Value.GetProperty("items").EnumerateArray().Single(w => w.GetProperty("id").GetGuid() == senseId);
         return item.TryGetProperty("personalContext", out JsonElement note) && note.ValueKind == JsonValueKind.String ? note.GetString() : null;
     }
 

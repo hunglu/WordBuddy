@@ -62,12 +62,12 @@ public sealed class PersonalVocabularyTests
             Guid wordId = wordIdJson.GetGuid();
 
             // Retrieve it back via the learner's own list.
-            IAPIResponse mineResponse = await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions
+            IAPIResponse mineResponse = await content.GetAsync("/api/vocabulary/mine?pageSize=100", new APIRequestContextOptions
             {
                 Headers = AuthHeader(learnerToken),
             });
             mineResponse.Ok.Should().BeTrue();
-            JsonElement mine = (await mineResponse.JsonAsync())!.Value;
+            JsonElement mine = (await mineResponse.JsonAsync())!.Value.GetProperty("items");
             mine.EnumerateArray().Should().Contain(w =>
                 w.GetProperty("id").GetGuid() == wordId
                 && w.GetProperty("shareStatus").GetString() == "Private");
@@ -88,12 +88,12 @@ public sealed class PersonalVocabularyTests
             moderateResponse.Status.Should().Be(204, $"moderation should succeed, got {moderateResponse.Status}: {await moderateResponse.TextAsync()}");
 
             // The word now appears in the shared pool.
-            IAPIResponse sharedResponse = await content.GetAsync("/api/vocabulary/shared", new APIRequestContextOptions
+            IAPIResponse sharedResponse = await content.GetAsync("/api/vocabulary/shared?pageSize=100", new APIRequestContextOptions
             {
                 Headers = AuthHeader(learnerToken),
             });
             sharedResponse.Ok.Should().BeTrue();
-            JsonElement shared = (await sharedResponse.JsonAsync())!.Value;
+            JsonElement shared = (await sharedResponse.JsonAsync())!.Value.GetProperty("items");
             shared.EnumerateArray().Should().Contain(w =>
                 w.GetProperty("id").GetGuid() == wordId
                 && w.GetProperty("shareStatus").GetString() == "Shared"
@@ -197,10 +197,10 @@ public sealed class PersonalVocabularyTests
             adoptResponse.Status.Should().Be(201, $"adopting should succeed, got {adoptResponse.Status}: {await adoptResponse.TextAsync()}");
             (await adoptResponse.JsonAsync())!.Value.GetGuid().Should().Be(wordId);
 
-            JsonElement mine = (await (await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions
+            JsonElement mine = (await (await content.GetAsync("/api/vocabulary/mine?pageSize=100", new APIRequestContextOptions
             {
                 Headers = AuthHeader(adopterToken),
-            })).JsonAsync())!.Value;
+            })).JsonAsync())!.Value.GetProperty("items");
             mine.EnumerateArray().Should().Contain(w =>
                 w.GetProperty("id").GetGuid() == wordId && !w.GetProperty("isAuthor").GetBoolean());
 
@@ -208,16 +208,16 @@ public sealed class PersonalVocabularyTests
             (await content.DeleteAsync($"/api/vocabulary/{wordId}", new APIRequestContextOptions { Headers = AuthHeader(adopterToken) }))
                 .Status.Should().Be(204);
 
-            JsonElement mineAfter = (await (await content.GetAsync("/api/vocabulary/mine", new APIRequestContextOptions
+            JsonElement mineAfter = (await (await content.GetAsync("/api/vocabulary/mine?pageSize=100", new APIRequestContextOptions
             {
                 Headers = AuthHeader(adopterToken),
-            })).JsonAsync())!.Value;
+            })).JsonAsync())!.Value.GetProperty("items");
             mineAfter.EnumerateArray().Should().NotContain(w => w.GetProperty("id").GetGuid() == wordId);
 
-            JsonElement shared = (await (await content.GetAsync("/api/vocabulary/shared", new APIRequestContextOptions
+            JsonElement shared = (await (await content.GetAsync("/api/vocabulary/shared?pageSize=100", new APIRequestContextOptions
             {
                 Headers = AuthHeader(adopterToken),
-            })).JsonAsync())!.Value;
+            })).JsonAsync())!.Value.GetProperty("items");
             shared.EnumerateArray().Should().Contain(w => w.GetProperty("id").GetGuid() == wordId);
         }
         finally
@@ -325,9 +325,10 @@ public sealed class PersonalVocabularyTests
 
     private static async Task<JsonElement> GetJsonAsync(IAPIRequestContext content, string path, string token)
     {
-        IAPIResponse response = await content.GetAsync(path, new APIRequestContextOptions { Headers = AuthHeader(token) });
+        string url = path + (path.Contains('?') ? "&" : "?") + "pageSize=100";
+        IAPIResponse response = await content.GetAsync(url, new APIRequestContextOptions { Headers = AuthHeader(token) });
         response.Status.Should().Be(200, $"GET {path} should succeed, got {response.Status}: {await response.TextAsync()}");
-        return (await response.JsonAsync())!.Value;
+        return (await response.JsonAsync())!.Value.GetProperty("items");
     }
 
     private static async Task<string> RegisterLearnerAsync(IAPIRequestContext identity, string ageGroup)
