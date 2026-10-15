@@ -474,6 +474,11 @@ namespace WordBuddy.Identity.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsModerator")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(200)

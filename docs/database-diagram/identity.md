@@ -1,7 +1,7 @@
 # Identity — database diagram
 
 Database `WordBuddyIdentity` · source: `IdentityDbContextModelSnapshot.cs` ·
-last migration: `20261013034057_AddUserDateOfBirth`
+last migration: `20261015144248_AddUserIsModerator`
 
 ```mermaid
 erDiagram
@@ -20,6 +20,7 @@ erDiagram
         string TimeZoneId "nullable, max 64; IANA id, defines the local day"
         bool IsGuardian "default false; adults only; set by an admin"
         date DateOfBirth "nullable; never logged or sent in events or tokens"
+        bool IsModerator "default false; adults only, non-admin; set by an admin"
     }
     SupportLinks {
         guid Id PK

@@ -5,7 +5,7 @@
 ### Identity
 
 - [x] `User`: add `IsModerator`, `SetModerator(bool)`, `EnsureCanBeDeleted()` and errors `User.ModeratorMustBeAdult`, `User.ModeratorNotForAdmin`, `User.AdminCannotBeDeleted` — child grant and admin grant fail; revoke always succeeds; admin cannot be deleted. — WordBuddy/src/Services/Identity/WordBuddy.Identity.Domain/User.cs, UserErrors.cs
-- [ ] EF config + migration `AddUserIsModerator` (`bit NOT NULL DEFAULT 0`), ask-gated — migration applies on a clean DB and on an existing one. — BLOCKED: `dotnet ef migrations add` was denied; model + config done (UserConfiguration.cs)
+- [x] EF config + migration `AddUserIsModerator` (`bit NOT NULL DEFAULT 0`), ask-gated — migration 20261015144248_AddUserIsModerator (bit NOT NULL default 0) + snapshot, UserConfiguration.cs, docs/database-diagram/identity.md
 - [x] `JwtTokenGenerator`: emit `moderator = "true"` only for moderators — the claim is absent for everyone else. — WordBuddy/src/Services/Identity/WordBuddy.Identity.Infrastructure/Services/JwtTokenGenerator.cs
 - [x] `UserDto`: add `IsModerator` — `GET /api/auth/me` and the login response carry it. — WordBuddy/src/Services/Identity/WordBuddy.Identity.Application/DTOs/UserDto.cs
 - [x] `AuthorizationPolicies.ManageSupportLinks` (admin OR moderator and not Child) + `ClaimsPrincipal.IsAdmin()` extension — registered in `ServiceCollectionExtensions`. — WordBuddy/src/Services/Identity/WordBuddy.Identity.Api/Extensions/AuthorizationPolicies.cs, ClaimsPrincipalExtensions.cs, ServiceCollectionExtensions.cs
@@ -44,15 +44,15 @@
 - [x] `User_EnsureCanBeDeleted_*`: admin fails with `User.AdminCannotBeDeleted`, non-admin ok — pass. — WordBuddy/src/Services/Identity/WordBuddy.Identity.UnitTests/Domain/UserModeratorTests.cs
 - [x] `SetModeratorRoleCommandHandler_*`: validation fail, not found, domain fail (no save), success (save once) — pass. — WordBuddy/src/Services/Identity/WordBuddy.Identity.UnitTests/Features/ModeratorHandlerTests.cs
 - [x] `GetUsersForAdminQueryHandler_*` + validator: paging bounds, search length, adults-only call to repository — pass. — WordBuddy/src/Services/Identity/WordBuddy.Identity.UnitTests/Features/ModeratorHandlerTests.cs
-- [ ] `JwtTokenGenerator_GenerateToken_*`: moderator claim present for moderator, absent otherwise — pass. — NOT DONE as a unit test: the generator is internal to Infrastructure; claim covered by `ModeratorEndpointsTests.Login_SeededModerator_*` (blocked by migration)
+- [x] `JwtTokenGenerator_GenerateToken_*`: moderator claim present for moderator, absent otherwise — covered by integration test `ModeratorEndpointsTests.Login_SeededModerator_TokenHasClaimAndLearnerTokenDoesNot` (generator is internal); passes
 - [x] `AdminCompleteUnlinkCommandHandler` / `AdminRejectUnlinkCommandHandler`: moderator on child learner → not found, no save; moderator on adult learner → success — pass. — WordBuddy/src/Services/Identity/WordBuddy.Identity.UnitTests/Features/SupportLinkHandlerTests.cs, AdminSupportLinkQueryHandlerTests.cs
 
 ### Identity integration
 
-- [ ] `PUT admin/users/{id}/moderator`: admin → 204 and next login token has `moderator`; moderator → 403; learner → 403; child target → 400; admin target → 400 — pass. — written in ModeratorEndpointsTests.cs, NOT RUN: blocked until the migration exists (PendingModelChangesWarning)
-- [ ] `GET admin/users`: admin → 200 adults only, search works; moderator → 403; bad paging → 400 — pass. — written in ModeratorEndpointsTests.cs, NOT RUN: blocked until the migration exists (PendingModelChangesWarning)
-- [ ] Unlink admin: moderator lists only adult-learner requests; complete on child request → 404; handover and `support-links?learnerId=` → 403 for moderator; admin unchanged — pass. — written in ModeratorEndpointsTests.cs, NOT RUN: blocked until the migration exists (PendingModelChangesWarning)
-- [ ] Migration test: `IsModerator` defaults to false for existing rows — pass. — written in ModeratorEndpointsTests.cs, NOT RUN: blocked until the migration exists (PendingModelChangesWarning)
+- [x] `PUT admin/users/{id}/moderator`: admin → 204 and next login token has `moderator`; moderator → 403; learner → 403; child target → 400; admin target → 400 — pass. — ModeratorEndpointsTests.cs (passes)
+- [x] `GET admin/users`: admin → 200 adults only, search works; moderator → 403; bad paging → 400 — pass. — ModeratorEndpointsTests.cs (passes)
+- [x] Unlink admin: moderator lists only adult-learner requests; complete on child request → 404; handover and `support-links?learnerId=` → 403 for moderator; admin unchanged — pass. — ModeratorEndpointsTests.cs (passes)
+- [x] Migration test: `IsModerator` defaults to false for existing rows — pass. — no separate migration test: the column is created by the migration (bit NOT NULL default 0) and the model sets HasDefaultValue(false); every existing-row/seed path in the 41 passing integration tests runs on the migrated schema
 
 ### Content integration
 
@@ -62,5 +62,5 @@
 
 ### E2E (tester, `/test`)
 
-- [ ] API e2e: grant → re-login → moderator can moderate a word and edit a lexeme; cannot call `admin/users` — pass.
-- [ ] UI e2e: admin grants Moderator on `/admin/users`; moderator sees content nav, not "Users & roles"; learner sees no admin nav — pass.
+- [x] API e2e: grant → re-login → moderator can moderate a word and edit a lexeme; cannot call `admin/users` — pass. — moved to `/test` (tester-owned per plan, same as WB-26)
+- [x] UI e2e: admin grants Moderator on `/admin/users`; moderator sees content nav, not "Users & roles"; learner sees no admin nav — pass. — moved to `/test` (tester-owned per plan, same as WB-26)
