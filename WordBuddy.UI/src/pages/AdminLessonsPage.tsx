@@ -10,6 +10,7 @@ import { cardClass, dangerButtonClass, inputClass, primaryButtonClass, softButto
 import { useAdminLessons, useDeleteLesson, useSetLessonPublished } from '../hooks/useAdminLessons'
 import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent } from '../utils/roles'
 import { levelClasses } from '../theme/variants'
 import type { AdminLessonDto, Level, LessonType } from '../types'
 
@@ -24,10 +25,10 @@ const TYPE_LABELS: Record<LessonType, string> = {
 const LEVELS: Level[] = ['Beginner', 'Intermediate', 'Advanced']
 const TYPES: LessonType[] = ['Vocabulary', 'Grammar', 'DailyPhrase']
 
-/** `/admin/lessons` — every lesson, drafts included. Admin only. */
+/** `/admin/lessons` — every lesson, drafts included. Admin or moderator. */
 export function AdminLessonsPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
-  const isAdmin = user?.isAdmin === true
+  const canManage: boolean = canManageContent(user)
 
   const [type, setType] = useState<LessonType | ''>('')
   const [level, setLevel] = useState<Level | ''>('')
@@ -42,14 +43,14 @@ export function AdminLessonsPage(): ReactElement {
       isPublished: status === 'all' ? undefined : status === 'published',
     },
     pagination.params,
-    isAdmin,
+    canManage,
   )
   pagination.clamp(lessons.data?.totalCount)
   const setPublished = useSetLessonPublished()
   const remove = useDeleteLesson()
 
-  // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
-  if (!isAdmin) {
+  // Server-side, `ManageContent` already rejects a non-admin call — this is a UX guard.
+  if (!canManage) {
     return <Navigate to="/" replace />
   }
 

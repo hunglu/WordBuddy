@@ -25,7 +25,7 @@ public class AdminSupportLinkQueryHandlerTests
     public async Task GetUnlinkRequestsForAdminQueryHandler_HandleAsync_EmptyPage_KeepsRealTotal()
     {
         _links
-            .Setup(l => l.GetEscalatedUnlinkRequestsAsync(3, 10, It.IsAny<CancellationToken>()))
+            .Setup(l => l.GetEscalatedUnlinkRequestsAsync(3, 10, true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<UnlinkRequest>([], 3, 10, 21));
         _links
             .Setup(l => l.GetLinksByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))

@@ -5,6 +5,9 @@ namespace WordBuddy.Identity.Api.Extensions;
 
 internal static class ClaimsPrincipalExtensions
 {
+    /// <summary>Whether the caller carries the <c>is_admin = true</c> claim.</summary>
+    public static bool IsAdmin(this ClaimsPrincipal user) => user.HasClaim("is_admin", "true");
+
     /// <summary>
     /// Extracts the authenticated user id from the JWT <c>sub</c> claim. Checks both
     /// <see cref="ClaimTypes.NameIdentifier"/> (the default inbound mapping target for <c>sub</c>)

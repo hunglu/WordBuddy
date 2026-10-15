@@ -15,9 +15,13 @@ references to any other WordBuddy service or shared project — see the root
 | POST | `/api/auth/login` | Anonymous | Authenticates an existing account, returns a JWT |
 | PUT | `/api/auth/profile/time-zone` | Bearer | Sets or clears the caller IANA time zone (`{ "timeZoneId": "Asia/Ho_Chi_Minh" }`); unknown id → `400 User.UnknownTimeZone` |
 | PUT | `/api/auth/admin/users/{id}/guardian` | `AdminOnly` | Grants or removes the Guardian role (`{ "isGuardian": true }`); a child account → `400 User.GuardianMustBeAdult`; non-admin → `403` |
+| PUT | `/api/auth/admin/users/{id}/moderator` | `AdminOnly` | Grants or removes the Moderator role (`{ "isModerator": true }`) → `204`; a child → `400 User.ModeratorMustBeAdult`; an admin → `400 User.ModeratorNotForAdmin`; unknown id → `404` |
+| GET | `/api/auth/admin/users` | `AdminOnly` | Pages adult accounts for role assignment (`?search=` email or display name, max 100 chars; `?page=`, `?pageSize=`) |
 | POST | `/api/auth/admin/learner-profiles/republish` | `AdminOnly` | One-off backfill (WB-29): publishes `LearnerProfileUpdated` for every user. Safe to rerun; returns `{ "published": n }` |
-| GET | `/api/auth/admin/unlink-requests` | `AdminOnly` | Pages escalated unlink requests (`?page=`, `?pageSize=`) |
+| GET | `/api/auth/admin/unlink-requests` | `ManageSupportLinks` | Pages escalated unlink requests (`?page=`, `?pageSize=`); a moderator sees adult learners only |
+| POST | `/api/auth/admin/unlink-requests/{id}/complete` and `/reject` | `ManageSupportLinks` | Completes or rejects an escalated unlink (`{ "reason" }`, audited); a moderator on a child learner's request → `404` |
 | GET | `/api/auth/admin/support-links?learnerId=` | `AdminOnly` | Pages the links of one learner (`?page=`, `?pageSize=`) |
+| POST | `/api/auth/admin/support-links/handover` | `AdminOnly` | Primary handover (child-only flow) |
 | GET | `/api/auth/groups/owned` | Bearer | Pages the groups the caller owns, with member counts (`?page=`, `?pageSize=`). Replaces `GET /api/auth/groups` (removed) |
 | GET | `/api/auth/groups/joined` | Bearer | Pages the groups the caller joined: name and owner only (`?page=`, `?pageSize=`) |
 | GET | `/api/auth/groups/approvals` | Bearer | Pages pending child memberships the caller approves as Primary (`?page=`, `?pageSize=`) |
@@ -28,6 +32,14 @@ Every paged route takes `?page=` (default 1, min 1) and `?pageSize=` (default 25
 return `400`. A page past the end returns `200` with empty `items` and the real `totalCount`. The body is
 `{ items, page, pageSize, totalCount }` (`WordBuddy.Shared.Kernel.PagedResult<T>`). The group snapshot is cached
 under `identity:group-snapshot:{groupId}`; group commands delete it.
+
+### Moderator role (WB-56)
+
+- `ManageSupportLinks` = `is_admin = true` OR (`moderator = true` AND `age_group != Child`). `AdminOnly` stays for users, roles, handover and backfills.
+- The JWT carries `moderator = true` only for moderators. A grant or revoke shows in a new token after the next
+  login. A revoked moderator keeps the rights until the token expires (`Jwt:ExpiryMinutes`, 60).
+- Development seed: `moderator@wordbuddy.com` (adult moderator).
+- `User.EnsureCanBeDeleted()` is the rule for any future delete feature: an admin account cannot be deleted.
 
 ### Profile event and Guardian role (WB-29)
 

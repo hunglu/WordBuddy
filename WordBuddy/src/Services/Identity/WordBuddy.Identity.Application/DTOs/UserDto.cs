@@ -12,6 +12,7 @@ namespace WordBuddy.Identity.Application.DTOs;
 /// <param name="AvatarId">Optional avatar id from the fixed catalog.</param>
 /// <param name="TimeZoneId">IANA time zone id, or null when unset.</param>
 /// <param name="IsGuardian">Whether the account holds the Guardian role.</param>
+/// <param name="IsModerator">Whether the account holds the Moderator role.</param>
 /// <param name="DateOfBirth">Own date of birth, or null when unset. Shown to the owner only.</param>
 /// <param name="AgeBand">Age band derived from the date of birth, or null.</param>
 /// <param name="HasActiveSupporter">Whether the user has at least one active supporter. Child learning features need this.</param>
@@ -27,10 +28,11 @@ public sealed record UserDto(
     string? TimeZoneId = null,
     bool IsGuardian = false,
     DateOnly? DateOfBirth = null,
-    AgeBand? AgeBand = null)
+    AgeBand? AgeBand = null,
+    bool IsModerator = false)
 {
     /// <summary>Maps a user and its supporter state to the DTO.</summary>
     public static UserDto From(User user, bool hasActiveSupporter, DateOnly? today = null) =>
         new(user.Id, user.Email, user.DisplayName, user.AgeGroup, user.IsAdmin, user.Alias, user.AvatarId, hasActiveSupporter, user.TimeZoneId, user.IsGuardian,
-            user.DateOfBirth, user.GetAgeBand(today ?? DateOnly.FromDateTime(DateTime.UtcNow)));
+            user.DateOfBirth, user.GetAgeBand(today ?? DateOnly.FromDateTime(DateTime.UtcNow)), user.IsModerator);
 }

@@ -217,8 +217,8 @@ public sealed class PersonalVocabularyController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Lists one page of words awaiting moderation (admin only).</summary>
-    [Authorize(Policy = "AdminOnly")]
+    /// <summary>Lists one page of words awaiting moderation (admin or moderator).</summary>
+    [Authorize(Policy = ServiceCollectionExtensions.ManageContentPolicy)]
     [HttpGet("moderation/pending")]
     public async Task<IActionResult> GetPendingModeration(
         [FromQuery] int page = 1,
@@ -230,8 +230,8 @@ public sealed class PersonalVocabularyController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Approves or rejects a pending-review word (admin only).</summary>
-    [Authorize(Policy = "AdminOnly")]
+    /// <summary>Approves or rejects a pending-review word (admin or moderator).</summary>
+    [Authorize(Policy = ServiceCollectionExtensions.ManageContentPolicy)]
     [HttpPost("moderation/{id:guid}")]
     public async Task<IActionResult> Moderate(Guid id, [FromBody] ModerateVocabularyWordRequest request, CancellationToken ct)
     {

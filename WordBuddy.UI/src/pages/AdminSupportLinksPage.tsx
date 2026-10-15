@@ -21,17 +21,19 @@ import {
 } from '../hooks/useSupportLinks'
 import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent, isAdmin as isAdminUser } from '../utils/roles'
 
 const REASON_MAX = 500
 
-/** `/admin/support-links` — complete or reject escalated unlinks, hand Primary over. Admin only. */
+/** `/admin/support-links` — complete or reject escalated unlinks (admin and moderator); hand Primary over (admin only). */
 export function AdminSupportLinksPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
-  const isAdmin = user?.isAdmin === true
+  const canManage: boolean = canManageContent(user)
+  const isAdmin: boolean = isAdminUser(user)
 
   const requestsPaging = usePagination()
   const linksPaging = usePagination()
-  const requests = useAdminUnlinkRequests(requestsPaging.params, isAdmin)
+  const requests = useAdminUnlinkRequests(requestsPaging.params, canManage)
   requestsPaging.clamp(requests.data?.totalCount)
   const resolve = useAdminResolveUnlink()
   const handover = useAdminHandoverPrimary()
@@ -43,8 +45,8 @@ export function AdminSupportLinksPage(): ReactElement {
   const learnerLinks = useAdminLearnerSupportLinks(lookupId, linksPaging.params)
   linksPaging.clamp(learnerLinks.data?.totalCount)
 
-  // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
-  if (!isAdmin) {
+  // Server-side, `ManageSupportLinks` already rejects a call without the right — this is a UX guard.
+  if (!canManage) {
     return <Navigate to="/" replace />
   }
 
@@ -52,6 +54,9 @@ export function AdminSupportLinksPage(): ReactElement {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <h1 className="text-3xl font-extrabold text-wb-ink">Support links (admin)</h1>
       <p className="mt-2 text-wb-ink-muted">Every action is audited with your reason.</p>
+      {!isAdmin && (
+        <p className="mt-1 text-sm text-wb-ink-muted">Requests of child learners go to an admin.</p>
+      )}
 
       <section className="mt-6">
         <h2 className="text-2xl font-bold text-wb-ink">Escalated unlink requests</h2>
@@ -118,6 +123,7 @@ export function AdminSupportLinksPage(): ReactElement {
         {resolve.isError && <p className="mt-2 text-sm text-wb-danger">{problemMessage(resolve.error, 'That did not work.')}</p>}
       </section>
 
+      {isAdmin && (
       <section className="mt-10">
         <h2 className="text-2xl font-bold text-wb-ink">Primary handover</h2>
         <form
@@ -195,6 +201,7 @@ export function AdminSupportLinksPage(): ReactElement {
           </div>
         )}
       </section>
+      )}
     </motion.div>
   )
 }

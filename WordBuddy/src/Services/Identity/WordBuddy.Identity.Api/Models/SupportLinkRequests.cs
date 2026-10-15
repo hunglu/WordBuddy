@@ -28,6 +28,10 @@ public sealed record UpdateTimeZoneRequest(string? TimeZoneId);
 /// <param name="IsGuardian">True grants the Guardian role (adults only); false removes it.</param>
 public sealed record SetGuardianRequest(bool IsGuardian);
 
+/// <summary>Body of <c>PUT /api/auth/admin/users/{id}/moderator</c>.</summary>
+/// <param name="IsModerator">True grants the Moderator role (adult, non-admin accounts only); false removes it.</param>
+public sealed record SetModeratorRequest(bool IsModerator);
+
 /// <summary>Body of <c>PUT /api/auth/profile/date-of-birth</c>.</summary>
 /// <param name="DateOfBirth">ISO date (<c>yyyy-MM-dd</c>); null clears.</param>
 public sealed record UpdateDateOfBirthRequest(DateOnly? DateOfBirth);

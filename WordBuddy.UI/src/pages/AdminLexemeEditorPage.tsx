@@ -7,16 +7,17 @@ import { LexemeForm } from '../components/admin-lexemes/LexemeForm'
 import { LexemeSensesPanel } from '../components/admin-lexemes/LexemeSensesPanel'
 import { useAdminLexeme } from '../hooks/useAdminLexemes'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent } from '../utils/roles'
 
-/** `/admin/lexemes/:id` — correct the dictionary fields and audio of one lexeme. Admin only. */
+/** `/admin/lexemes/:id` — correct the dictionary fields and audio of one lexeme. Admin or moderator. */
 export function AdminLexemeEditorPage(): ReactElement {
   const { id } = useParams<{ id: string }>()
-  const isAdmin: boolean = useAuthStore((state) => state.user?.isAdmin) === true
+  const canManage: boolean = canManageContent(useAuthStore((state) => state.user))
 
-  const lexeme = useAdminLexeme(id, isAdmin)
+  const lexeme = useAdminLexeme(id, canManage)
 
-  // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
-  if (!isAdmin) {
+  // Server-side, `ManageContent` already rejects a non-admin call — this is a UX guard.
+  if (!canManage) {
     return <Navigate to="/" replace />
   }
 

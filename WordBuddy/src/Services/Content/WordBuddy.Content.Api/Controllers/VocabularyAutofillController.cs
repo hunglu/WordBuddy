@@ -104,8 +104,8 @@ public sealed class VocabularyAutofillController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Admin queue (one page): auto-filled words any child waits on.</summary>
-    [Authorize(Policy = "AdminOnly")]
+    /// <summary>Admin or moderator queue (one page): auto-filled words any child waits on.</summary>
+    [Authorize(Policy = ServiceCollectionExtensions.ManageContentPolicy)]
     [HttpGet("moderation/autofill-pending")]
     public async Task<IActionResult> GetAdminPendingApprovals(
         [FromQuery] int page = 1,
@@ -117,8 +117,8 @@ public sealed class VocabularyAutofillController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Admin approval: the word becomes visible to every child.</summary>
-    [Authorize(Policy = "AdminOnly")]
+    /// <summary>Admin or moderator approval: the word becomes visible to every child.</summary>
+    [Authorize(Policy = ServiceCollectionExtensions.ManageContentPolicy)]
     [HttpPost("moderation/autofill/{senseId:guid}/approve")]
     public async Task<IActionResult> ApproveForChildren(Guid senseId, CancellationToken ct)
     {

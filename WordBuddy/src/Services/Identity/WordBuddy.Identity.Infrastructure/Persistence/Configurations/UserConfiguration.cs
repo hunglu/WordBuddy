@@ -25,6 +25,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.TimeZoneId).HasMaxLength(User.TimeZoneIdMaxLength);
         builder.Property(u => u.DateOfBirth).HasColumnType("date");
         builder.Property(u => u.IsGuardian).HasDefaultValue(false).IsRequired();
+        builder.Property(u => u.IsModerator).HasDefaultValue(false).IsRequired();
         builder.Ignore(u => u.PublicName);
     }
 }

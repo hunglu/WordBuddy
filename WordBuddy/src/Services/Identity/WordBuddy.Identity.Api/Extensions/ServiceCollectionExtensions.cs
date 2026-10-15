@@ -35,7 +35,12 @@ internal static class ServiceCollectionExtensions
             });
 
         services.AddAuthorization(options =>
-            options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireClaim("is_admin", "true")));
+        {
+            options.AddPolicy(AuthorizationPolicies.AdminOnly, policy => policy.RequireClaim("is_admin", "true"));
+            options.AddPolicy(AuthorizationPolicies.ManageSupportLinks, policy => policy.RequireAssertion(context =>
+                context.User.HasClaim("is_admin", "true")
+                || (context.User.HasClaim("moderator", "true") && !context.User.HasClaim("age_group", "Child"))));
+        });
 
         services.AddWordBuddyRateLimiting();
 

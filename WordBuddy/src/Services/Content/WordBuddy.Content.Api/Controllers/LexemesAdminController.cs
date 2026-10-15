@@ -18,7 +18,7 @@ namespace WordBuddy.Content.Api.Controllers;
 /// UK/US pronunciation audio.</summary>
 [ApiController]
 [Route("api/vocabulary/admin/lexemes")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = ServiceCollectionExtensions.ManageContentPolicy)]
 public sealed class LexemesAdminController : ControllerBase
 {
     // 5 MB file plus multipart overhead.

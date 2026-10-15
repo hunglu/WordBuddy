@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Identity.Application.Interfaces;
+using WordBuddy.Identity.Domain;
 using WordBuddy.Identity.Domain.SupportLinks;
 using WordBuddy.Identity.Infrastructure.Persistence;
 using WordBuddy.Shared.Kernel;
@@ -124,12 +125,25 @@ internal sealed class SupportLinkRepository : ISupportLinkRepository
                 && (r.Status == UnlinkRequestStatus.Pending || r.Status == UnlinkRequestStatus.OverrideRequested))
             .ToListAsync(ct);
 
-    public async Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(int page, int pageSize, CancellationToken ct = default) =>
-        await _dbContext.UnlinkRequests
-            .Where(r => r.Status == UnlinkRequestStatus.OverrideRequested)
-            .OrderBy(r => r.EscalatedAtUtc)
-            .ThenBy(r => r.Id)
-            .ToPagedResultAsync(page, pageSize, ct);
+    public async Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(
+        int page, int pageSize, bool includeChildLearners, CancellationToken ct = default)
+    {
+        IQueryable<UnlinkRequest> query = _dbContext.UnlinkRequests.Where(r => r.Status == UnlinkRequestStatus.OverrideRequested);
+        if (!includeChildLearners)
+        {
+            query = query.Where(r => _dbContext.SupportLinks
+                .Join(_dbContext.Users, l => l.LearnerId, u => u.Id, (l, u) => new { l.Id, u.AgeGroup })
+                .Any(x => x.Id == r.LinkId && x.AgeGroup != AgeGroup.Child));
+        }
+
+        return await query.OrderBy(r => r.EscalatedAtUtc).ThenBy(r => r.Id).ToPagedResultAsync(page, pageSize, ct);
+    }
+
+    public Task<bool> IsChildLearnerLinkAsync(Guid linkId, CancellationToken ct = default) =>
+        _dbContext.SupportLinks
+            .Where(l => l.Id == linkId)
+            .Join(_dbContext.Users, l => l.LearnerId, u => u.Id, (l, u) => u.AgeGroup)
+            .AnyAsync(a => a == AgeGroup.Child, ct);
 
     public async Task<IReadOnlyList<SupportLink>> GetLinksByIdsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default) =>
         await _dbContext.SupportLinks.Where(l => linkIds.Contains(l.Id)).ToListAsync(ct);

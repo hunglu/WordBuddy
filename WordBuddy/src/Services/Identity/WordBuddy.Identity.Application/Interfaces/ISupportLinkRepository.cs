@@ -59,7 +59,10 @@ public interface ISupportLinkRepository
     Task<IReadOnlyList<UnlinkRequest>> GetOpenUnlinkRequestsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default);
 
     /// <summary>Returns one page of the unlink requests escalated to an admin, oldest first (read-only).</summary>
-    Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(int page, int pageSize, CancellationToken ct = default);
+    Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(int page, int pageSize, bool includeChildLearners, CancellationToken ct = default);
+
+    /// <summary>Whether the learner of the link is a Child account. False when the link is unknown.</summary>
+    Task<bool> IsChildLearnerLinkAsync(Guid linkId, CancellationToken ct = default);
 
     /// <summary>Returns links by id (read-only).</summary>
     Task<IReadOnlyList<SupportLink>> GetLinksByIdsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default);

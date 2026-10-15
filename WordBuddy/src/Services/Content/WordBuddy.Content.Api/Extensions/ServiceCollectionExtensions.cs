@@ -14,6 +14,9 @@ internal static class ServiceCollectionExtensions
     /// <summary>Adults and admins pass; Child accounts get 403.</summary>
     public const string AdultOrAdminPolicy = "AdultOrAdmin";
 
+    /// <summary>Policy name: admin, or an adult moderator (<c>moderator = true</c>, not a child).</summary>
+    public const string ManageContentPolicy = "ManageContent";
+
     /// <summary>
     /// Configures JWT bearer validation using the same signing key/issuer Identity uses to issue
     /// tokens (<c>Jwt:Secret</c>/<c>Jwt:Issuer</c> in config — this service never issues tokens
@@ -46,6 +49,13 @@ internal static class ServiceCollectionExtensions
         {
             options.AddPolicy("AdminOnly", policy => policy.RequireClaim("is_admin", "true"));
             options.AddSupportLinkPolicies();
+
+            // WB-56: content work is for admins and adult moderators. The age check repeats the
+            // Identity rule (a moderator is always an adult) as defence in depth.
+            options.AddPolicy(ManageContentPolicy, policy => policy.RequireAssertion(context =>
+                string.Equals(context.User.FindFirst("is_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(context.User.FindFirst("moderator")?.Value, "true", StringComparison.OrdinalIgnoreCase) &&
+                 !string.Equals(context.User.FindFirst("age_group")?.Value, "Child", StringComparison.OrdinalIgnoreCase))));
 
             // Child accounts cannot initiate sharing — this feature's first-principles
             // child-safety gate on the write side. An admin may act on any word regardless of

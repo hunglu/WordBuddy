@@ -21,6 +21,8 @@ using WordBuddy.Identity.Application.Features.Auth.Commands.RegisterUser;
 using WordBuddy.Identity.Application.Features.Profile.Commands.ChangePassword;
 using WordBuddy.Identity.Application.Features.Profile.Commands.RepublishLearnerProfiles;
 using WordBuddy.Identity.Application.Features.Profile.Commands.SetGuardianRole;
+using WordBuddy.Identity.Application.Features.Profile.Commands.SetModeratorRole;
+using WordBuddy.Identity.Application.Features.Users.Queries.GetUsersForAdmin;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateDateOfBirth;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateDisplayName;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileAliasAvatar;
@@ -69,6 +71,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<ChangePasswordCommand>, ChangePasswordCommandValidator>();
         services.AddScoped<ICommandHandler<SetGuardianRoleCommand>, SetGuardianRoleCommandHandler>();
         services.AddScoped<IValidator<SetGuardianRoleCommand>, SetGuardianRoleCommandValidator>();
+        services.AddScoped<ICommandHandler<SetModeratorRoleCommand>, SetModeratorRoleCommandHandler>();
+        services.AddScoped<IValidator<SetModeratorRoleCommand>, SetModeratorRoleCommandValidator>();
+        services.AddScoped<IQueryHandler<GetUsersForAdminQuery, PagedResult<AdminUserDto>>, GetUsersForAdminQueryHandler>();
+        services.AddScoped<IValidator<GetUsersForAdminQuery>, GetUsersForAdminQueryValidator>();
         services.AddScoped<ICommandHandler<RepublishLearnerProfilesCommand, int>, RepublishLearnerProfilesCommandHandler>();
         services.AddScoped<IQueryHandler<GetCurrentUserQuery, UserDto>, GetCurrentUserQueryHandler>();
 

@@ -1,14 +1,14 @@
 ---
 title: WB-56_Moderator role to assist admin
-status: idea
+status: in-progress
 type: new
 issue: 56
 pr: none            # set by /code when it opens the pull request
 affects: docs/features/WB-56_moderator-role-to-assist-admin.md
 supersedes: none
-version: 1.0
+version: 3.0
 created: 2026-10-14T21:42:09+07:00
-updated: 2026-10-14T21:42:09+07:00
+updated: 2026-10-15T18:28:43+07:00
 ---
 
 ## Problem

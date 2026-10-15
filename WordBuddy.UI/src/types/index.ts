@@ -48,10 +48,22 @@ export interface User {
   timeZoneId?: string | null
   /** Whether the account holds the Guardian role (can allow challenges for linked children). */
   isGuardian?: boolean
+  /** Whether the account holds the Moderator role (manages content and adult unlink requests). */
+  isModerator?: boolean
   /** Own date of birth (`yyyy-MM-dd`), or null when unset. Only the owner and active supporters see it. */
   dateOfBirth?: string | null
   /** Age band derived from the date of birth, or null. */
   ageBand?: AgeBand | null
+}
+
+/** One adult account on the admin role screen (`GET /api/auth/admin/users`). */
+export interface AdminUser {
+  id: string
+  email: string
+  displayName: string
+  isAdmin: boolean
+  isModerator: boolean
+  isGuardian: boolean
 }
 
 // ── Identity: support links (WB-24) ─────────────────────────────────────────

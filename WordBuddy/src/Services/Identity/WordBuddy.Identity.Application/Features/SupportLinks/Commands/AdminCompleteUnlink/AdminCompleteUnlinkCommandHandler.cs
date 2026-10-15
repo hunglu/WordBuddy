@@ -60,6 +60,12 @@ public sealed class AdminCompleteUnlinkCommandHandler : ICommandHandler<AdminCom
         }
 
         UnlinkRequest request = found.Value;
+        if (!command.ActorIsAdmin && await _links.IsChildLearnerLinkAsync(request.LinkId, ct))
+        {
+            _logger.LogWarning("AdminCompleteUnlinkCommand: non-admin actor on a child learner request, UnlinkRequestId={UnlinkRequestId}", command.UnlinkRequestId);
+            return Result.Failure(SupportLinkErrors.UnlinkRequestNotFound);
+        }
+
         Result<SupportLink> linkResult = await _links.GetLinkTrackedAsync(request.LinkId, ct);
         if (linkResult.IsFailure)
         {

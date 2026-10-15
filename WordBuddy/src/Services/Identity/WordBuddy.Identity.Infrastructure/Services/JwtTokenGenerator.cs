@@ -45,6 +45,12 @@ internal sealed class JwtTokenGenerator : IJwtTokenGenerator
             claims.Add(new Claim("guardian", "true"));
         }
 
+        // Only moderators carry the claim, so its presence is the role check.
+        if (user.IsModerator)
+        {
+            claims.Add(new Claim("moderator", "true"));
+        }
+
         SymmetricSecurityKey signingKey = new(Encoding.UTF8.GetBytes(_settings.Secret));
         SigningCredentials credentials = new(signingKey, SecurityAlgorithms.HmacSha256);
 

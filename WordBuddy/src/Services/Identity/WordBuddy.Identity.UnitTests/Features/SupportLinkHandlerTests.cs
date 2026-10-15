@@ -360,7 +360,7 @@ public class SupportLinkHandlerTests
 
         AdminCompleteUnlinkCommandHandler handler = new(_f.Links.Object, _f.Events.Object, _f.GroupCleaner.Object, _f.Cache.Object, _f.Time,
             new AdminCompleteUnlinkCommandValidator(), Mock.Of<ILogger<AdminCompleteUnlinkCommandHandler>>());
-        Result result = await handler.HandleAsync(new AdminCompleteUnlinkCommand(adminId, request.Id, "No response for 7 days"));
+        Result result = await handler.HandleAsync(new AdminCompleteUnlinkCommand(adminId, request.Id, "No response for 7 days", true));
 
         result.IsSuccess.Should().BeTrue();
         link.Status.Should().Be(SupportLinkStatus.Revoked);
@@ -375,7 +375,7 @@ public class SupportLinkHandlerTests
         AdminRejectUnlinkCommandHandler handler = new(_f.Links.Object, _f.Cache.Object, _f.Time,
             new AdminRejectUnlinkCommandValidator(), Mock.Of<ILogger<AdminRejectUnlinkCommandHandler>>());
 
-        Result result = await handler.HandleAsync(new AdminRejectUnlinkCommand(Guid.NewGuid(), Guid.NewGuid(), " "));
+        Result result = await handler.HandleAsync(new AdminRejectUnlinkCommand(Guid.NewGuid(), Guid.NewGuid(), " ", true));
 
         result.Error.Type.Should().Be(ErrorType.Validation);
     }
@@ -389,12 +389,81 @@ public class SupportLinkHandlerTests
 
         AdminRejectUnlinkCommandHandler handler = new(_f.Links.Object, _f.Cache.Object, _f.Time,
             new AdminRejectUnlinkCommandValidator(), Mock.Of<ILogger<AdminRejectUnlinkCommandHandler>>());
-        Result result = await handler.HandleAsync(new AdminRejectUnlinkCommand(Guid.NewGuid(), request.Id, "Supporter still needed"));
+        Result result = await handler.HandleAsync(new AdminRejectUnlinkCommand(Guid.NewGuid(), request.Id, "Supporter still needed", true));
 
         result.IsSuccess.Should().BeTrue();
         link.IsActive.Should().BeTrue();
         request.Status.Should().Be(UnlinkRequestStatus.RejectedByAdmin);
         _f.Audit.Should().ContainSingle(a => a.Action == SupportLinkAuditAction.AdminUnlinkRejected);
+    }
+
+    [Fact]
+    public async Task AdminCompleteUnlinkCommandHandler_HandleAsync_ModeratorOnChildLearner_NotFoundAndNoSave()
+    {
+        User child = TestData.Child();
+        SupportLink link = TestData.Link(child, TestData.Adult("Parent"));
+        UnlinkRequest request = GivenEscalated(link, child.Id);
+        _f.Links.Setup(l => l.IsChildLearnerLinkAsync(link.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        AdminCompleteUnlinkCommandHandler handler = new(_f.Links.Object, _f.Events.Object, _f.GroupCleaner.Object, _f.Cache.Object, _f.Time,
+            new AdminCompleteUnlinkCommandValidator(), Mock.Of<ILogger<AdminCompleteUnlinkCommandHandler>>());
+        Result result = await handler.HandleAsync(new AdminCompleteUnlinkCommand(Guid.NewGuid(), request.Id, "Reason", false));
+
+        result.Error.Should().Be(SupportLinkErrors.UnlinkRequestNotFound);
+        link.IsActive.Should().BeTrue();
+        _f.Audit.Should().BeEmpty();
+        _f.Links.Verify(l => l.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdminCompleteUnlinkCommandHandler_HandleAsync_ModeratorOnAdultLearner_Succeeds()
+    {
+        User learner = TestData.Adult("Learner");
+        SupportLink link = TestData.Link(learner, TestData.Adult("Partner"));
+        _f.GivenLink(link);
+        UnlinkRequest request = GivenEscalated(link, learner.Id);
+        _f.Links.Setup(l => l.IsChildLearnerLinkAsync(link.Id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        AdminCompleteUnlinkCommandHandler handler = new(_f.Links.Object, _f.Events.Object, _f.GroupCleaner.Object, _f.Cache.Object, _f.Time,
+            new AdminCompleteUnlinkCommandValidator(), Mock.Of<ILogger<AdminCompleteUnlinkCommandHandler>>());
+        Result result = await handler.HandleAsync(new AdminCompleteUnlinkCommand(Guid.NewGuid(), request.Id, "Reason", false));
+
+        result.IsSuccess.Should().BeTrue();
+        link.Status.Should().Be(SupportLinkStatus.Revoked);
+    }
+
+    [Fact]
+    public async Task AdminRejectUnlinkCommandHandler_HandleAsync_ModeratorOnChildLearner_NotFoundAndNoSave()
+    {
+        User child = TestData.Child();
+        SupportLink link = TestData.Link(child, TestData.Adult("Parent"));
+        UnlinkRequest request = GivenEscalated(link, child.Id);
+        _f.Links.Setup(l => l.IsChildLearnerLinkAsync(link.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        AdminRejectUnlinkCommandHandler handler = new(_f.Links.Object, _f.Cache.Object, _f.Time,
+            new AdminRejectUnlinkCommandValidator(), Mock.Of<ILogger<AdminRejectUnlinkCommandHandler>>());
+        Result result = await handler.HandleAsync(new AdminRejectUnlinkCommand(Guid.NewGuid(), request.Id, "Reason", false));
+
+        result.Error.Should().Be(SupportLinkErrors.UnlinkRequestNotFound);
+        request.Status.Should().Be(UnlinkRequestStatus.OverrideRequested);
+        _f.Audit.Should().BeEmpty();
+        _f.Links.Verify(l => l.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdminRejectUnlinkCommandHandler_HandleAsync_ModeratorOnAdultLearner_Succeeds()
+    {
+        User learner = TestData.Adult("Learner");
+        SupportLink link = TestData.Link(learner, TestData.Adult("Partner"));
+        UnlinkRequest request = GivenEscalated(link, learner.Id);
+        _f.Links.Setup(l => l.IsChildLearnerLinkAsync(link.Id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        AdminRejectUnlinkCommandHandler handler = new(_f.Links.Object, _f.Cache.Object, _f.Time,
+            new AdminRejectUnlinkCommandValidator(), Mock.Of<ILogger<AdminRejectUnlinkCommandHandler>>());
+        Result result = await handler.HandleAsync(new AdminRejectUnlinkCommand(Guid.NewGuid(), request.Id, "Reason", false));
+
+        result.IsSuccess.Should().BeTrue();
+        request.Status.Should().Be(UnlinkRequestStatus.RejectedByAdmin);
     }
 
     [Fact]

@@ -65,6 +65,17 @@ internal sealed class UserRepository : IUserRepository
     public async Task<IReadOnlyList<User>> GetPageAsync(int skip, int take, CancellationToken ct = default) =>
         await _dbContext.Users.AsNoTracking().OrderBy(u => u.Id).Skip(skip).Take(take).ToListAsync(ct);
 
+    public async Task<PagedResult<User>> GetAdultsPagedAsync(string? search, int page, int pageSize, CancellationToken ct = default)
+    {
+        IQueryable<User> query = _dbContext.Users.AsNoTracking().Where(u => u.AgeGroup == AgeGroup.Adult);
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(u => u.Email.Contains(search) || u.DisplayName.Contains(search));
+        }
+
+        return await query.OrderBy(u => u.DisplayName).ThenBy(u => u.Id).ToPagedResultAsync(page, pageSize, ct);
+    }
+
     public Task<bool> AliasTakenAsync(string alias, Guid exceptUserId, CancellationToken ct = default) =>
         _dbContext.Users.AsNoTracking().AnyAsync(u => u.Alias == alias && u.Id != exceptUserId, ct);
 
