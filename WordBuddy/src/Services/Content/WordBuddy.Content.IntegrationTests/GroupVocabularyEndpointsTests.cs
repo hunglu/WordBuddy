@@ -80,7 +80,7 @@ public sealed class GroupVocabularyEndpointsTests
         other.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await Client(Guid.NewGuid(), "Adult").GetAsync($"/api/vocabulary/groups/{groupId}/words")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        List<GroupWordAssignmentDto> history = (await Client(owner, "Adult").GetFromJsonAsync<List<GroupWordAssignmentDto>>($"/api/vocabulary/groups/{groupId}/words"))!;
+        List<GroupWordAssignmentDto> history = await PagedHttp.GetAllAsync<GroupWordAssignmentDto>(Client(owner, "Adult"), $"/api/vocabulary/groups/{groupId}/words");
         history.Should().NotBeEmpty().And.OnlyContain(h => h.SenseId == senseId);
     }
 }

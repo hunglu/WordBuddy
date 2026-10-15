@@ -2,15 +2,19 @@ import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { problemMessage } from '../api/supportLinks'
 import { ChallengeCard } from '../components/challenges/ChallengeCard'
+import { Pager } from '../components/Pager'
 import { cardClass } from '../components/support/supportUi'
 import { useChallenges } from '../hooks/useChallenges'
+import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 
 /** `/challenges` — the open and running vocabulary challenges of the learner's audience. */
 export function ChallengesPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
   const isChild = user?.ageGroup === 'Child'
-  const { data, isLoading, isError, error } = useChallenges()
+  const pagination = usePagination()
+  const { data, isLoading, isError, error } = useChallenges(pagination.params)
+  pagination.clamp(data?.totalCount)
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -24,7 +28,7 @@ export function ChallengesPage(): ReactElement {
         <p className="mt-6 text-lg text-wb-danger">{problemMessage(error, "Couldn't load challenges right now.")}</p>
       )}
 
-      {data && data.length === 0 && (
+      {data && data.totalCount === 0 && (
         <div className={`mt-6 max-w-xl ${cardClass}`}>
           <p className="text-4xl">{isChild ? '🤝' : '🏆'}</p>
           {isChild ? (
@@ -43,11 +47,24 @@ export function ChallengesPage(): ReactElement {
         </div>
       )}
 
-      {data && data.length > 0 && (
+      {data && data.items.length > 0 && (
         <div className="mt-6 flex max-w-2xl flex-col gap-3">
-          {data.map((challenge) => (
+          {data.items.map((challenge) => (
             <ChallengeCard key={challenge.id} challenge={challenge} />
           ))}
+        </div>
+      )}
+
+      {data && (
+        <div className="max-w-2xl">
+          <Pager
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalCount={data.totalCount}
+            onPageChange={pagination.setPage}
+            label="Challenge pages"
+            itemLabel="challenges"
+          />
         </div>
       )}
     </motion.div>

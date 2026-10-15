@@ -63,7 +63,7 @@ public sealed class VocabularyAutofillEndpointsTests
 
     private static async Task<JsonElement> MineItemAsync(HttpClient client, Guid senseId)
     {
-        JsonElement mine = await ReadJsonAsync(await client.GetAsync("/api/vocabulary/mine"));
+        JsonElement mine = await PagedHttp.GetAllAsArrayAsync(client, "/api/vocabulary/mine");
         return mine.EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == senseId);
     }
 
@@ -188,7 +188,7 @@ public sealed class VocabularyAutofillEndpointsTests
         item.GetProperty("definition").GetString().Should().BeEmpty();
         item.GetProperty("examples").GetArrayLength().Should().Be(0);
 
-        JsonElement shared = await ReadJsonAsync(await child.GetAsync("/api/vocabulary/shared"));
+        JsonElement shared = await PagedHttp.GetAllAsArrayAsync(child, "/api/vocabulary/shared");
         shared.EnumerateArray().Should().NotContain(i => i.GetProperty("id").GetGuid() == senseId);
 
         (await SensesEndpointReturnsAsync(child, senseId)).Should().BeFalse();
@@ -212,7 +212,7 @@ public sealed class VocabularyAutofillEndpointsTests
         await AddToMineAsync(child, senseId);
         await AddToMineAsync(otherChild, senseId);
 
-        JsonElement pending = await ReadJsonAsync(await supporter.GetAsync($"/api/vocabulary/learners/{childId}/pending-approvals"));
+        JsonElement pending = await PagedHttp.GetAllAsArrayAsync(supporter, $"/api/vocabulary/learners/{childId}/pending-approvals");
         HttpResponseMessage approve = await supporter.PostAsync($"/api/vocabulary/learners/{childId}/words/{senseId}/approve", null);
         HttpResponseMessage again = await supporter.PostAsync($"/api/vocabulary/learners/{childId}/words/{senseId}/approve", null);
 
@@ -234,7 +234,7 @@ public sealed class VocabularyAutofillEndpointsTests
         Guid senseId = await AutofillAsync(UniqueWord());
         await AddToMineAsync(child, senseId);
 
-        JsonElement pending = await ReadJsonAsync(await admin.GetAsync("/api/vocabulary/moderation/autofill-pending"));
+        JsonElement pending = await PagedHttp.GetAllAsArrayAsync(admin, "/api/vocabulary/moderation/autofill-pending");
         HttpResponseMessage approve = await admin.PostAsync($"/api/vocabulary/moderation/autofill/{senseId}/approve", null);
 
         pending.EnumerateArray().Should().Contain(p => p.GetProperty("senseId").GetGuid() == senseId);
@@ -243,7 +243,7 @@ public sealed class VocabularyAutofillEndpointsTests
 
         Guid laterChildId = await ChildWithSupporterAsync(Guid.NewGuid());
         HttpClient laterChild = Client(laterChildId, "Child");
-        JsonElement shared = await ReadJsonAsync(await laterChild.GetAsync("/api/vocabulary/shared"));
+        JsonElement shared = await PagedHttp.GetAllAsArrayAsync(laterChild, "/api/vocabulary/shared");
         shared.EnumerateArray().Should().Contain(i => i.GetProperty("id").GetGuid() == senseId);
         (await SensesEndpointReturnsAsync(laterChild, senseId)).Should().BeTrue();
     }

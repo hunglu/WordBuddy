@@ -37,6 +37,13 @@ internal sealed class SupportLinkRepository : ISupportLinkRepository
     public async Task<IReadOnlyList<SupportLink>> GetLearnerLinksAsync(Guid learnerId, CancellationToken ct = default) =>
         await _dbContext.SupportLinks.Where(l => l.LearnerId == learnerId).OrderBy(l => l.CreatedAtUtc).ToListAsync(ct);
 
+    public async Task<PagedResult<SupportLink>> GetLearnerLinksPagedAsync(Guid learnerId, int page, int pageSize, CancellationToken ct = default) =>
+        await _dbContext.SupportLinks
+            .Where(l => l.LearnerId == learnerId)
+            .OrderBy(l => l.CreatedAtUtc)
+            .ThenBy(l => l.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
+
     public Task<bool> HasActiveSupporterAsync(Guid learnerId, CancellationToken ct = default) =>
         _dbContext.SupportLinks.AnyAsync(l => l.LearnerId == learnerId && l.Status == SupportLinkStatus.Active, ct);
 
@@ -117,11 +124,12 @@ internal sealed class SupportLinkRepository : ISupportLinkRepository
                 && (r.Status == UnlinkRequestStatus.Pending || r.Status == UnlinkRequestStatus.OverrideRequested))
             .ToListAsync(ct);
 
-    public async Task<IReadOnlyList<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(CancellationToken ct = default) =>
+    public async Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(int page, int pageSize, CancellationToken ct = default) =>
         await _dbContext.UnlinkRequests
             .Where(r => r.Status == UnlinkRequestStatus.OverrideRequested)
             .OrderBy(r => r.EscalatedAtUtc)
-            .ToListAsync(ct);
+            .ThenBy(r => r.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
 
     public async Task<IReadOnlyList<SupportLink>> GetLinksByIdsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default) =>
         await _dbContext.SupportLinks.Where(l => linkIds.Contains(l.Id)).ToListAsync(ct);

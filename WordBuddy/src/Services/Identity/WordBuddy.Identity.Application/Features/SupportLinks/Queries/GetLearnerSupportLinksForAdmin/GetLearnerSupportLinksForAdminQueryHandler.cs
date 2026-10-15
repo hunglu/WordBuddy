@@ -1,38 +1,50 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Domain.SupportLinks;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Identity.Application.Features.SupportLinks.Queries.GetLearnerSupportLinksForAdmin;
 
-public sealed class GetLearnerSupportLinksForAdminQueryHandler : IQueryHandler<GetLearnerSupportLinksForAdminQuery, IReadOnlyList<AdminSupportLinkDto>>
+public sealed class GetLearnerSupportLinksForAdminQueryHandler : IQueryHandler<GetLearnerSupportLinksForAdminQuery, PagedResult<AdminSupportLinkDto>>
 {
     private readonly ISupportLinkRepository _links;
+    private readonly IValidator<GetLearnerSupportLinksForAdminQuery> _validator;
     private readonly ILogger<GetLearnerSupportLinksForAdminQueryHandler> _logger;
 
-    public GetLearnerSupportLinksForAdminQueryHandler(ISupportLinkRepository links, ILogger<GetLearnerSupportLinksForAdminQueryHandler> logger)
+    public GetLearnerSupportLinksForAdminQueryHandler(
+        ISupportLinkRepository links,
+        IValidator<GetLearnerSupportLinksForAdminQuery> validator,
+        ILogger<GetLearnerSupportLinksForAdminQueryHandler> logger)
     {
         _links = links;
+        _validator = validator;
         _logger = logger;
     }
 
-    public async Task<Result<IReadOnlyList<AdminSupportLinkDto>>> HandleAsync(GetLearnerSupportLinksForAdminQuery query, CancellationToken ct = default)
+    public async Task<Result<PagedResult<AdminSupportLinkDto>>> HandleAsync(GetLearnerSupportLinksForAdminQuery query, CancellationToken ct = default)
     {
-        _logger.LogInformation("GetLearnerSupportLinksForAdminQuery started: LearnerId={LearnerId}", query.LearnerId);
+        _logger.LogInformation(
+            "GetLearnerSupportLinksForAdminQuery started: LearnerId={LearnerId}, Page={Page}, PageSize={PageSize}",
+            query.LearnerId, query.Page, query.PageSize);
 
-        if (query.LearnerId == Guid.Empty)
+        ValidationResult validation = await _validator.ValidateAsync(query, ct);
+        if (!validation.IsValid)
         {
-            return Result.Failure<IReadOnlyList<AdminSupportLinkDto>>(
-                Error.Validation("GetLearnerSupportLinksForAdmin.Validation", "LearnerId is required."));
+            _logger.LogWarning("GetLearnerSupportLinksForAdminQuery validation failed: {Errors}", validation.ToString());
+            return Result.Failure<PagedResult<AdminSupportLinkDto>>(
+                Error.Validation("GetLearnerSupportLinksForAdmin.Validation", validation.ToString()));
         }
 
-        IReadOnlyList<SupportLink> links = await _links.GetLearnerLinksAsync(query.LearnerId, ct);
-        IReadOnlyList<AdminSupportLinkDto> result = links
+        PagedResult<SupportLink> links = await _links.GetLearnerLinksPagedAsync(query.LearnerId, query.Page, query.PageSize, ct);
+        List<AdminSupportLinkDto> items = links.Items
             .Select(l => new AdminSupportLinkDto(l.Id, l.LearnerId, l.SupporterId, l.IsPrimary, l.Relationship, l.Status, l.CreatedAtUtc))
             .ToList();
 
-        return Result.Success(result);
+        _logger.LogInformation("GetLearnerSupportLinksForAdminQuery succeeded: Count={Count}, TotalCount={TotalCount}", items.Count, links.TotalCount);
+        return Result.Success(new PagedResult<AdminSupportLinkDto>(items, links.Page, links.PageSize, links.TotalCount));
     }
 }

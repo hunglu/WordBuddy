@@ -163,8 +163,8 @@ public sealed class SupportLinkEndpointsTests
         (await learner.Client.GetAsync("/api/auth/admin/unlink-requests")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         HttpClient admin = await LoginAdminAsync();
-        List<AdminUnlinkRequestDto> escalated = (await admin.GetFromJsonAsync<List<AdminUnlinkRequestDto>>(
-            "/api/auth/admin/unlink-requests", Json))!;
+        List<AdminUnlinkRequestDto> escalated = await PagedHttp.GetAllAsync<AdminUnlinkRequestDto>(
+            admin, "/api/auth/admin/unlink-requests", Json);
         AdminUnlinkRequestDto request = escalated.Should().ContainSingle(r => r.LinkId == link.Id).Subject;
 
         (await learner.Client.PostAsJsonAsync($"/api/auth/admin/unlink-requests/{request.Id}/complete", new { reason = "x" }))
@@ -248,5 +248,27 @@ public sealed class SupportLinkEndpointsTests
         {
             await endpoint.StopAsync();
         }
+    }
+
+    [Fact]
+    public async Task AdminLists_UnlinkRequestsAndLearnerLinks_ArePagedAndValidated()
+    {
+        HttpClient admin = await LoginAdminAsync();
+        Account learner = await RegisterAsync("Adult", "Learner");
+        Account supporter = await RegisterAsync("Adult", "Supporter");
+
+        JsonElement unlink = await PagedHttp.GetPageAsync(admin, "/api/auth/admin/unlink-requests?page=1&pageSize=5");
+        JsonElement links = await PagedHttp.GetPageAsync(admin, $"/api/auth/admin/support-links?learnerId={learner.User.Id}&page=1&pageSize=5");
+
+        foreach (JsonElement page in new[] { unlink, links })
+        {
+            page.EnumerateObject().Select(p => p.Name).Should().BeEquivalentTo("items", "page", "pageSize", "totalCount");
+            page.GetProperty("pageSize").GetInt32().Should().Be(5);
+        }
+
+        links.GetProperty("totalCount").GetInt32().Should().Be(0);
+        (await admin.GetAsync("/api/auth/admin/unlink-requests?pageSize=101")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await admin.GetAsync($"/api/auth/admin/support-links?learnerId={learner.User.Id}&page=0")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        supporter.User.Id.Should().NotBe(Guid.Empty);
     }
 }

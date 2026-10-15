@@ -19,15 +19,15 @@ namespace WordBuddy.Identity.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public sealed class AdminSupportLinksController : ControllerBase
 {
-    private readonly IQueryHandler<GetUnlinkRequestsForAdminQuery, IReadOnlyList<AdminUnlinkRequestDto>> _getUnlinkRequests;
-    private readonly IQueryHandler<GetLearnerSupportLinksForAdminQuery, IReadOnlyList<AdminSupportLinkDto>> _getLearnerLinks;
+    private readonly IQueryHandler<GetUnlinkRequestsForAdminQuery, PagedResult<AdminUnlinkRequestDto>> _getUnlinkRequests;
+    private readonly IQueryHandler<GetLearnerSupportLinksForAdminQuery, PagedResult<AdminSupportLinkDto>> _getLearnerLinks;
     private readonly ICommandHandler<AdminCompleteUnlinkCommand> _complete;
     private readonly ICommandHandler<AdminRejectUnlinkCommand> _reject;
     private readonly ICommandHandler<AdminHandoverPrimaryCommand> _handover;
 
     public AdminSupportLinksController(
-        IQueryHandler<GetUnlinkRequestsForAdminQuery, IReadOnlyList<AdminUnlinkRequestDto>> getUnlinkRequests,
-        IQueryHandler<GetLearnerSupportLinksForAdminQuery, IReadOnlyList<AdminSupportLinkDto>> getLearnerLinks,
+        IQueryHandler<GetUnlinkRequestsForAdminQuery, PagedResult<AdminUnlinkRequestDto>> getUnlinkRequests,
+        IQueryHandler<GetLearnerSupportLinksForAdminQuery, PagedResult<AdminSupportLinkDto>> getLearnerLinks,
         ICommandHandler<AdminCompleteUnlinkCommand> complete,
         ICommandHandler<AdminRejectUnlinkCommand> reject,
         ICommandHandler<AdminHandoverPrimaryCommand> handover)
@@ -39,11 +39,15 @@ public sealed class AdminSupportLinksController : ControllerBase
         _handover = handover;
     }
 
-    /// <summary>Lists unlink requests escalated to an admin.</summary>
+    /// <summary>Lists one page of the unlink requests escalated to an admin.</summary>
     [HttpGet("unlink-requests")]
-    public async Task<IActionResult> GetUnlinkRequests(CancellationToken ct)
+    public async Task<IActionResult> GetUnlinkRequests(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<AdminUnlinkRequestDto>> result = await _getUnlinkRequests.HandleAsync(new GetUnlinkRequestsForAdminQuery(), ct);
+        Result<PagedResult<AdminUnlinkRequestDto>> result = await _getUnlinkRequests.HandleAsync(
+            new GetUnlinkRequestsForAdminQuery(page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
@@ -63,12 +67,16 @@ public sealed class AdminSupportLinksController : ControllerBase
         return result.IsSuccess ? NoContent() : result.ToProblemResult(this);
     }
 
-    /// <summary>Lists all links of one learner (for the Primary handover).</summary>
+    /// <summary>Lists one page of the links of one learner (for the Primary handover).</summary>
     [HttpGet("support-links")]
-    public async Task<IActionResult> GetLearnerLinks([FromQuery] Guid learnerId, CancellationToken ct)
+    public async Task<IActionResult> GetLearnerLinks(
+        [FromQuery] Guid learnerId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<AdminSupportLinkDto>> result =
-            await _getLearnerLinks.HandleAsync(new GetLearnerSupportLinksForAdminQuery(learnerId), ct);
+        Result<PagedResult<AdminSupportLinkDto>> result =
+            await _getLearnerLinks.HandleAsync(new GetLearnerSupportLinksForAdminQuery(learnerId, page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

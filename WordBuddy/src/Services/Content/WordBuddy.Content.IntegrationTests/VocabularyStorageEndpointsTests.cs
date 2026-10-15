@@ -56,9 +56,7 @@ public sealed class VocabularyStorageEndpointsTests
 
     private static async Task<List<PersonalVocabularyWordDto>> GetListAsync(HttpClient client, string url)
     {
-        HttpResponseMessage response = await client.GetAsync(url);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        return (await response.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions))!;
+        return await PagedHttp.GetAllAsync<PersonalVocabularyWordDto>(client, url, JsonOptions);
     }
 
     /// <summary>Owner adds, shares, and an admin approves — returns the shared word's id.</summary>
@@ -221,7 +219,7 @@ public sealed class VocabularyStorageEndpointsTests
         mine.Should().ContainSingle(w => w.Id == sharedId).Which.Should().Match<PersonalVocabularyWordDto>(w =>
             !w.IsAuthor && w.OwnerUserId == adopterId && w.ShareStatus == VocabularyShareStatus.Private && !w.VisibleToChildren);
 
-        List<PersonalVocabularyWordDto> check = await GetListAsync(adopter, "/api/vocabulary/check?count=50");
+        List<PersonalVocabularyWordDto> check = (await adopter.GetFromJsonAsync<List<PersonalVocabularyWordDto>>("/api/vocabulary/check?count=50", JsonOptions))!;
         check.Should().Contain(w => w.Id == sharedId);
 
         (await adopter.DeleteAsync($"/api/vocabulary/{sharedId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);

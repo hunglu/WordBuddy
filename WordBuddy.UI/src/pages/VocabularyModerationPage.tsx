@@ -3,6 +3,8 @@ import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { AutofillApprovalsPanel } from '../components/autofill/AutofillApprovalsPanel'
+import { Pager } from '../components/Pager'
+import { usePagination } from '../hooks/usePagination'
 import { usePendingVocabularyModeration, useModerateVocabularyWord } from '../hooks/useVocabulary'
 import { useAuthStore } from '../store/authStore'
 
@@ -51,7 +53,10 @@ const TABS = [
 
 /** The original moderation queue: learner words asking to join the shared pool. */
 function SharedWordsQueue(): ReactElement {
-  const { data: words, isLoading, isError } = usePendingVocabularyModeration()
+  const pagination = usePagination()
+  const { data: page, isLoading, isError } = usePendingVocabularyModeration(pagination.params)
+  pagination.clamp(page?.totalCount)
+  const words = page?.items
   const moderate = useModerateVocabularyWord()
   const [visibleToChildrenByWord, setVisibleToChildrenByWord] = useState<Record<string, boolean>>({})
 
@@ -62,7 +67,7 @@ function SharedWordsQueue(): ReactElement {
       {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading the moderation queue…</p>}
       {isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load the moderation queue right now.</p>}
 
-      {words && words.length === 0 && (
+      {page && page.totalCount === 0 && (
         <p className="mt-8 text-lg text-wb-ink-muted">Nothing pending review right now.</p>
       )}
 
@@ -110,6 +115,17 @@ function SharedWordsQueue(): ReactElement {
             )
           })}
         </div>
+      )}
+
+      {page && (
+        <Pager
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={page.totalCount}
+          onPageChange={pagination.setPage}
+          label="Moderation queue pages"
+          itemLabel="words"
+        />
       )}
     </>
   )

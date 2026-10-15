@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 import { useAdminPendingApprovals, useApproveAutofillForChildren } from '../../hooks/useAutofill'
+import { usePagination } from '../../hooks/usePagination'
+import { Pager } from '../Pager'
 import { SenseCard } from './SenseCard'
 
 /**
@@ -7,12 +9,14 @@ import { SenseCard } from './SenseCard'
  * the word visible to every child. The page itself is admin-only (`AdminOnly` on the API).
  */
 export function AutofillApprovalsPanel(): ReactElement {
-  const { data: words, isLoading, isError } = useAdminPendingApprovals()
+  const pagination = usePagination()
+  const { data: page, isLoading, isError } = useAdminPendingApprovals(pagination.params)
+  pagination.clamp(page?.totalCount)
   const approve = useApproveAutofillForChildren()
 
   if (isLoading) return <p className="mt-8 text-lg text-wb-ink-muted">Loading auto-filled words…</p>
   if (isError) return <p className="mt-8 text-lg text-wb-danger">Couldn't load auto-filled words right now.</p>
-  if (!words || words.length === 0) {
+  if (!page || page.totalCount === 0) {
     return <p className="mt-8 text-lg text-wb-ink-muted">No auto-filled words wait for child approval.</p>
   }
 
@@ -20,7 +24,7 @@ export function AutofillApprovalsPanel(): ReactElement {
     <div className="mt-6 flex flex-col gap-4">
       <p className="text-wb-ink-muted">Approving shows the word to every child.</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        {words.map((word, index) => (
+        {page.items.map((word, index) => (
           <SenseCard key={word.senseId} sense={word} index={index}>
             <button
               type="button"
@@ -36,6 +40,14 @@ export function AutofillApprovalsPanel(): ReactElement {
           </SenseCard>
         ))}
       </div>
+      <Pager
+        page={pagination.page}
+        pageSize={pagination.pageSize}
+        totalCount={page.totalCount}
+        onPageChange={pagination.setPage}
+        label="Auto-filled word pages"
+        itemLabel="words"
+      />
       {approve.isError && <p className="text-sm text-wb-danger">Couldn't approve this word. Please try again.</p>}
     </div>
   )

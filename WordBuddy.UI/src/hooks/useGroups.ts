@@ -1,10 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addGroupMembers,
   createGroup,
   deleteGroup,
   getGroup,
-  getMyGroups,
+  getGroupMembers,
+  getJoinedGroups,
+  getOwnedGroups,
   getPendingGroupApprovals,
   leaveGroup,
   removeGroupMember,
@@ -13,32 +15,62 @@ import {
 } from '../api/groups'
 import { getGroupDashboard } from '../api/progress'
 import { assignWordsToGroup, getGroupWordAssignments } from '../api/vocabulary'
-import type { DashboardRange } from '../types'
+import type { DashboardRange, PageParams } from '../types'
 
 export const GROUPS_KEY = ['groups'] as const
 export const GROUP_APPROVALS_KEY = ['groups', 'approvals'] as const
 
-/** Groups the caller owns and groups the caller joined. */
-export function useMyGroups() {
-  return useQuery({ queryKey: GROUPS_KEY, queryFn: getMyGroups })
+/** One page of the groups the caller owns. */
+export function useOwnedGroups(paging: PageParams, enabled = true) {
+  return useQuery({
+    queryKey: [...GROUPS_KEY, 'owned', paging],
+    queryFn: () => getOwnedGroups(paging),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
 }
 
-/** One group with its members. Owner only (403 for anyone else). */
+/** One page of the groups the caller joined. */
+export function useJoinedGroups(paging: PageParams) {
+  return useQuery({
+    queryKey: [...GROUPS_KEY, 'joined', paging],
+    queryFn: () => getJoinedGroups(paging),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** One group with member counts and learner ids. Owner only (403 for anyone else). */
 export function useGroup(groupId: string) {
   return useQuery({ queryKey: ['groups', groupId], queryFn: () => getGroup(groupId), retry: false })
 }
 
-/** Pending child memberships waiting for the caller (as Primary supporter). */
-export function usePendingGroupApprovals(enabled = true) {
-  return useQuery({ queryKey: GROUP_APPROVALS_KEY, queryFn: getPendingGroupApprovals, enabled })
+/** One page of the members of a group. Owner only. */
+export function useGroupMembers(groupId: string, paging: PageParams) {
+  return useQuery({
+    queryKey: ['groups', groupId, 'members', paging],
+    queryFn: () => getGroupMembers(groupId, paging),
+    retry: false,
+    placeholderData: keepPreviousData,
+  })
 }
 
-/** Assignment history of a group. Owner only. */
-export function useGroupWordAssignments(groupId: string) {
+/** One page of the pending child memberships waiting for the caller (as Primary supporter). */
+export function usePendingGroupApprovals(paging: PageParams, enabled = true) {
   return useQuery({
-    queryKey: ['groupWords', groupId],
-    queryFn: () => getGroupWordAssignments(groupId),
+    queryKey: [...GROUP_APPROVALS_KEY, paging],
+    queryFn: () => getPendingGroupApprovals(paging),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** One page of the assignment history of a group. Owner only. */
+export function useGroupWordAssignments(groupId: string, paging: PageParams) {
+  return useQuery({
+    queryKey: ['groupWords', groupId, paging],
+    queryFn: () => getGroupWordAssignments(groupId, paging),
     retry: false,
+    placeholderData: keepPreviousData,
   })
 }
 

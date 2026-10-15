@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useGroupDashboard } from '../../hooks/useGroups'
+import { MAX_PAGE_SIZE } from '../../api/paging'
+import { useGroupDashboard, useGroupMembers } from '../../hooks/useGroups'
 import type { DashboardRange, LearnerGroupDetail } from '../../types'
 import { avatarEmoji, cardClass, primaryButtonClass, softButtonClass } from '../support/supportUi'
 import { NO_ACCESS_MESSAGE, inlineErrorClass, isForbidden } from './groupUi'
@@ -17,9 +18,11 @@ function percent(value: number | null): string {
 /** Dashboard tab: one row per active member (avatar and public name only), group totals, 7/30/90 day range. */
 export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactElement {
   const [days, setDays] = useState<DashboardRange>(30)
-  const activeMembers = group.members.filter((member) => member.status === 'Active')
-  const { data, isLoading, isError, error } = useGroupDashboard(group.id, days, activeMembers.length > 0)
-  const membersById = new Map(group.members.map((member) => [member.learnerId, member]))
+  const activeCount: number = group.activeMemberCount
+  const { data, isLoading, isError, error } = useGroupDashboard(group.id, days, activeCount > 0)
+  // A group has at most 40 members, so one call at the largest page size reads every name.
+  const members = useGroupMembers(group.id, { page: 1, pageSize: MAX_PAGE_SIZE })
+  const membersById = new Map((members.data?.items ?? []).map((member) => [member.learnerId, member]))
 
   return (
     <section className={cardClass} aria-label="Group dashboard">
@@ -40,10 +43,10 @@ export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactEleme
         </div>
       </div>
 
-      {activeMembers.length === 0 && (
+      {activeCount === 0 && (
         <p className="mt-3 text-wb-ink-muted">The dashboard shows when the group has an active member.</p>
       )}
-      {activeMembers.length > 0 && isLoading && <p className="mt-3 text-wb-ink-muted">Loading the dashboard…</p>}
+      {activeCount > 0 && isLoading && <p className="mt-3 text-wb-ink-muted">Loading the dashboard…</p>}
       {isError && (
         <p className={`mt-3 ${inlineErrorClass}`}>
           {isForbidden(error) ? NO_ACCESS_MESSAGE : "Couldn't load the dashboard right now. Please try again later."}

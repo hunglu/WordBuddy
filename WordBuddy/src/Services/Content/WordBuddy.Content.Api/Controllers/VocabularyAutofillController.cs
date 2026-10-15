@@ -24,14 +24,14 @@ public sealed class VocabularyAutofillController : ControllerBase
 {
     private readonly IQueryHandler<LookupAutofillQuery, AutofillResultDto> _lookup;
     private readonly ICommandHandler<AddAutofillSenseToMyListCommand, Guid> _addToMine;
-    private readonly IQueryHandler<GetPendingChildApprovalsQuery, IReadOnlyList<ChildApprovalDto>> _getPending;
+    private readonly IQueryHandler<GetPendingChildApprovalsQuery, PagedResult<ChildApprovalDto>> _getPending;
     private readonly ICommandHandler<ApproveChildWordCommand> _approve;
     private readonly ILogger<VocabularyAutofillController> _logger;
 
     public VocabularyAutofillController(
         IQueryHandler<LookupAutofillQuery, AutofillResultDto> lookup,
         ICommandHandler<AddAutofillSenseToMyListCommand, Guid> addToMine,
-        IQueryHandler<GetPendingChildApprovalsQuery, IReadOnlyList<ChildApprovalDto>> getPending,
+        IQueryHandler<GetPendingChildApprovalsQuery, PagedResult<ChildApprovalDto>> getPending,
         ICommandHandler<ApproveChildWordCommand> approve,
         ILogger<VocabularyAutofillController> logger)
     {
@@ -73,13 +73,18 @@ public sealed class VocabularyAutofillController : ControllerBase
         return Ok(result.Value);
     }
 
-    /// <summary>Supporter queue: auto-filled words the learner waits on.</summary>
+    /// <summary>Supporter queue (one page): auto-filled words the learner waits on.</summary>
     [Authorize(Policy = ServiceCollectionExtensions.AdultOrAdminPolicy)]
     [Authorize(Policy = SupportLinkPolicies.CanSupportLearner)]
     [HttpGet("learners/{learnerId:guid}/pending-approvals")]
-    public async Task<IActionResult> GetLearnerPendingApprovals(Guid learnerId, CancellationToken ct)
+    public async Task<IActionResult> GetLearnerPendingApprovals(
+        Guid learnerId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<ChildApprovalDto>> result = await _getPending.HandleAsync(new GetPendingChildApprovalsQuery(learnerId), ct);
+        Result<PagedResult<ChildApprovalDto>> result = await _getPending.HandleAsync(
+            new GetPendingChildApprovalsQuery(learnerId, page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
@@ -99,12 +104,16 @@ public sealed class VocabularyAutofillController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Admin queue: auto-filled words any child waits on.</summary>
+    /// <summary>Admin queue (one page): auto-filled words any child waits on.</summary>
     [Authorize(Policy = "AdminOnly")]
     [HttpGet("moderation/autofill-pending")]
-    public async Task<IActionResult> GetAdminPendingApprovals(CancellationToken ct)
+    public async Task<IActionResult> GetAdminPendingApprovals(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<ChildApprovalDto>> result = await _getPending.HandleAsync(new GetPendingChildApprovalsQuery(null), ct);
+        Result<PagedResult<ChildApprovalDto>> result = await _getPending.HandleAsync(
+            new GetPendingChildApprovalsQuery(null, page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

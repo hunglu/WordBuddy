@@ -50,12 +50,12 @@ public class GetChallengeBoardQueryHandlerTests
         Result<ChallengeBoardDto> result = await Handler().HandleAsync(new GetChallengeBoardQuery(users[6], challenge.Id, AgeGroup.Child));
 
         ChallengeBoardDto board = result.Value;
-        board.Entries.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 7);
+        board.Entries.Items.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 7);
         board.MyRank.Should().Be(7);
         board.MyScore.Should().Be(20);
         board.ParticipantCount.Should().Be(8);
-        board.Entries.Single(e => e.IsMe).Score.Should().Be(20);
-        board.Entries.Where(e => !e.IsMe).Should().OnlyContain(e => e.Score == null && e.TargetReached == null);
+        board.Entries.Items.Single(e => e.IsMe).Score.Should().Be(20);
+        board.Entries.Items.Where(e => !e.IsMe).Should().OnlyContain(e => e.Score == null && e.TargetReached == null);
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public class GetChallengeBoardQueryHandlerTests
 
         ChallengeBoardDto board = (await Handler().HandleAsync(new GetChallengeBoardQuery(users[1], challenge.Id, AgeGroup.Child))).Value;
 
-        board.Entries.Should().HaveCount(5);
-        board.Entries.Count(e => e.IsMe).Should().Be(1);
+        board.Entries.Items.Should().HaveCount(5);
+        board.Entries.Items.Count(e => e.IsMe).Should().Be(1);
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public class GetChallengeBoardQueryHandlerTests
 
         ChallengeBoardDto board = (await Handler().HandleAsync(new GetChallengeBoardQuery(users[0], challenge.Id, AgeGroup.Child))).Value;
 
-        board.Entries.Select(e => e.Name).Should().Equal("Alias1", "Alias2", ChallengeProfile.ChildFallbackName, "Alias4", "Alias5");
-        board.Entries.Should().OnlyContain(e => e.AvatarId == "owl");
+        board.Entries.Items.Select(e => e.Name).Should().Equal("Alias1", "Alias2", ChallengeProfile.ChildFallbackName, "Alias4", "Alias5");
+        board.Entries.Items.Should().OnlyContain(e => e.AvatarId == "owl");
         string json = JsonSerializer.Serialize(board);
         json.Should().NotContain("Real Name");
         foreach (Guid user in users)
@@ -97,11 +97,11 @@ public class GetChallengeBoardQueryHandlerTests
 
         ChallengeBoardDto board = (await Handler().HandleAsync(new GetChallengeBoardQuery(users[6], challenge.Id, AgeGroup.Adult))).Value;
 
-        board.Entries.Should().HaveCount(8);
-        board.Entries.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 6, 7, 8);
-        board.Entries.Should().OnlyContain(e => e.Score != null);
-        board.Entries[2].Name.Should().Be("Real Name 3", "an adult without an alias shows the display name");
-        board.Entries.Single(e => e.IsMe).Rank.Should().Be(7);
+        board.Entries.Items.Should().HaveCount(8);
+        board.Entries.Items.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 6, 7, 8);
+        board.Entries.Items.Should().OnlyContain(e => e.Score != null);
+        board.Entries.Items[2].Name.Should().Be("Real Name 3", "an adult without an alias shows the display name");
+        board.Entries.Items.Single(e => e.IsMe).Rank.Should().Be(7);
     }
 
     [Fact]
@@ -146,6 +146,57 @@ public class GetChallengeBoardQueryHandlerTests
         _cache.Items.Should().ContainKey(ChallengeCache.BoardKey(challenge.Id));
         first.MyRank.Should().Be(1);
         second.MyRank.Should().Be(8);
-        second.Entries.Last().IsMe.Should().BeTrue();
+        second.Entries.Items.Last().IsMe.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetChallengeBoardQueryHandler_HandleAsync_AdultPageTwoIsTheRightSlice()
+    {
+        (Challenge challenge, List<Guid> users) = EightLearners(ChallengeAudience.Adult);
+
+        ChallengeBoardDto board = (await Handler().HandleAsync(new GetChallengeBoardQuery(users[0], challenge.Id, AgeGroup.Adult, 2, 3))).Value;
+
+        board.Entries.Items.Select(e => e.Rank).Should().Equal(4, 5, 6);
+        board.Entries.Page.Should().Be(2);
+        board.Entries.PageSize.Should().Be(3);
+        board.Entries.TotalCount.Should().Be(8);
+        board.ParticipantCount.Should().Be(8);
+        board.MyRank.Should().Be(1, "my rank does not depend on the page");
+    }
+
+    [Fact]
+    public async Task GetChallengeBoardQueryHandler_HandleAsync_AdultPastTheEndIsEmptyWithTotal()
+    {
+        (Challenge challenge, List<Guid> users) = EightLearners(ChallengeAudience.Adult);
+
+        ChallengeBoardDto board = (await Handler().HandleAsync(new GetChallengeBoardQuery(users[0], challenge.Id, AgeGroup.Adult, 9, 25))).Value;
+
+        board.Entries.Items.Should().BeEmpty();
+        board.Entries.TotalCount.Should().Be(8);
+    }
+
+    [Fact]
+    public async Task GetChallengeBoardQueryHandler_HandleAsync_ChildWithPageTwoStillGetsTopFiveAndOwnRowOnly()
+    {
+        (Challenge challenge, List<Guid> users) = EightLearners(ChallengeAudience.Child);
+        _repo.Consents.Add(ChallengeConsent.Create(users[6], Guid.NewGuid(), Monday));
+
+        ChallengeBoardDto board = (await Handler().HandleAsync(new GetChallengeBoardQuery(users[6], challenge.Id, AgeGroup.Child, 2, 2))).Value;
+
+        board.Entries.Items.Select(e => e.Rank).Should().Equal(1, 2, 3, 4, 5, 7);
+        board.Entries.Page.Should().Be(1);
+        board.Entries.TotalCount.Should().Be(6);
+        board.Entries.Items.Where(e => !e.IsMe).Should().OnlyContain(e => e.Score == null && e.TargetReached == null);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetChallengeBoardQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        Result<ChallengeBoardDto> result = await Handler().HandleAsync(new GetChallengeBoardQuery(Guid.NewGuid(), Guid.NewGuid(), AgeGroup.Adult, page, pageSize));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
     }
 }

@@ -38,8 +38,8 @@ model this follows.
 | GET | `/api/progress/dashboard/me?days=7\|30\|90` | Bearer, `ChildHasSupporter`, rate limit `dashboard` | The caller's own dashboard (WB-26) |
 | GET | `/api/progress/dashboard/learners/{learnerId}?days=…` | Bearer, `CanSupportLearner`, rate limit `dashboard` | A learner's dashboard for an active supporter; no link or revoked link → 403 |
 | POST / GET | `/api/progress/vocabulary-recall` | Bearer | Old self-rated recall check; kept until WB-23 ships |
-| GET | `/api/progress/challenges` | Bearer | Open and Running challenges of the caller audience (from `age_group`). A child without Guardian consent gets `[]` |
-| GET | `/api/progress/challenges/{id}/board` | Bearer, same audience | Adult: full ranking. Child: own rank and top 5, alias and avatar only |
+| GET | `/api/progress/challenges` | Bearer | Pages the Open and Running challenges of the caller audience (from `age_group`); `?page=` (default 1), `?pageSize=` (1-100, default 25). A child without Guardian consent gets an empty page |
+| GET | `/api/progress/challenges/{id}/board` | Bearer, same audience | Adult: pages the full ranking (`?page=`, `?pageSize=`); `entries` is `{ items, page, pageSize, totalCount }`. Child: own rank and top 5, alias and avatar only; paging is ignored and the answer is always one page |
 | POST | `/api/progress/challenges/{id}/join` | Bearer, rate limit `challenge-join` | Opt in. `409 Challenge.Full` at capacity; `403 Challenge.NoConsent` for a child without consent |
 | DELETE | `/api/progress/challenges/{id}/join` | Bearer | Opt out |
 | PUT | `/api/progress/challenges/consent/{childId}` | `GuardianOnly` (`guardian` claim) | `{ "enabled": true }`. Needs the Guardian role and an active support link, else `403 Challenge.NotGuardian` / `Challenge.NoActiveLink` |

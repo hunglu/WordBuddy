@@ -1,43 +1,24 @@
-using System.Text.Json;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using WordBuddy.Shared.Application.Abstractions;
-using WordBuddy.Identity.Application.Caching;
 using WordBuddy.Identity.Application.DTOs;
-using WordBuddy.Identity.Application.Interfaces;
-using WordBuddy.Identity.Application.Settings;
-using WordBuddy.Identity.Domain;
 using WordBuddy.Identity.Domain.Groups;
+using WordBuddy.Shared.Application.Abstractions;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Identity.Application.Features.Groups.Queries.GetGroup;
 
 /// <summary>
-/// Cache-aside read under <c>identity:group:{groupId}</c> (absolute expiry). The owner check runs on
-/// every call, including cache hits. Members show the public name and avatar only; a child without
-/// alias appears as "Child learner".
+/// Reads the group snapshot (cached under <c>identity:group-snapshot:{groupId}</c>). The owner check
+/// runs on every call, including cache hits. The detail has member counts and ids only; the members
+/// themselves come from <c>GetGroupMembersQuery</c>.
 /// </summary>
 public sealed class GetGroupQueryHandler : IQueryHandler<GetGroupQuery, LearnerGroupDetailDto>
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
-    private readonly IUserRepository _users;
-    private readonly ILearnerGroupRepository _groups;
-    private readonly IDistributedCache _cache;
-    private readonly LearnerGroupOptions _options;
+    private readonly LearnerGroupSnapshotLoader _snapshots;
     private readonly ILogger<GetGroupQueryHandler> _logger;
 
-    public GetGroupQueryHandler(
-        IUserRepository users,
-        ILearnerGroupRepository groups,
-        IDistributedCache cache,
-        LearnerGroupOptions options,
-        ILogger<GetGroupQueryHandler> logger)
+    public GetGroupQueryHandler(LearnerGroupSnapshotLoader snapshots, ILogger<GetGroupQueryHandler> logger)
     {
-        _users = users;
-        _groups = groups;
-        _cache = cache;
-        _options = options;
+        _snapshots = snapshots;
         _logger = logger;
     }
 
@@ -45,65 +26,29 @@ public sealed class GetGroupQueryHandler : IQueryHandler<GetGroupQuery, LearnerG
     {
         _logger.LogInformation("GetGroupQuery started: GroupId={GroupId}, CallerId={CallerId}", query.GroupId, query.CallerId);
 
-        string key = LearnerGroupCache.Key(query.GroupId);
-        string? cached = await _cache.GetStringAsync(key, ct);
-        if (cached is not null)
+        Result<LearnerGroupSnapshot> loaded = await _snapshots.LoadAsync(query.GroupId, ct);
+        if (loaded.IsFailure)
         {
-            LearnerGroupDetailDto? hit = JsonSerializer.Deserialize<LearnerGroupDetailDto>(cached, JsonOptions);
-            if (hit is not null)
-            {
-                return CheckOwner(hit, query);
-            }
+            return Result.Failure<LearnerGroupDetailDto>(loaded.Error);
         }
 
-        Result<LearnerGroup> found = await _groups.GetGroupAsync(query.GroupId, ct);
-        if (found.IsFailure)
+        LearnerGroupSnapshot snapshot = loaded.Value;
+        if (snapshot.OwnerId != query.CallerId)
         {
-            return Result.Failure<LearnerGroupDetailDto>(found.Error);
+            _logger.LogWarning("GetGroupQuery rejected: GroupId={GroupId}, ErrorCode={ErrorCode}", query.GroupId, LearnerGroupErrors.NotOwner.Code);
+            return Result.Failure<LearnerGroupDetailDto>(LearnerGroupErrors.NotOwner);
         }
 
-        LearnerGroup group = found.Value;
-        IReadOnlyList<LearnerGroupMember> members = (await _groups.GetOpenMembersAsync([group.Id], ct))
-            .OrderBy(m => m.AddedAtUtc)
-            .ToList();
-        IReadOnlyList<User> users = await _users.GetByIdsAsync(members.Select(m => m.LearnerId).ToList(), ct);
-        Dictionary<Guid, User> usersById = users.ToDictionary(u => u.Id);
+        LearnerGroupDetailDto detail = new(
+            snapshot.Id,
+            snapshot.OwnerId,
+            snapshot.Name,
+            snapshot.CreatedAtUtc,
+            snapshot.Members.Count(m => m.Status == GroupMemberStatus.Active),
+            snapshot.Members.Count(m => m.Status == GroupMemberStatus.PendingPrimaryApproval),
+            snapshot.Members.Select(m => m.LearnerId).ToList());
 
-        List<GroupMemberDto> memberDtos = [];
-        foreach (LearnerGroupMember member in members)
-        {
-            if (usersById.TryGetValue(member.LearnerId, out User? user))
-            {
-                memberDtos.Add(new GroupMemberDto(
-                    member.Id, member.LearnerId, user.PublicName, user.AvatarId, user.AgeGroup, member.Status, member.AddedAtUtc));
-            }
-        }
-
-        LearnerGroupDetailDto detail = new(group.Id, group.OwnerId, group.Name, group.CreatedAtUtc, memberDtos);
-        Result<LearnerGroupDetailDto> checkedResult = CheckOwner(detail, query);
-        if (checkedResult.IsFailure)
-        {
-            return checkedResult;
-        }
-
-        await _cache.SetStringAsync(
-            key,
-            JsonSerializer.Serialize(detail, JsonOptions),
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheMinutes) },
-            ct);
-
-        _logger.LogInformation("GetGroupQuery succeeded: GroupId={GroupId}, MemberCount={MemberCount}", group.Id, memberDtos.Count);
-        return checkedResult;
-    }
-
-    private Result<LearnerGroupDetailDto> CheckOwner(LearnerGroupDetailDto detail, GetGroupQuery query)
-    {
-        if (detail.OwnerId == query.CallerId)
-        {
-            return Result.Success(detail);
-        }
-
-        _logger.LogWarning("GetGroupQuery rejected: GroupId={GroupId}, ErrorCode={ErrorCode}", query.GroupId, LearnerGroupErrors.NotOwner.Code);
-        return Result.Failure<LearnerGroupDetailDto>(LearnerGroupErrors.NotOwner);
+        _logger.LogInformation("GetGroupQuery succeeded: GroupId={GroupId}, MemberCount={MemberCount}", snapshot.Id, snapshot.Members.Count);
+        return Result.Success(detail);
     }
 }

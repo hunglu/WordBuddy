@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion'
 import { useId, useState, type ReactElement } from 'react'
+import { CARD_PAGE_SIZE } from '../api/paging'
+import { Pager } from '../components/Pager'
 import { PersonalContextField } from '../components/vocabulary/PersonalContextField'
+import { usePagination } from '../hooks/usePagination'
 import { useAddSharedWordToMyList, useSharedVocabularyWords } from '../hooks/useVocabulary'
 
 type AddToMyListControlsProps = Readonly<{
@@ -41,7 +44,10 @@ function AddToMyListControls({ isPending, onAdd }: AddToMyListControlsProps): Re
 }
 
 export function VocabularySharedPoolPage(): ReactElement {
-  const { data: words, isLoading, isError } = useSharedVocabularyWords()
+  const pagination = usePagination(CARD_PAGE_SIZE)
+  const { data: page, isLoading, isError } = useSharedVocabularyWords(pagination.params)
+  pagination.clamp(page?.totalCount)
+  const words = page?.items
   const addToMyList = useAddSharedWordToMyList()
 
   return (
@@ -58,7 +64,7 @@ export function VocabularySharedPoolPage(): ReactElement {
         </p>
       )}
 
-      {words && words.length === 0 && (
+      {page && page.totalCount === 0 && (
         <p className="mt-8 text-lg text-wb-ink-muted">No shared words yet — check back soon!</p>
       )}
 
@@ -83,6 +89,17 @@ export function VocabularySharedPoolPage(): ReactElement {
             </div>
           ))}
         </div>
+      )}
+
+      {page && (
+        <Pager
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={page.totalCount}
+          onPageChange={pagination.setPage}
+          label="Shared pool pages"
+          itemLabel="words"
+        />
       )}
     </motion.div>
   )

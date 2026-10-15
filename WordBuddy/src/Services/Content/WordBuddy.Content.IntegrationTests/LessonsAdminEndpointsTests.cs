@@ -152,7 +152,7 @@ public sealed class LessonsAdminEndpointsTests
         (await adult.GetAsync($"/api/lessons/{lessonId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         List<LessonDto> adultList = (await adult.GetFromJsonAsync<List<LessonDto>>("/api/lessons", JsonOptions))!;
         adultList.Should().NotContain(l => l.Id == lessonId);
-        List<AdminLessonDto> adminList = (await admin.GetFromJsonAsync<List<AdminLessonDto>>("/api/lessons/admin?isPublished=false", JsonOptions))!;
+        List<AdminLessonDto> adminList = await PagedHttp.GetAllAsync<AdminLessonDto>(admin, "/api/lessons/admin?isPublished=false", JsonOptions);
         adminList.Should().Contain(l => l.Id == lessonId && !l.IsPublished);
 
         (await admin.PostAsync($"/api/lessons/admin/{lessonId}/publish", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);

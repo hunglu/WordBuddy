@@ -24,14 +24,14 @@ namespace WordBuddy.Progress.Api.Controllers;
 [Authorize]
 public sealed class ChallengesController : ControllerBase
 {
-    private readonly IQueryHandler<ListChallengesQuery, IReadOnlyList<ChallengeDto>> _list;
+    private readonly IQueryHandler<ListChallengesQuery, PagedResult<ChallengeDto>> _list;
     private readonly IQueryHandler<GetChallengeBoardQuery, ChallengeBoardDto> _board;
     private readonly ICommandHandler<JoinChallengeCommand> _join;
     private readonly ICommandHandler<LeaveChallengeCommand> _leave;
     private readonly ICommandHandler<SetChildChallengeConsentCommand> _consent;
 
     public ChallengesController(
-        IQueryHandler<ListChallengesQuery, IReadOnlyList<ChallengeDto>> list,
+        IQueryHandler<ListChallengesQuery, PagedResult<ChallengeDto>> list,
         IQueryHandler<GetChallengeBoardQuery, ChallengeBoardDto> board,
         ICommandHandler<JoinChallengeCommand> join,
         ICommandHandler<LeaveChallengeCommand> leave,
@@ -44,19 +44,28 @@ public sealed class ChallengesController : ControllerBase
         _consent = consent;
     }
 
-    /// <summary>Lists the Open and Running challenges of the caller audience. A child without consent gets an empty list.</summary>
+    /// <summary>Lists one page of the Open and Running challenges of the caller audience. A child without consent gets an empty page.</summary>
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken ct)
+    public async Task<IActionResult> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<ChallengeDto>> result = await _list.HandleAsync(new ListChallengesQuery(User.GetUserId(), User.GetAgeGroup()), ct);
+        Result<PagedResult<ChallengeDto>> result = await _list.HandleAsync(
+            new ListChallengesQuery(User.GetUserId(), User.GetAgeGroup(), page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 
-    /// <summary>Gets the board. Adult: full ranking. Child: own rank and the top 5, alias and avatar only.</summary>
+    /// <summary>Gets the board. Adult: one page of the full ranking. Child: own rank and the top 5, alias and avatar only; paging is ignored.</summary>
     [HttpGet("{id:guid}/board")]
-    public async Task<IActionResult> GetBoard(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetBoard(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<ChallengeBoardDto> result = await _board.HandleAsync(new GetChallengeBoardQuery(User.GetUserId(), id, User.GetAgeGroup()), ct);
+        Result<ChallengeBoardDto> result = await _board.HandleAsync(
+            new GetChallengeBoardQuery(User.GetUserId(), id, User.GetAgeGroup(), page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

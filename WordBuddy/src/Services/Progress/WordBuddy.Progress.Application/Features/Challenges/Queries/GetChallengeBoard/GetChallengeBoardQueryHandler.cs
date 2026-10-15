@@ -14,8 +14,8 @@ namespace WordBuddy.Progress.Application.Features.Challenges.Queries.GetChalleng
 
 /// <summary>
 /// Builds the board from a cached ranking (<c>progress:challenge-board:{id}</c>, absolute 5 minutes). Filtering for
-/// the caller happens after the cache read. Adult: the full ranking. Child: the caller row and the top 5,
-/// alias and avatar only, no user ids, scores only on the caller row. Logs ids and counts only.
+/// the caller happens after the cache read. Adult: one page of the full ranking. Child: the caller row and the top 5
+/// (paging ignored, one page), alias and avatar only, no user ids, scores only on the caller row. Logs ids and counts only.
 /// </summary>
 public sealed class GetChallengeBoardQueryHandler : IQueryHandler<GetChallengeBoardQuery, ChallengeBoardDto>
 {
@@ -44,7 +44,8 @@ public sealed class GetChallengeBoardQueryHandler : IQueryHandler<GetChallengeBo
 
     public async Task<Result<ChallengeBoardDto>> HandleAsync(GetChallengeBoardQuery query, CancellationToken ct = default)
     {
-        _logger.LogInformation("GetChallengeBoardQuery started: ChallengeId={ChallengeId}, UserId={UserId}", query.ChallengeId, query.UserId);
+        _logger.LogInformation("GetChallengeBoardQuery started: ChallengeId={ChallengeId}, UserId={UserId}, Page={Page}, PageSize={PageSize}",
+            query.ChallengeId, query.UserId, query.Page, query.PageSize);
 
         ValidationResult validation = await _validator.ValidateAsync(query, ct);
         if (!validation.IsValid)
@@ -74,10 +75,11 @@ public sealed class GetChallengeBoardQueryHandler : IQueryHandler<GetChallengeBo
         }
 
         BoardSnapshot snapshot = await GetSnapshotAsync(challenge, ct);
-        ChallengeBoardDto board = Filter(challenge, snapshot, query.UserId, audience);
+        ChallengeBoardDto board = Filter(challenge, snapshot, query, audience);
 
         _logger.LogInformation(
-            "GetChallengeBoardQuery succeeded: ChallengeId={ChallengeId}, Entries={Entries}", query.ChallengeId, board.Entries.Count);
+            "GetChallengeBoardQuery succeeded: ChallengeId={ChallengeId}, Entries={Entries}, TotalCount={TotalCount}",
+            query.ChallengeId, board.Entries.Items.Count, board.Entries.TotalCount);
         return Result.Success(board);
     }
 
@@ -118,14 +120,16 @@ public sealed class GetChallengeBoardQueryHandler : IQueryHandler<GetChallengeBo
         return snapshot;
     }
 
-    private static ChallengeBoardDto Filter(Challenge challenge, BoardSnapshot snapshot, Guid userId, ChallengeAudience audience)
+    private static ChallengeBoardDto Filter(Challenge challenge, BoardSnapshot snapshot, GetChallengeBoardQuery query, ChallengeAudience audience)
     {
+        Guid userId = query.UserId;
         BoardSnapshotRow? mine = snapshot.Rows.FirstOrDefault(r => r.UserId == userId);
-        List<ChallengeBoardEntryDto> entries;
+        PagedResult<ChallengeBoardEntryDto> entries;
 
         if (audience == ChallengeAudience.Adult)
         {
-            entries = [.. snapshot.Rows.Select(r => new ChallengeBoardEntryDto(r.Rank, r.Name, r.AvatarId, r.UserId == userId, r.Score, r.TargetReached))];
+            List<ChallengeBoardEntryDto> all = [.. snapshot.Rows.Select(r => new ChallengeBoardEntryDto(r.Rank, r.Name, r.AvatarId, r.UserId == userId, r.Score, r.TargetReached))];
+            entries = Paging.Slice(all, query.Page, query.PageSize);
         }
         else
         {
@@ -136,11 +140,14 @@ public sealed class GetChallengeBoardQueryHandler : IQueryHandler<GetChallengeBo
                 visible = visible.Append(mine);
             }
 
-            entries = [.. visible.Select(r =>
+            List<ChallengeBoardEntryDto> childRows = [.. visible.Select(r =>
             {
                 bool isMe = r.UserId == userId;
                 return new ChallengeBoardEntryDto(r.Rank, r.Name, r.AvatarId, isMe, isMe ? r.Score : null, isMe ? r.TargetReached : null);
             })];
+
+            // Paging is ignored: one page, never more than the top 5 and the own row.
+            entries = new PagedResult<ChallengeBoardEntryDto>(childRows, 1, ChildTopCount + 1, childRows.Count);
         }
 
         return new ChallengeBoardDto(

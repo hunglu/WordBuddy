@@ -27,7 +27,7 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Returns(Task.CompletedTask);
     }
 
-    private GetSharedVocabularyWordsQueryHandler CreateHandler() => new(_repository.Object, _cache.Object, _logger.Object);
+    private GetSharedVocabularyWordsQueryHandler CreateHandler() => new(_repository.Object, _cache.Object, new GetSharedVocabularyWordsQueryValidator(), _logger.Object);
 
     private static Sense CreateSharedWord(bool visibleToChildren) => TestWords.Shared(Guid.NewGuid(), visibleToChildren);
 
@@ -38,10 +38,11 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Setup(r => r.GetSharedAsync(false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<Sense>>([CreateSharedWord(true), CreateSharedWord(false)]));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid()));
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid()));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().HaveCount(2);
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.TotalCount.Should().Be(2);
         _repository.Verify(r => r.GetSharedAsync(false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -52,10 +53,11 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Setup(r => r.GetSharedAsync(true, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<Sense>>([CreateSharedWord(true)]));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Child, Guid.NewGuid()));
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Child, Guid.NewGuid()));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().OnlyContain(dto => dto.VisibleToChildren);
+        result.Value.Items.Should().OnlyContain(dto => dto.VisibleToChildren);
+        result.Value.TotalCount.Should().Be(1);
         _repository.Verify(r => r.GetSharedAsync(true, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -70,12 +72,12 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Setup(r => r.GetSharedAsync(false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<IReadOnlyList<Sense>>([own, other, transferred]));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, callerId));
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, callerId));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Single(d => d.Id == own.Id).IsMine.Should().BeTrue();
-        result.Value.Single(d => d.Id == other.Id).IsMine.Should().BeFalse();
-        result.Value.Single(d => d.Id == transferred.Id).IsMine.Should().BeFalse();
+        result.Value.Items.Single(d => d.Id == own.Id).IsMine.Should().BeTrue();
+        result.Value.Items.Single(d => d.Id == other.Id).IsMine.Should().BeFalse();
+        result.Value.Items.Single(d => d.Id == transferred.Id).IsMine.Should().BeFalse();
     }
 
     [Fact]
@@ -90,11 +92,92 @@ public class GetSharedVocabularyWordsQueryHandlerTests
             .Setup(c => c.GetAsync("content:vocabulary-shared:False", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(cachedDtos)));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, callerId));
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetSharedVocabularyWordsQuery(AgeGroup.Adult, callerId));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Single(d => d.Id == own.Id).IsMine.Should().BeTrue();
-        result.Value.Single(d => d.Id == transferred.Id).IsMine.Should().BeFalse();
+        result.Value.Items.Single(d => d.Id == own.Id).IsMine.Should().BeTrue();
+        result.Value.Items.Single(d => d.Id == transferred.Id).IsMine.Should().BeFalse();
         _repository.Verify(r => r.GetSharedAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void CacheHit(string key, IEnumerable<PersonalVocabularyWordDto> dtos) =>
+        _cache
+            .Setup(c => c.GetAsync(key, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(dtos.ToList())));
+
+    [Fact]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_CacheHit_SlicesPageAndKeepsTotal()
+    {
+        List<PersonalVocabularyWordDto> pool = Enumerable.Range(0, 5)
+            .Select(i => PersonalVocabularyWordMapper.ToDto(TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, word: $"word{i}")))
+            .ToList();
+        CacheHit("content:vocabulary-shared:False", pool);
+
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(
+            new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid(), null, 2, 2));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Select(d => d.Word).Should().Equal("word2", "word3");
+        result.Value.TotalCount.Should().Be(5);
+        result.Value.Page.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_PastTheEnd_ReturnsEmptyItemsAndRealTotal()
+    {
+        List<PersonalVocabularyWordDto> pool = [PersonalVocabularyWordMapper.ToDto(TestWords.Shared(Guid.NewGuid(), visibleToChildren: true))];
+        CacheHit("content:vocabulary-shared:False", pool);
+
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(
+            new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid(), null, 9, 25));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().BeEmpty();
+        result.Value.TotalCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_Search_FiltersCaseInsensitiveBeforePaging()
+    {
+        List<PersonalVocabularyWordDto> pool =
+        [
+            PersonalVocabularyWordMapper.ToDto(TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, word: "Apple")),
+            PersonalVocabularyWordMapper.ToDto(TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, word: "banana")),
+            PersonalVocabularyWordMapper.ToDto(TestWords.Shared(Guid.NewGuid(), visibleToChildren: true, word: "pineapple")),
+        ];
+        CacheHit("content:vocabulary-shared:False", pool);
+
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(
+            new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid(), "APPLE", 1, 25));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Select(d => d.Word).Should().BeEquivalentTo("Apple", "pineapple");
+        result.Value.TotalCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_Child_UsesChildCacheSoTotalExcludesNonChildWords()
+    {
+        List<PersonalVocabularyWordDto> childPool = [PersonalVocabularyWordMapper.ToDto(TestWords.Shared(Guid.NewGuid(), visibleToChildren: true))];
+        CacheHit("content:vocabulary-shared:True", childPool);
+
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(
+            new GetSharedVocabularyWordsQuery(AgeGroup.Child, Guid.NewGuid()));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.TotalCount.Should().Be(1);
+        _repository.Verify(r => r.GetSharedAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 101)]
+    public async Task GetSharedVocabularyWordsQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(
+            new GetSharedVocabularyWordsQuery(AgeGroup.Adult, Guid.NewGuid(), null, page, pageSize));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
     }
 }

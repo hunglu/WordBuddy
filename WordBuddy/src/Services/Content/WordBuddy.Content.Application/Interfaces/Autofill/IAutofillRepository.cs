@@ -22,11 +22,11 @@ public interface IAutofillRepository
 
     /// <summary>Returns a learner's links that wait for child approval (sense not globally
     /// approved, link not approved), senses loaded, oldest first.</summary>
-    Task<Result<IReadOnlyList<LearnerWord>>> GetPendingLinksForLearnerAsync(Guid learnerId, CancellationToken ct = default);
+    Task<Result<PagedResult<LearnerWord>>> GetPendingLinksForLearnerAsync(Guid learnerId, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Returns auto-filled senses that are not <see cref="Sense.VisibleToChildren"/> and that
     /// at least one child linked without a supporter approval yet, oldest first.</summary>
-    Task<Result<IReadOnlyList<Sense>>> GetPendingSensesForAdminAsync(CancellationToken ct = default);
+    Task<Result<PagedResult<Sense>>> GetPendingSensesForAdminAsync(int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Returns the tracked link of a learner to a sense, sense loaded, or not found.</summary>
     Task<Result<LearnerWord>> GetTrackedLinkAsync(Guid learnerId, Guid senseId, CancellationToken ct = default);

@@ -32,11 +32,11 @@ internal sealed class ChallengeRepository : IChallengeRepository
         return challenge is null ? Result.Failure<Challenge>(ChallengeErrors.NotFound) : Result.Success(challenge);
     }
 
-    public async Task<IReadOnlyList<Challenge>> GetActiveAsync(ChallengeAudience audience, CancellationToken ct = default) =>
+    public async Task<PagedResult<Challenge>> GetActiveAsync(ChallengeAudience audience, int page, int pageSize, CancellationToken ct = default) =>
         await _dbContext.Challenges
             .Where(c => c.Audience == audience && (c.Status == ChallengeStatus.Open || c.Status == ChallengeStatus.Running))
-            .OrderBy(c => c.StartsAtUtc).ThenBy(c => c.TemplateKey)
-            .ToListAsync(ct);
+            .OrderBy(c => c.StartsAtUtc).ThenBy(c => c.TemplateKey).ThenBy(c => c.Id)
+            .ToPagedResultAsync(page, pageSize, ct);
 
     public async Task<IReadOnlyList<Challenge>> GetNotFinishedTrackedAsync(CancellationToken ct = default) =>
         await _dbContext.Challenges.AsTracking().Where(c => c.Status != ChallengeStatus.Finished).OrderBy(c => c.StartsAtUtc).ToListAsync(ct);

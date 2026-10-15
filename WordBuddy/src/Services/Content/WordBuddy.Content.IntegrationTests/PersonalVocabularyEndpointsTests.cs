@@ -63,9 +63,7 @@ public sealed class PersonalVocabularyEndpointsTests
         addResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         Guid wordId = await addResponse.Content.ReadFromJsonAsync<Guid>();
 
-        HttpResponseMessage mineResponse = await owner.GetAsync("/api/vocabulary/mine");
-        mineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<PersonalVocabularyWordDto>? mine = await mineResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions);
+        List<PersonalVocabularyWordDto> mine = await GetListAsync(owner, "/api/vocabulary/mine");
         mine.Should().Contain(w => w.Id == wordId && w.ShareStatus == VocabularyShareStatus.Private);
 
         HttpResponseMessage shareResponse = await owner.PostAsync($"/api/vocabulary/{wordId}/share", content: null);
@@ -75,9 +73,7 @@ public sealed class PersonalVocabularyEndpointsTests
             $"/api/vocabulary/moderation/{wordId}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: true));
         moderateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        HttpResponseMessage sharedResponse = await owner.GetAsync("/api/vocabulary/shared");
-        sharedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<PersonalVocabularyWordDto>? shared = await sharedResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions);
+        List<PersonalVocabularyWordDto> shared = await GetListAsync(owner, "/api/vocabulary/shared");
         shared.Should().Contain(w => w.Id == wordId && w.VisibleToChildren);
     }
 
@@ -97,9 +93,7 @@ public sealed class PersonalVocabularyEndpointsTests
         await owner.PostAsync($"/api/vocabulary/{wordId}/share", content: null);
         await admin.PostAsJsonAsync($"/api/vocabulary/moderation/{wordId}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: false));
 
-        HttpResponseMessage childSharedResponse = await child.GetAsync("/api/vocabulary/shared");
-        childSharedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        List<PersonalVocabularyWordDto>? childShared = await childSharedResponse.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions);
+        List<PersonalVocabularyWordDto> childShared = await GetListAsync(child, "/api/vocabulary/shared");
         childShared.Should().NotContain(w => w.Id == wordId);
     }
 
@@ -141,9 +135,7 @@ public sealed class PersonalVocabularyEndpointsTests
 
     private static async Task<List<PersonalVocabularyWordDto>> GetListAsync(HttpClient client, string url)
     {
-        HttpResponseMessage response = await client.GetAsync(url);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        return (await response.Content.ReadFromJsonAsync<List<PersonalVocabularyWordDto>>(JsonOptions))!;
+        return await PagedHttp.GetAllAsync<PersonalVocabularyWordDto>(client, url, JsonOptions);
     }
 
     /// <summary>The owner adds and shares a word; an admin approves it when <paramref name="approve"/>.</summary>
@@ -264,10 +256,8 @@ public sealed class PersonalVocabularyEndpointsTests
 
     private static async Task<JsonElement[]> GetJsonArrayAsync(HttpClient client, string url)
     {
-        HttpResponseMessage response = await client.GetAsync(url);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        return document.RootElement.EnumerateArray().Select(e => e.Clone()).ToArray();
+        JsonElement array = await PagedHttp.GetAllAsArrayAsync(client, url);
+        return array.EnumerateArray().ToArray();
     }
 
     private async Task<(int Lexemes, int Senses)> CountLexemesAndSensesAsync(string word)

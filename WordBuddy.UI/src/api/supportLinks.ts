@@ -5,6 +5,8 @@ import type {
   CreatedInvitation,
   InvitationSide,
   MySupportLinks,
+  PageParams,
+  PagedResult,
   SupportLink,
   SupportRelationship,
   User,
@@ -69,8 +71,8 @@ export async function escalateUnlink(linkId: string): Promise<void> {
 
 // ── Admin ───────────────────────────────────────────────────────────────────
 
-export async function getAdminUnlinkRequests(): Promise<AdminUnlinkRequest[]> {
-  const { data } = await apiClient.get<AdminUnlinkRequest[]>('/auth/admin/unlink-requests')
+export async function getAdminUnlinkRequests(paging: PageParams): Promise<PagedResult<AdminUnlinkRequest>> {
+  const { data } = await apiClient.get<PagedResult<AdminUnlinkRequest>>('/auth/admin/unlink-requests', { params: paging })
   return data
 }
 
@@ -82,8 +84,10 @@ export async function adminRejectUnlink(id: string, reason: string): Promise<voi
   await apiClient.post(`/auth/admin/unlink-requests/${id}/reject`, { reason })
 }
 
-export async function getAdminLearnerSupportLinks(learnerId: string): Promise<AdminSupportLink[]> {
-  const { data } = await apiClient.get<AdminSupportLink[]>('/auth/admin/support-links', { params: { learnerId } })
+export async function getAdminLearnerSupportLinks(learnerId: string, paging: PageParams): Promise<PagedResult<AdminSupportLink>> {
+  const { data } = await apiClient.get<PagedResult<AdminSupportLink>>('/auth/admin/support-links', {
+    params: { learnerId, ...paging },
+  })
   return data
 }
 

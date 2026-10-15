@@ -20,8 +20,8 @@ public interface IVocabularyWordRepository
     /// can never probe for other users' word ids.</summary>
     Task<Result<LearnerWord>> GetLinkAsync(Guid userId, Guid senseId, CancellationToken ct = default);
 
-    /// <summary>Returns all of a learner's links with their senses loaded, newest first.</summary>
-    Task<Result<IReadOnlyList<LearnerWord>>> GetLinkedToUserAsync(Guid userId, CancellationToken ct = default);
+    /// <summary>Returns one page of a learner's links with their senses loaded, newest first.</summary>
+    Task<Result<PagedResult<LearnerWord>>> GetLinkedToUserAsync(Guid userId, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Returns one page of learner links (ids and add time only), ordered by link id, skipping
     /// <see cref="SystemOwner"/> links. Keyset paging: only links with an id after
@@ -45,8 +45,8 @@ public interface IVocabularyWordRepository
     /// <paramref name="search"/> (<see langword="null"/> or empty = no text filter), ordered by word.</summary>
     Task<Result<IReadOnlyList<Sense>>> SearchAttachableAsync(string? search, int take, CancellationToken ct = default);
 
-    /// <summary>Returns senses awaiting moderation, oldest first.</summary>
-    Task<Result<IReadOnlyList<Sense>>> GetPendingModerationAsync(CancellationToken ct = default);
+    /// <summary>Returns one page of senses awaiting moderation, oldest first.</summary>
+    Task<Result<PagedResult<Sense>>> GetPendingModerationAsync(int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>Returns the <see cref="Lexeme"/> for <paramref name="word"/> with an unknown
     /// (<see langword="null"/>) part of speech, creating it when missing. Safe under concurrency:

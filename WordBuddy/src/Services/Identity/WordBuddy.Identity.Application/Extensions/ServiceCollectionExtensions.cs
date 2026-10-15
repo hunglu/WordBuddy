@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Shared.Kernel;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Features.Groups;
 using WordBuddy.Identity.Application.Features.Groups.Commands.AddGroupMembers;
@@ -11,7 +12,9 @@ using WordBuddy.Identity.Application.Features.Groups.Commands.RemoveGroupMember;
 using WordBuddy.Identity.Application.Features.Groups.Commands.RenameGroup;
 using WordBuddy.Identity.Application.Features.Groups.Commands.RespondToGroupMembership;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroup;
-using WordBuddy.Identity.Application.Features.Groups.Queries.GetMyGroups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroupMembers;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetJoinedGroups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetOwnedGroups;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetPendingGroupApprovals;
 using WordBuddy.Identity.Application.Features.Auth.Commands.Login;
 using WordBuddy.Identity.Application.Features.Auth.Commands.RegisterUser;
@@ -99,8 +102,10 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IQueryHandler<GetMySupportLinksQuery, MySupportLinksDto>, GetMySupportLinksQueryHandler>();
         services.AddScoped<IQueryHandler<GetPendingSupporterApprovalsQuery, IReadOnlyList<SupportLinkDto>>, GetPendingSupporterApprovalsQueryHandler>();
-        services.AddScoped<IQueryHandler<GetUnlinkRequestsForAdminQuery, IReadOnlyList<AdminUnlinkRequestDto>>, GetUnlinkRequestsForAdminQueryHandler>();
-        services.AddScoped<IQueryHandler<GetLearnerSupportLinksForAdminQuery, IReadOnlyList<AdminSupportLinkDto>>, GetLearnerSupportLinksForAdminQueryHandler>();
+        services.AddScoped<IValidator<GetUnlinkRequestsForAdminQuery>, GetUnlinkRequestsForAdminQueryValidator>();
+        services.AddScoped<IQueryHandler<GetUnlinkRequestsForAdminQuery, PagedResult<AdminUnlinkRequestDto>>, GetUnlinkRequestsForAdminQueryHandler>();
+        services.AddScoped<IValidator<GetLearnerSupportLinksForAdminQuery>, GetLearnerSupportLinksForAdminQueryValidator>();
+        services.AddScoped<IQueryHandler<GetLearnerSupportLinksForAdminQuery, PagedResult<AdminSupportLinkDto>>, GetLearnerSupportLinksForAdminQueryHandler>();
 
         // Learning groups
         services.AddScoped<ILearnerGroupMembershipCleaner, LearnerGroupMembershipCleaner>();
@@ -120,9 +125,16 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommandHandler<RespondToGroupMembershipCommand>, RespondToGroupMembershipCommandHandler>();
         services.AddScoped<IValidator<RespondToGroupMembershipCommand>, RespondToGroupMembershipCommandValidator>();
 
-        services.AddScoped<IQueryHandler<GetMyGroupsQuery, MyGroupsDto>, GetMyGroupsQueryHandler>();
+        services.AddScoped<LearnerGroupSnapshotLoader>();
+        services.AddScoped<IValidator<GetOwnedGroupsQuery>, GetOwnedGroupsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetOwnedGroupsQuery, PagedResult<OwnedGroupDto>>, GetOwnedGroupsQueryHandler>();
+        services.AddScoped<IValidator<GetJoinedGroupsQuery>, GetJoinedGroupsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetJoinedGroupsQuery, PagedResult<JoinedGroupDto>>, GetJoinedGroupsQueryHandler>();
+        services.AddScoped<IValidator<GetGroupMembersQuery>, GetGroupMembersQueryValidator>();
+        services.AddScoped<IQueryHandler<GetGroupMembersQuery, PagedResult<GroupMemberDto>>, GetGroupMembersQueryHandler>();
         services.AddScoped<IQueryHandler<GetGroupQuery, LearnerGroupDetailDto>, GetGroupQueryHandler>();
-        services.AddScoped<IQueryHandler<GetPendingGroupApprovalsQuery, IReadOnlyList<PendingGroupApprovalDto>>, GetPendingGroupApprovalsQueryHandler>();
+        services.AddScoped<IValidator<GetPendingGroupApprovalsQuery>, GetPendingGroupApprovalsQueryValidator>();
+        services.AddScoped<IQueryHandler<GetPendingGroupApprovalsQuery, PagedResult<PendingGroupApprovalDto>>, GetPendingGroupApprovalsQueryHandler>();
 
         return services;
     }

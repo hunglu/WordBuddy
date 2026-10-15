@@ -18,9 +18,6 @@ public sealed record AdminLexemeListItemDto(
     int CatalogSenseCount,
     int PrivateLearnerSenseCount);
 
-/// <summary>One page of the admin lexeme list.</summary>
-public sealed record AdminLexemePageDto(IReadOnlyList<AdminLexemeListItemDto> Items, int TotalCount, int Page, int PageSize);
-
 /// <summary>A catalog sense (system word or shared-pool word) of a lexeme, read-only. Private,
 /// pending and rejected learner senses are never listed.</summary>
 public sealed record AdminLexemeSenseDto(

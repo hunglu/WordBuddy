@@ -17,6 +17,7 @@ using WordBuddy.Progress.Application.Features.VocabularySrs.Commands.UpdateLearn
 using WordBuddy.Progress.Application.Features.VocabularySrs.Queries.GetLearnerVocabularySettings;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Shared.Application.Abstractions;
+using WordBuddy.Shared.Kernel;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Features.LearnerWords.Commands.RecordLearnerWordAdded;
 using WordBuddy.Progress.Application.Features.LearnerWords.Commands.RecordLearnerWordRemoved;
@@ -92,7 +93,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IChallengeConsentCleaner, ChallengeConsentCleaner>();
         services.AddScoped<ChallengeScoreProjector>();
 
-        services.AddScoped<IQueryHandler<ListChallengesQuery, IReadOnlyList<ChallengeDto>>, ListChallengesQueryHandler>();
+        services.AddScoped<IQueryHandler<ListChallengesQuery, PagedResult<ChallengeDto>>, ListChallengesQueryHandler>();
         services.AddScoped<IValidator<ListChallengesQuery>, ListChallengesQueryValidator>();
         services.AddScoped<IQueryHandler<GetChallengeBoardQuery, ChallengeBoardDto>, GetChallengeBoardQueryHandler>();
         services.AddScoped<IValidator<GetChallengeBoardQuery>, GetChallengeBoardQueryValidator>();

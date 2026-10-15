@@ -5,7 +5,9 @@ import { useState, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
+import { CARD_PAGE_SIZE } from '../api/paging'
 import { AutofillResults } from '../components/autofill/AutofillResults'
+import { Pager } from '../components/Pager'
 import { SenseDetails } from '../components/autofill/SenseDetails'
 import { DeleteWordConfirmDialog, needsDeleteConfirmation } from '../components/vocabulary/DeleteWordConfirmDialog'
 import { EditWordForm } from '../components/vocabulary/EditWordForm'
@@ -17,6 +19,7 @@ import {
   useMyVocabularyWords,
   useRequestShareVocabularyWord,
 } from '../hooks/useVocabulary'
+import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 import { shareStatusClasses } from '../theme/variants'
 import type { PersonalVocabularyWord } from '../types'
@@ -32,7 +35,11 @@ type WordFormValues = z.infer<typeof wordSchema>
 
 export function VocabularyBuilderPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
-  const { data: words, isLoading, isError } = useMyVocabularyWords()
+  const pagination = usePagination(CARD_PAGE_SIZE)
+  const { data: page, isLoading, isError } = useMyVocabularyWords(pagination.params)
+  // A delete or an edit can empty the current page: move to the last page that still has words.
+  pagination.clamp(page?.totalCount)
+  const words = page?.items
   const addWord = useAddVocabularyWord()
   const deleteWord = useDeleteVocabularyWord()
   const requestShare = useRequestShareVocabularyWord()
@@ -208,7 +215,7 @@ export function VocabularyBuilderPage(): ReactElement {
         </p>
       )}
 
-      {words && words.length === 0 && (
+      {page && page.totalCount === 0 && (
         <p className="mt-8 text-lg text-wb-ink-muted">You haven't added any words yet — start above!</p>
       )}
 
@@ -269,6 +276,17 @@ export function VocabularyBuilderPage(): ReactElement {
             </div>
           ))}
         </div>
+      )}
+
+      {page && (
+        <Pager
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={page.totalCount}
+          onPageChange={pagination.setPage}
+          label="My vocabulary pages"
+          itemLabel="words"
+        />
       )}
 
       <DeleteWordConfirmDialog

@@ -14,18 +14,18 @@ public class GetMyVocabularyWordsQueryHandlerTests
     private readonly Mock<IVocabularyWordRepository> _repository = new();
     private readonly Mock<ILogger<GetMyVocabularyWordsQueryHandler>> _logger = new();
 
-    private GetMyVocabularyWordsQueryHandler CreateHandler() => new(_repository.Object, _logger.Object);
+    private GetMyVocabularyWordsQueryHandler CreateHandler() => new(_repository.Object, new GetMyVocabularyWordsQueryValidator(), _logger.Object);
 
     private async Task<PersonalVocabularyWordDto> GetSingleAsync(Guid userId, LearnerWord link)
     {
         _repository
-            .Setup(r => r.GetLinkedToUserAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<IReadOnlyList<LearnerWord>>([link]));
+            .Setup(r => r.GetLinkedToUserAsync(userId, 1, 25, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedResult<LearnerWord>([link], 1, 25, 1)));
 
-        Result<IReadOnlyList<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(userId, AgeGroup.Adult));
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(userId, AgeGroup.Adult));
 
         result.IsSuccess.Should().BeTrue();
-        return result.Value.Should().ContainSingle().Subject;
+        return result.Value.Items.Should().ContainSingle().Subject;
     }
 
     [Fact]
@@ -69,5 +69,36 @@ public class GetMyVocabularyWordsQueryHandlerTests
         dto.OwnerUserId.Should().Be(userId);
         dto.ShareStatus.Should().Be(VocabularyShareStatus.Private);
         dto.IsAuthor.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetMyVocabularyWordsQueryHandler_HandleAsync_PassesPagingAndKeepsTotal()
+    {
+        Guid userId = Guid.NewGuid();
+        Sense system = TestWords.System();
+        _repository
+            .Setup(r => r.GetLinkedToUserAsync(userId, 3, 5, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedResult<LearnerWord>([new LearnerWord(Guid.NewGuid(), userId, system, isAuthor: false)], 3, 5, 11)));
+
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(userId, AgeGroup.Child, 3, 5));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Page.Should().Be(3);
+        result.Value.PageSize.Should().Be(5);
+        result.Value.TotalCount.Should().Be(11);
+        result.Value.Items.Should().HaveCount(1);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetMyVocabularyWordsQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        Result<PagedResult<PersonalVocabularyWordDto>> result = await CreateHandler().HandleAsync(new GetMyVocabularyWordsQuery(Guid.NewGuid(), AgeGroup.Adult, page, pageSize));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _repository.VerifyNoOtherCalls();
     }
 }

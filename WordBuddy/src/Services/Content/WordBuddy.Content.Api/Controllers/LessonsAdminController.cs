@@ -27,7 +27,7 @@ namespace WordBuddy.Content.Api.Controllers;
 [Authorize(Policy = "AdminOnly")]
 public sealed class LessonsAdminController : ControllerBase
 {
-    private readonly IQueryHandler<GetAdminLessonsQuery, IReadOnlyList<AdminLessonDto>> _getLessons;
+    private readonly IQueryHandler<GetAdminLessonsQuery, PagedResult<AdminLessonDto>> _getLessons;
     private readonly IQueryHandler<GetAdminLessonDetailQuery, AdminLessonDetailDto> _getLessonDetail;
     private readonly IQueryHandler<SearchLessonSensesQuery, IReadOnlyList<AdminSenseSearchResultDto>> _searchSenses;
     private readonly ICommandHandler<CreateLessonCommand, Guid> _createLesson;
@@ -41,7 +41,7 @@ public sealed class LessonsAdminController : ControllerBase
     private readonly ILogger<LessonsAdminController> _logger;
 
     public LessonsAdminController(
-        IQueryHandler<GetAdminLessonsQuery, IReadOnlyList<AdminLessonDto>> getLessons,
+        IQueryHandler<GetAdminLessonsQuery, PagedResult<AdminLessonDto>> getLessons,
         IQueryHandler<GetAdminLessonDetailQuery, AdminLessonDetailDto> getLessonDetail,
         IQueryHandler<SearchLessonSensesQuery, IReadOnlyList<AdminSenseSearchResultDto>> searchSenses,
         ICommandHandler<CreateLessonCommand, Guid> createLesson,
@@ -71,9 +71,15 @@ public sealed class LessonsAdminController : ControllerBase
     /// <summary>Lists drafts and published lessons, optionally filtered.</summary>
     [HttpGet]
     public async Task<IActionResult> GetLessons(
-        [FromQuery] LessonType? type, [FromQuery] Level? level, [FromQuery] bool? isPublished, CancellationToken ct)
+        [FromQuery] LessonType? type,
+        [FromQuery] Level? level,
+        [FromQuery] bool? isPublished,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = Paging.DefaultPageSize,
+        CancellationToken ct = default)
     {
-        Result<IReadOnlyList<AdminLessonDto>> result = await _getLessons.HandleAsync(new GetAdminLessonsQuery(type, level, isPublished), ct);
+        Result<PagedResult<AdminLessonDto>> result = await _getLessons.HandleAsync(
+            new GetAdminLessonsQuery(type, level, isPublished, page, pageSize), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

@@ -12,8 +12,8 @@ public interface IChallengeRepository
     /// <summary>Returns the tracked challenge, or <see cref="ChallengeErrors.NotFound"/>.</summary>
     Task<Result<Challenge>> GetTrackedByIdAsync(Guid challengeId, CancellationToken ct = default);
 
-    /// <summary>Open and Running challenges of one audience (read-only), soonest start first.</summary>
-    Task<IReadOnlyList<Challenge>> GetActiveAsync(ChallengeAudience audience, CancellationToken ct = default);
+    /// <summary>One page of the Open and Running challenges of one audience (read-only), soonest start first.</summary>
+    Task<PagedResult<Challenge>> GetActiveAsync(ChallengeAudience audience, int page, int pageSize, CancellationToken ct = default);
 
     /// <summary>All challenges that are not Finished, tracked. Used by the life cycle.</summary>
     Task<IReadOnlyList<Challenge>> GetNotFinishedTrackedAsync(CancellationToken ct = default);

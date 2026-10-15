@@ -43,7 +43,7 @@ internal sealed class LessonRepository : ILessonRepository
         return Result.Success<IReadOnlyList<Lesson>>(lessons);
     }
 
-    public async Task<Result<IReadOnlyList<Lesson>>> ListAllAsync(LessonType? type, Level? level, bool? isPublished, CancellationToken ct = default)
+    public async Task<Result<PagedResult<Lesson>>> ListAllAsync(LessonType? type, Level? level, bool? isPublished, int page, int pageSize, CancellationToken ct = default)
     {
         _logger.LogDebug("Querying all Lessons: Type={Type}, Level={Level}, IsPublished={IsPublished}", type, level, isPublished);
 
@@ -61,8 +61,8 @@ internal sealed class LessonRepository : ILessonRepository
             query = query.Where(l => l.IsPublished == isPublished);
         }
 
-        List<Lesson> lessons = await query.OrderBy(l => l.Title).ToListAsync(ct);
-        return Result.Success<IReadOnlyList<Lesson>>(lessons);
+        PagedResult<Lesson> lessons = await query.OrderBy(l => l.Title).ThenBy(l => l.Id).ToPagedResultAsync(page, pageSize, ct);
+        return Result.Success(lessons);
     }
 
     public async Task<Result<Lesson>> GetByIdForUpdateAsync(Guid id, CancellationToken ct = default)

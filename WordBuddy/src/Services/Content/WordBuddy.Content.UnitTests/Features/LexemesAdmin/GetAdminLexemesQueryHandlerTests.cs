@@ -19,12 +19,12 @@ public class GetAdminLexemesQueryHandlerTests
     [Fact]
     public async Task GetAdminLexemesQueryHandler_HandleAsync_PassesNormalizedSearchAndPagingToRepository()
     {
-        AdminLexemePageDto page = new([], 0, 3, 10);
+        PagedResult<AdminLexemeListItemDto> page = new([], 3, 10, 0);
         _repository
             .Setup(r => r.SearchAsync("APPLE", PartOfSpeech.Noun, CefrLevel.A1, 3, 10, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(page));
 
-        Result<AdminLexemePageDto> result = await Handler().HandleAsync(
+        Result<PagedResult<AdminLexemeListItemDto>> result = await Handler().HandleAsync(
             new GetAdminLexemesQuery("  apple ", PartOfSpeech.Noun, CefrLevel.A1, 3, 10));
 
         result.IsSuccess.Should().BeTrue();
@@ -36,9 +36,9 @@ public class GetAdminLexemesQueryHandlerTests
     {
         _repository
             .Setup(r => r.SearchAsync(null, null, null, 1, 25, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(new AdminLexemePageDto([], 0, 1, 25)));
+            .ReturnsAsync(Result.Success(new PagedResult<AdminLexemeListItemDto>([], 1, 25, 0)));
 
-        Result<AdminLexemePageDto> result = await Handler().HandleAsync(new GetAdminLexemesQuery("   ", null, null));
+        Result<PagedResult<AdminLexemeListItemDto>> result = await Handler().HandleAsync(new GetAdminLexemesQuery("   ", null, null));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -49,7 +49,7 @@ public class GetAdminLexemesQueryHandlerTests
     [InlineData(-5)]
     public async Task GetAdminLexemesQueryHandler_HandleAsync_InvalidPageSize_ReturnsValidation(int pageSize)
     {
-        Result<AdminLexemePageDto> result = await Handler().HandleAsync(new GetAdminLexemesQuery(null, null, null, 1, pageSize));
+        Result<PagedResult<AdminLexemeListItemDto>> result = await Handler().HandleAsync(new GetAdminLexemesQuery(null, null, null, 1, pageSize));
 
         result.Error.Type.Should().Be(ErrorType.Validation);
         _repository.VerifyNoOtherCalls();
@@ -58,7 +58,7 @@ public class GetAdminLexemesQueryHandlerTests
     [Fact]
     public async Task GetAdminLexemesQueryHandler_HandleAsync_PageZero_ReturnsValidation()
     {
-        Result<AdminLexemePageDto> result = await Handler().HandleAsync(new GetAdminLexemesQuery(null, null, null, 0, 25));
+        Result<PagedResult<AdminLexemeListItemDto>> result = await Handler().HandleAsync(new GetAdminLexemesQuery(null, null, null, 0, 25));
 
         result.Error.Type.Should().Be(ErrorType.Validation);
     }
@@ -66,7 +66,7 @@ public class GetAdminLexemesQueryHandlerTests
     [Fact]
     public async Task GetAdminLexemesQueryHandler_HandleAsync_SearchLongerThan200_ReturnsValidation()
     {
-        Result<AdminLexemePageDto> result = await Handler().HandleAsync(
+        Result<PagedResult<AdminLexemeListItemDto>> result = await Handler().HandleAsync(
             new GetAdminLexemesQuery(new string('a', Lexeme.LemmaMaxLength + 1), null, null));
 
         result.Error.Type.Should().Be(ErrorType.Validation);
@@ -79,9 +79,9 @@ public class GetAdminLexemesQueryHandlerTests
         Error error = Error.Failure("Test.Failure", "boom");
         _repository
             .Setup(r => r.SearchAsync(It.IsAny<string?>(), It.IsAny<PartOfSpeech?>(), It.IsAny<CefrLevel?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<AdminLexemePageDto>(error));
+            .ReturnsAsync(Result.Failure<PagedResult<AdminLexemeListItemDto>>(error));
 
-        Result<AdminLexemePageDto> result = await Handler().HandleAsync(new GetAdminLexemesQuery(null, null, null));
+        Result<PagedResult<AdminLexemeListItemDto>> result = await Handler().HandleAsync(new GetAdminLexemesQuery(null, null, null));
 
         result.Error.Should().Be(error);
     }

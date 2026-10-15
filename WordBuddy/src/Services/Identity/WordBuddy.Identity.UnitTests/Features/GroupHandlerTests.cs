@@ -11,7 +11,10 @@ using WordBuddy.Identity.Application.Features.Groups.Commands.RemoveGroupMember;
 using WordBuddy.Identity.Application.Features.Groups.Commands.RenameGroup;
 using WordBuddy.Identity.Application.Features.Groups.Commands.RespondToGroupMembership;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroup;
-using WordBuddy.Identity.Application.Features.Groups.Queries.GetMyGroups;
+using WordBuddy.Identity.Application.Features.Groups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetGroupMembers;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetJoinedGroups;
+using WordBuddy.Identity.Application.Features.Groups.Queries.GetOwnedGroups;
 using WordBuddy.Identity.Application.Features.Groups.Queries.GetPendingGroupApprovals;
 using WordBuddy.Identity.Domain;
 using WordBuddy.Identity.Domain.Groups;
@@ -385,19 +388,29 @@ public class GroupHandlerTests
         _f.Primaries[child.Id] = parent.Id;
         LearnerGroup group = _f.GivenGroup(teacher);
         LearnerGroupMember member = _f.GivenMember(group, teacher, child, ownerIsPrimary: false);
-        GetPendingGroupApprovalsQueryHandler handler = new(_f.Users.Object, _f.Groups.Object, Mock.Of<ILogger<GetPendingGroupApprovalsQueryHandler>>());
+        GetPendingGroupApprovalsQueryHandler handler = new(_f.Users.Object, _f.Groups.Object, new GetPendingGroupApprovalsQueryValidator(), Mock.Of<ILogger<GetPendingGroupApprovalsQueryHandler>>());
 
-        Result<IReadOnlyList<PendingGroupApprovalDto>> forPrimary = await handler.HandleAsync(new GetPendingGroupApprovalsQuery(parent.Id));
-        Result<IReadOnlyList<PendingGroupApprovalDto>> forTeacher = await handler.HandleAsync(new GetPendingGroupApprovalsQuery(teacher.Id));
+        Result<PagedResult<PendingGroupApprovalDto>> forPrimary = await handler.HandleAsync(new GetPendingGroupApprovalsQuery(parent.Id));
+        Result<PagedResult<PendingGroupApprovalDto>> forTeacher = await handler.HandleAsync(new GetPendingGroupApprovalsQuery(teacher.Id));
 
-        forPrimary.Value.Should().ContainSingle(a => a.MemberId == member.Id && a.LearnerName == "Child learner");
-        forTeacher.Value.Should().BeEmpty();
+        forPrimary.Value.Items.Should().ContainSingle(a => a.MemberId == member.Id && a.LearnerName == "Child learner");
+        forPrimary.Value.TotalCount.Should().Be(1);
+        forTeacher.Value.Items.Should().BeEmpty();
+        forTeacher.Value.TotalCount.Should().Be(0);
     }
 
     // ── Queries ─────────────────────────────────────────────────────────────
 
+    private LearnerGroupSnapshotLoader SnapshotLoader() =>
+        new(_f.Users.Object, _f.Groups.Object, _f.Cache.Object, _f.Options, Mock.Of<ILogger<LearnerGroupSnapshotLoader>>());
+
+    private GetGroupQueryHandler GetGroupHandler() => new(SnapshotLoader(), Mock.Of<ILogger<GetGroupQueryHandler>>());
+
+    private GetGroupMembersQueryHandler MembersHandler() =>
+        new(SnapshotLoader(), new GetGroupMembersQueryValidator(), Mock.Of<ILogger<GetGroupMembersQueryHandler>>());
+
     [Fact]
-    public async Task GetGroupQueryHandler_HandleAsync_OwnerSeesPublicNamesOnly()
+    public async Task GetGroupQueryHandler_HandleAsync_OwnerGetsCountsAndLearnerIdsNoMembers()
     {
         User teacher = TestData.Adult("Teacher");
         User child = TestData.Child("Secret");
@@ -406,14 +419,14 @@ public class GroupHandlerTests
         LearnerGroup group = _f.GivenGroup(teacher);
         _f.GivenMember(group, teacher, child);
         _f.GivenMember(group, teacher, adult);
-        GetGroupQueryHandler handler = new(_f.Users.Object, _f.Groups.Object, _f.Cache.Object, _f.Options, Mock.Of<ILogger<GetGroupQueryHandler>>());
 
-        Result<LearnerGroupDetailDto> result = await handler.HandleAsync(new GetGroupQuery(group.Id, teacher.Id));
+        Result<LearnerGroupDetailDto> result = await GetGroupHandler().HandleAsync(new GetGroupQuery(group.Id, teacher.Id));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Members.Should().Contain(m => m.LearnerId == child.Id && m.PublicName == "Child learner");
-        result.Value.Members.Should().NotContain(m => m.PublicName.Contains("Secret"));
-        result.Value.Members.Should().Contain(m => m.LearnerId == adult.Id && m.PublicName == "Learner");
+        result.Value.ActiveMemberCount.Should().Be(2);
+        result.Value.PendingMemberCount.Should().Be(0);
+        result.Value.MemberLearnerIds.Should().BeEquivalentTo([child.Id, adult.Id]);
+        typeof(LearnerGroupDetailDto).GetProperties().Select(p => p.Name).Should().NotContain("Members");
     }
 
     [Fact]
@@ -424,15 +437,96 @@ public class GroupHandlerTests
         _f.GivenUsers(teacher, adult);
         LearnerGroup group = _f.GivenGroup(teacher);
         _f.GivenMember(group, teacher, adult);
-        GetGroupQueryHandler handler = new(_f.Users.Object, _f.Groups.Object, _f.Cache.Object, _f.Options, Mock.Of<ILogger<GetGroupQueryHandler>>());
 
-        Result<LearnerGroupDetailDto> result = await handler.HandleAsync(new GetGroupQuery(group.Id, adult.Id));
+        Result<LearnerGroupDetailDto> result = await GetGroupHandler().HandleAsync(new GetGroupQuery(group.Id, adult.Id));
 
         result.Error.Should().Be(LearnerGroupErrors.NotOwner);
     }
 
     [Fact]
-    public async Task GetMyGroupsQueryHandler_HandleAsync_LearnerSeesNameAndOwnerNoMembers()
+    public async Task GetGroupMembersQueryHandler_HandleAsync_OwnerSeesPublicNamesOnlyInPages()
+    {
+        User teacher = TestData.Adult("Teacher");
+        User child = TestData.Child("Secret");
+        User adult = TestData.Adult("Learner");
+        User third = TestData.Adult("Third");
+        _f.GivenUsers(teacher, child, adult, third);
+        LearnerGroup group = _f.GivenGroup(teacher);
+        _f.GivenMember(group, teacher, child);
+        _f.GivenMember(group, teacher, adult);
+        _f.GivenMember(group, teacher, third);
+
+        Result<PagedResult<GroupMemberDto>> first = await MembersHandler().HandleAsync(new GetGroupMembersQuery(group.Id, teacher.Id, 1, 2));
+        Result<PagedResult<GroupMemberDto>> second = await MembersHandler().HandleAsync(new GetGroupMembersQuery(group.Id, teacher.Id, 2, 2));
+
+        first.IsSuccess.Should().BeTrue();
+        first.Value.Items.Should().HaveCount(2);
+        first.Value.TotalCount.Should().Be(3);
+        second.Value.Items.Should().HaveCount(1);
+        first.Value.Items.Concat(second.Value.Items).Should().Contain(m => m.LearnerId == child.Id && m.PublicName == "Child learner");
+        first.Value.Items.Concat(second.Value.Items).Should().NotContain(m => m.PublicName.Contains("Secret"));
+    }
+
+    [Fact]
+    public async Task GetGroupMembersQueryHandler_HandleAsync_NonOwnerForbidden()
+    {
+        User teacher = TestData.Adult("Teacher");
+        User adult = TestData.Adult("Learner");
+        _f.GivenUsers(teacher, adult);
+        LearnerGroup group = _f.GivenGroup(teacher);
+        _f.GivenMember(group, teacher, adult);
+
+        Result<PagedResult<GroupMemberDto>> result = await MembersHandler().HandleAsync(new GetGroupMembersQuery(group.Id, adult.Id));
+
+        result.Error.Should().Be(LearnerGroupErrors.NotOwner);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, 101)]
+    public async Task GetGroupMembersQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        Result<PagedResult<GroupMemberDto>> result = await MembersHandler().HandleAsync(new GetGroupMembersQuery(Guid.NewGuid(), Guid.NewGuid(), page, pageSize));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task LearnerGroupSnapshotLoader_LoadAsync_CacheMiss_StoresSnapshotUnderSnapshotKey()
+    {
+        User teacher = TestData.Adult("Teacher");
+        User adult = TestData.Adult("Learner");
+        _f.GivenUsers(teacher, adult);
+        LearnerGroup group = _f.GivenGroup(teacher);
+        _f.GivenMember(group, teacher, adult);
+
+        Result<LearnerGroupSnapshot> result = await SnapshotLoader().LoadAsync(group.Id);
+
+        result.IsSuccess.Should().BeTrue();
+        LearnerGroupCache.Key(group.Id).Should().Be($"identity:group-snapshot:{group.Id}");
+        _f.Cache.Verify(c => c.SetAsync(
+            $"identity:group-snapshot:{group.Id}", It.IsAny<byte[]>(), It.IsAny<Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LearnerGroupSnapshotLoader_LoadAsync_CacheHit_SkipsRepository()
+    {
+        Guid groupId = Guid.NewGuid();
+        LearnerGroupSnapshot cached = new(groupId, Guid.NewGuid(), "Cached", TestData.Now, []);
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(
+            System.Text.Json.JsonSerializer.Serialize(cached, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
+        _f.Cache.Setup(c => c.GetAsync($"identity:group-snapshot:{groupId}", It.IsAny<CancellationToken>())).ReturnsAsync(bytes);
+
+        Result<LearnerGroupSnapshot> result = await SnapshotLoader().LoadAsync(groupId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Name.Should().Be("Cached");
+        _f.Groups.Verify(g => g.GetGroupAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetJoinedAndOwnedGroups_HandleAsync_LearnerSeesNameAndOwnerNoMembers()
     {
         User teacher = TestData.Adult("Teacher");
         User adult = TestData.Adult("Learner");
@@ -441,14 +535,49 @@ public class GroupHandlerTests
         LearnerGroup group = _f.GivenGroup(teacher);
         _f.GivenMember(group, teacher, adult);
         _f.GivenMember(group, teacher, other);
-        GetMyGroupsQueryHandler handler = new(_f.Users.Object, _f.Groups.Object, Mock.Of<ILogger<GetMyGroupsQueryHandler>>());
+        GetJoinedGroupsQueryHandler joined = new(_f.Users.Object, _f.Groups.Object, new GetJoinedGroupsQueryValidator(), Mock.Of<ILogger<GetJoinedGroupsQueryHandler>>());
+        GetOwnedGroupsQueryHandler owned = new(_f.Groups.Object, new GetOwnedGroupsQueryValidator(), Mock.Of<ILogger<GetOwnedGroupsQueryHandler>>());
 
-        Result<MyGroupsDto> learnerView = await handler.HandleAsync(new GetMyGroupsQuery(adult.Id));
-        Result<MyGroupsDto> ownerView = await handler.HandleAsync(new GetMyGroupsQuery(teacher.Id));
+        Result<PagedResult<JoinedGroupDto>> learnerJoined = await joined.HandleAsync(new GetJoinedGroupsQuery(adult.Id));
+        Result<PagedResult<OwnedGroupDto>> learnerOwned = await owned.HandleAsync(new GetOwnedGroupsQuery(adult.Id));
+        Result<PagedResult<OwnedGroupDto>> ownerOwned = await owned.HandleAsync(new GetOwnedGroupsQuery(teacher.Id));
 
-        learnerView.Value.Owned.Should().BeEmpty();
-        learnerView.Value.Joined.Should().ContainSingle(j => j.Id == group.Id && j.OwnerName == "Teacher");
+        learnerOwned.Value.Items.Should().BeEmpty();
+        learnerOwned.Value.TotalCount.Should().Be(0);
+        learnerJoined.Value.Items.Should().ContainSingle(j => j.Id == group.Id && j.OwnerName == "Teacher");
+        learnerJoined.Value.TotalCount.Should().Be(1);
         typeof(JoinedGroupDto).GetProperties().Select(p => p.Name).Should().NotContain("Members");
-        ownerView.Value.Owned.Should().ContainSingle(o => o.Id == group.Id && o.ActiveMemberCount == 2);
+        ownerOwned.Value.Items.Should().ContainSingle(o => o.Id == group.Id && o.ActiveMemberCount == 2);
+    }
+
+    [Fact]
+    public async Task GetOwnedGroupsQueryHandler_HandleAsync_PagesGroups()
+    {
+        User teacher = TestData.Adult("Teacher");
+        _f.GivenUsers(teacher);
+        for (int i = 0; i < 3; i++)
+        {
+            _f.GivenGroup(teacher, $"Group {i}");
+        }
+
+        GetOwnedGroupsQueryHandler owned = new(_f.Groups.Object, new GetOwnedGroupsQueryValidator(), Mock.Of<ILogger<GetOwnedGroupsQueryHandler>>());
+
+        Result<PagedResult<OwnedGroupDto>> second = await owned.HandleAsync(new GetOwnedGroupsQuery(teacher.Id, 2, 2));
+
+        second.Value.Items.Should().HaveCount(1);
+        second.Value.TotalCount.Should().Be(3);
+        second.Value.Page.Should().Be(2);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(1, 101)]
+    public async Task GetOwnedGroupsQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
+    {
+        GetOwnedGroupsQueryHandler owned = new(_f.Groups.Object, new GetOwnedGroupsQueryValidator(), Mock.Of<ILogger<GetOwnedGroupsQueryHandler>>());
+
+        Result<PagedResult<OwnedGroupDto>> result = await owned.HandleAsync(new GetOwnedGroupsQuery(Guid.NewGuid(), page, pageSize));
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
     }
 }
