@@ -22,7 +22,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | User profile | `user-profile.md` | shipped |
 | Lesson authoring | `lesson-authoring.md` | shipped |
 | Lexeme admin | `lexeme-admin.md` | shipped |
-| List paging | `WB-55_apply-paging-to-table-list.md` | proposed |
+| List paging | `WB-55_apply-paging-to-table-list.md` | shipped |
 | Moderator role | `WB-56_moderator-role-to-assist-admin.md` | proposed |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.

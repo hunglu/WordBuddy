@@ -3,7 +3,7 @@ feature: Lexeme admin
 services: Content | UI
 audience: Adult
 state: shipped
-last-updated-by: WB-50_lexeme-admin-view
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Lexeme admin
@@ -55,8 +55,13 @@ Admins search lexemes, read their catalog senses, correct dictionary fields and 
 - Linux branch of the `LocalFileStorageService` path guard is untested (tests ran on Windows).
 - Ingress 50m limit applies to all paths, including anonymous `/api/auth`; split the Ingress before a cloud deploy.
 
+## Paging (WB-55)
+
+`GET /api/vocabulary/admin/lexemes` now uses the shared `PagedResult` type from `WordBuddy.Shared.Kernel` 1.1.0. The JSON is unchanged. The page uses the shared `Pager` component.
+
 ## Pending changes
 
 ## Change history
 
 - `WB-50_lexeme-admin-view` — admin lexeme list, edit and audio management (#50)
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — lexeme list moved to the shared paged type and pager

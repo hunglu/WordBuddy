@@ -3,7 +3,7 @@ feature: Vocabulary autofill
 services: Content
 audience: Both
 state: shipped
-last-updated-by: WB-25_vocabulary-autofill
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Vocabulary autofill
@@ -75,6 +75,10 @@ Word DTOs (`mine`, `shared`, lesson detail) gained optional `partOfSpeech`, `ipa
 - `/support` learner card: "Words to approve" list with **Approve** (supporters only).
 - Admin moderation: "Auto-filled words" tab (`?tab=autofill`) with **Approve for children**.
 
+## Paging (WB-55)
+
+`GET /api/vocabulary/moderation/autofill-pending` and `GET /api/vocabulary/learners/{id}/pending-approvals` are paged (`{ items, page, pageSize, totalCount }`). The approval panels show a pager.
+
 ## Pending changes
 
 None.
@@ -82,3 +86,4 @@ None.
 ## Change history
 
 - `WB-25_vocabulary-autofill` (#25, PR #37) — auto-fill lookup via catalog / dictionary / Claude; enrichment fields; child approval by supporter or admin; Development-only fake clients
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged autofill approval lists

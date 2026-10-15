@@ -3,7 +3,7 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-49_personal-context-on-learner-word
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Vocabulary storage
@@ -154,6 +154,10 @@ erDiagram
 - `/vocabulary/shared`: each card has an "Add a note" toggle before **Add to My List**.
 - `/vocabulary/shared`: own words show a "Your word" badge instead of **Add to My List**.
 
+## Paging (WB-55)
+
+`GET /api/vocabulary/mine` and `GET /api/vocabulary/shared` return `{ items, page, pageSize, totalCount }`. The shared pool also takes a `search` filter (case-insensitive contains on the word). For a child, `totalCount` counts child-visible words only. The moderation lists (`/moderation/pending`, `/moderation/autofill-pending`) are paged the same way.
+
 ## Pending changes
 
 None.
@@ -167,3 +171,4 @@ None.
 - `WB-27_learning-groups` (#27, PR #39) — `LearnerWords.AddedBy = Supporter` is now written by group assignment (`AddedByUserId` = the supporter, also the `LearnerWordAdded.AddedBy`); `GroupWordAssignments` history and `LearnerGroupMemberProjections` tables; see `learning-groups.md`
 - `WB-48_edit-own-vocabulary-word` (#48, PR #52) — owner-only in-place edit of `Private` senses (`PUT /api/vocabulary/{id}`); sense id kept; audio cleared on word change, image kept
 - `WB-49_personal-context-on-learner-word` (#49, PR #53) — optional personal note on every add flow; `PUT /api/vocabulary/{id}/personal-context`; note on `GET /mine`; UI field and editor
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged My words, shared pool (+ `search`) and moderation lists

@@ -3,7 +3,7 @@ feature: Vocabulary challenges
 services: Identity, Progress, UI
 audience: Both
 state: shipped
-last-updated-by: WB-29_vocabulary-challenges
+last-updated-by: WB-55_apply-paging-to-table-list
 ---
 
 # Vocabulary challenges
@@ -77,6 +77,10 @@ Identity adds `User.TimeZoneId` and `User.IsGuardian`, the `guardian` JWT claim,
 - Profile settings: time zone select. Supporter dashboard: "Allow challenges" toggle per child,
   shown only with the `guardian` claim.
 
+## Paging (WB-55)
+
+`GET /api/progress/challenges` returns a paged result. The board `entries` field is a paged result. For a child the board ignores `page` and `pageSize`: it is always page 1 with the top 5 plus the own row, so a child cannot page past the top 5.
+
 ## Pending changes
 
 None.
@@ -84,3 +88,4 @@ None.
 ## Change history
 
 - `WB-29_vocabulary-challenges` — first release of challenges, boards, guardian consent, time zones.
+- `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged challenge list and board
