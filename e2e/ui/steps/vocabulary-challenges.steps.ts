@@ -84,7 +84,16 @@ When('they open the board of the {string} challenge', async ({ page }, name: str
 })
 
 Then('the board lists them as {string}', async ({ page }, who: string) => {
-  await expect(page.getByRole('row', { name: new RegExp(`\\(${who}\\)`) })).toBeVisible()
+  // The board is paged (WB-55). A fresh learner has no points, so on a database full of e2e
+  // learners they are on a later page: follow "Next" until the row shows.
+  const row = page.getByRole('row', { name: new RegExp(`\\(${who}\\)`) })
+  const next = page.getByRole('button', { name: /Next/ })
+  for (let turn = 0; turn < 50 && !(await row.isVisible()); turn++) {
+    await expect(next).toBeVisible()
+    if (await next.isDisabled()) break
+    await next.click()
+  }
+  await expect(row).toBeVisible()
 })
 
 Then('the message {string} is shown', async ({ page }, text: string) => {

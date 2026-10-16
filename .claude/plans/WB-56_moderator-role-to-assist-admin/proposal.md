@@ -1,14 +1,14 @@
 ---
 title: WB-56_Moderator role to assist admin
-status: reviewed
+status: done
 type: new
 issue: 56
 pr: 58
 affects: docs/features/WB-56_moderator-role-to-assist-admin.md
 supersedes: none
-version: 7.0
+version: 8.0
 created: 2026-10-14T21:42:09+07:00
-updated: 2026-10-16T15:52:46+07:00
+updated: 2026-10-16T22:29:24+07:00
 ---
 
 ## Problem

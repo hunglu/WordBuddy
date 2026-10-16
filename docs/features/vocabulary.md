@@ -3,7 +3,7 @@ feature: Vocabulary storage
 services: Content, Progress
 audience: Both
 state: shipped
-last-updated-by: WB-55_apply-paging-to-table-list
+last-updated-by: WB-56_moderator-role-to-assist-admin
 ---
 
 # Vocabulary storage
@@ -121,7 +121,7 @@ erDiagram
   - The child filter (`VisibleToChildren`) applies per `Sense`, not per `Lexeme`: two meanings of one word can differ.
   - A `Shared` word always applies the child filter, also after hand-over to System.
   - Dedupe (and the migration) never links a Child to a word the Child cannot see, including System words.
-  - Admins moderate (`AdminOnly`) regardless of their own age group.
+  - Admins and adult moderators moderate (`ManageContent`). A moderator cannot moderate their own word (403 `PersonalVocabularyWord.ModerateOwnWordForbidden`); an admin can.
   - An `AutoFill` sense is hidden from a Child until approved by an admin (global) or the child's supporter (that child's link only).
 
 ### Accepted limitations
@@ -143,8 +143,8 @@ erDiagram
 | GET | `/api/vocabulary/shared` | Content | authenticated (Child: child-visible only) |
 | POST | `/api/vocabulary/shared/{id}/add-to-mine` | Content | authenticated (Child: child-visible only) |
 | GET | `/api/vocabulary/check` | Content | authenticated |
-| GET | `/api/vocabulary/moderation/pending` | Content | `AdminOnly` |
-| POST | `/api/vocabulary/moderation/{id}` | Content | `AdminOnly` |
+| GET | `/api/vocabulary/moderation/pending` | Content | `ManageContent` |
+| POST | `/api/vocabulary/moderation/{id}` | Content | `ManageContent` |
 
 ## UI
 
@@ -172,3 +172,4 @@ None.
 - `WB-48_edit-own-vocabulary-word` (#48, PR #52) — owner-only in-place edit of `Private` senses (`PUT /api/vocabulary/{id}`); sense id kept; audio cleared on word change, image kept
 - `WB-49_personal-context-on-learner-word` (#49, PR #53) — optional personal note on every add flow; `PUT /api/vocabulary/{id}/personal-context`; note on `GET /mine`; UI field and editor
 - `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged My words, shared pool (+ `search`) and moderation lists
+- `WB-56_moderator-role-to-assist-admin` (#56, PR #58) — moderation opens to adult moderators (`ManageContent`); moderators cannot moderate their own word

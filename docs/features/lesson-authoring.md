@@ -3,7 +3,7 @@ feature: Lesson authoring
 services: Content | UI
 audience: Both
 state: shipped
-last-updated-by: WB-55_apply-paging-to-table-list
+last-updated-by: WB-56_moderator-role-to-assist-admin
 ---
 
 # Lesson authoring
@@ -26,7 +26,7 @@ Create draft → attach senses → reorder → publish → learners read
 
 ## Rules
 
-- **Child vs adult:** only admins write (`AdminOnly`). `POST /api/lessons` moved to `/api/lessons/admin`; non-admins get 403.
+- **Child vs adult:** only admins and adult moderators write (`ManageContent`). `POST /api/lessons` moved to `/api/lessons/admin`; other learners get 403.
 - **Learner reads:** drafts are never listed. A child gets only published, child-targeted lessons; a draft or adult-targeted lesson detail is 404 for a child.
 - **Senses in a lesson:** Children see only child-targeted lessons. Inside a lesson, system words are always shown; shared-pool words not cleared for children are hidden.
 
@@ -34,17 +34,17 @@ Create draft → attach senses → reorder → publish → learners read
 
 | Method | Route | Service | Auth policy |
 |---|---|---|---|
-| GET | `/api/lessons/admin` | Content | AdminOnly |
-| GET | `/api/lessons/admin/{id}` | Content | AdminOnly |
-| POST | `/api/lessons/admin` | Content | AdminOnly |
-| PUT | `/api/lessons/admin/{id}` | Content | AdminOnly |
-| DELETE | `/api/lessons/admin/{id}` | Content | AdminOnly |
-| POST | `/api/lessons/admin/{id}/publish` | Content | AdminOnly |
-| POST | `/api/lessons/admin/{id}/unpublish` | Content | AdminOnly |
-| POST | `/api/lessons/admin/{id}/senses` | Content | AdminOnly |
-| DELETE | `/api/lessons/admin/{id}/senses/{senseId}` | Content | AdminOnly |
-| PUT | `/api/lessons/admin/{id}/senses/order` | Content | AdminOnly |
-| GET | `/api/lessons/admin/senses` | Content | AdminOnly |
+| GET | `/api/lessons/admin` | Content | ManageContent |
+| GET | `/api/lessons/admin/{id}` | Content | ManageContent |
+| POST | `/api/lessons/admin` | Content | ManageContent |
+| PUT | `/api/lessons/admin/{id}` | Content | ManageContent |
+| DELETE | `/api/lessons/admin/{id}` | Content | ManageContent |
+| POST | `/api/lessons/admin/{id}/publish` | Content | ManageContent |
+| POST | `/api/lessons/admin/{id}/unpublish` | Content | ManageContent |
+| POST | `/api/lessons/admin/{id}/senses` | Content | ManageContent |
+| DELETE | `/api/lessons/admin/{id}/senses/{senseId}` | Content | ManageContent |
+| PUT | `/api/lessons/admin/{id}/senses/order` | Content | ManageContent |
+| GET | `/api/lessons/admin/senses` | Content | ManageContent |
 
 ## UI
 
@@ -67,3 +67,4 @@ None.
 
 - `WB-47_admin-lesson-authoring` (#47, PR #51) — admin lesson CRUD, publish, sense attach / detach / reorder, `AdminOnly` on lesson writes, child filter on lesson reads
 - `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged admin lesson list
+- `WB-56_moderator-role-to-assist-admin` (#56, PR #58) — lesson authoring opens to adult moderators (`ManageContent` replaces `AdminOnly`)

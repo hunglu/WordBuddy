@@ -3,7 +3,7 @@ feature: Learner support links
 services: Identity, Content, Progress, UI
 audience: Both
 state: shipped
-last-updated-by: WB-55_apply-paging-to-table-list
+last-updated-by: WB-56_moderator-role-to-assist-admin
 ---
 
 # Learner support links
@@ -62,6 +62,7 @@ stateDiagram-v2
 - **Child vs adult:** see the table. Admins pass the child gate.
 - Invitation: 8-character code (no 0/O/1/I) and a link token; only SHA-256 hashes are stored; one use; 7 days.
 - Override: requester only, after `SupportLinks:UnlinkOverrideWaitDays` (7) from the request; a decline blocks it. Admin reason required (max 500).
+- Moderator (WB-56): handles escalated unlinks of **adult** learners only. A child learner's request, or one where the moderator is the learner or the supporter, is hidden from the list and returns the same 404 as an unknown id. Handover and link lookup stay `AdminOnly`.
 - Admin handover: admin makes another active supporter of a child the Primary (audited). The old Primary link can then be unlinked normally.
 - Audit: insert-only `SupportLinkAuditEntries` (link, actor, action, time, reason). No names, emails or child data.
 - Supporter cap (Progress): any active supporter sets `SupporterNewWordCap`. Effective cap: supporter cap → learner own cap → backlog rule. A revoke clears the cap set by that supporter.
@@ -83,8 +84,8 @@ stateDiagram-v2
 | POST | `/api/auth/support-links/{id}/unlink-request/confirm` · `/decline` | Identity | authenticated (other side) |
 | DELETE | `/api/auth/support-links/{id}/unlink-request` | Identity | authenticated (requester) |
 | POST | `/api/auth/support-links/{id}/unlink-request/escalate` | Identity | authenticated (requester, after wait) |
-| GET | `/api/auth/admin/unlink-requests` | Identity | `AdminOnly` |
-| POST | `/api/auth/admin/unlink-requests/{id}/complete` · `/reject` | Identity | `AdminOnly` |
+| GET | `/api/auth/admin/unlink-requests` | Identity | `ManageSupportLinks` |
+| POST | `/api/auth/admin/unlink-requests/{id}/complete` · `/reject` | Identity | `ManageSupportLinks` |
 | GET | `/api/auth/admin/support-links?learnerId=` | Identity | `AdminOnly` |
 | POST | `/api/auth/admin/support-links/handover` | Identity | `AdminOnly` |
 | GET | `/api/auth/me` | Identity | authenticated |
@@ -116,3 +117,4 @@ None.
 
 - `WB-24_learner-support-links` (#24) — support links, Primary approval for children, child learning gate, two-sided unlink with admin override, supporter cap, alias and avatar
 - `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged admin unlink-request and support-link lists
+- `WB-56_moderator-role-to-assist-admin` (#56, PR #58) — adult moderators handle escalated unlink requests of adult learners (`ManageSupportLinks`); handover stays admin only
