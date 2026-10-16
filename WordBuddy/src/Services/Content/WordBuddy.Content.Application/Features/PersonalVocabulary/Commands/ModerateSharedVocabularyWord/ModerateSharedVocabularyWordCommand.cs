@@ -4,9 +4,10 @@ namespace WordBuddy.Content.Application.Features.PersonalVocabulary.Commands.Mod
 
 /// <summary><paramref name="ModeratorUserId"/> comes from the authenticated (admin-only) caller's
 /// JWT. <paramref name="VisibleToChildren"/> is only meaningful when <paramref name="Approve"/> is
-/// <see langword="true"/>.</summary>
+/// <see langword="true"/>. <paramref name="ActorIsAdmin"/> false (a moderator) cannot moderate a word they own.</summary>
 public sealed record ModerateSharedVocabularyWordCommand(
     Guid WordId,
     bool Approve,
     bool VisibleToChildren,
-    Guid ModeratorUserId) : ICommand;
+    Guid ModeratorUserId,
+    bool ActorIsAdmin) : ICommand;

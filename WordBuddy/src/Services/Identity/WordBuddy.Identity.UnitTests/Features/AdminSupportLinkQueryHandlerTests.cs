@@ -25,13 +25,13 @@ public class AdminSupportLinkQueryHandlerTests
     public async Task GetUnlinkRequestsForAdminQueryHandler_HandleAsync_EmptyPage_KeepsRealTotal()
     {
         _links
-            .Setup(l => l.GetEscalatedUnlinkRequestsAsync(3, 10, true, It.IsAny<CancellationToken>()))
+            .Setup(l => l.GetEscalatedUnlinkRequestsAsync(3, 10, true, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<UnlinkRequest>([], 3, 10, 21));
         _links
             .Setup(l => l.GetLinksByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        Result<PagedResult<AdminUnlinkRequestDto>> result = await UnlinkHandler().HandleAsync(new GetUnlinkRequestsForAdminQuery(3, 10));
+        Result<PagedResult<AdminUnlinkRequestDto>> result = await UnlinkHandler().HandleAsync(new GetUnlinkRequestsForAdminQuery(3, 10, true, null));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Items.Should().BeEmpty();
@@ -45,7 +45,7 @@ public class AdminSupportLinkQueryHandlerTests
     [InlineData(1, 101)]
     public async Task GetUnlinkRequestsForAdminQueryHandler_HandleAsync_InvalidPaging_ReturnsValidationError(int page, int pageSize)
     {
-        Result<PagedResult<AdminUnlinkRequestDto>> result = await UnlinkHandler().HandleAsync(new GetUnlinkRequestsForAdminQuery(page, pageSize));
+        Result<PagedResult<AdminUnlinkRequestDto>> result = await UnlinkHandler().HandleAsync(new GetUnlinkRequestsForAdminQuery(page, pageSize, true, null));
 
         result.Error.Type.Should().Be(ErrorType.Validation);
         _links.VerifyNoOtherCalls();

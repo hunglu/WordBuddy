@@ -2,11 +2,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Domain.SupportLinks;
 using WordBuddy.Identity.Infrastructure.Persistence;
@@ -199,6 +202,58 @@ public sealed class ModeratorEndpointsTests
         (await admin.PostAsJsonAsync($"/api/auth/admin/unlink-requests/{childRequest.Id}/complete", new { reason = "Escalated" }))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await LinkStatusAsync(extra.Id)).Should().Be(SupportLinkStatus.Revoked);
+    }
+
+    [Fact]
+    public async Task UnlinkAdmin_ChildTokenWithModeratorClaim_Gets403()
+    {
+        // Real logins cannot produce this token (a Child is never a moderator); build it by hand.
+        List<Claim> claims =
+        [
+            new(JwtRegisteredClaimNames.Sub, Guid.NewGuid().ToString()),
+            new("age_group", "Child"),
+            new("is_admin", "false"),
+            new("moderator", "true"),
+        ];
+        JwtSecurityToken jwt = new(
+            issuer: IdentityApiFactory.JwtIssuer,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(30),
+            signingCredentials: new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(IdentityApiFactory.JwtSecret)), SecurityAlgorithms.HmacSha256));
+        HttpClient client = Authorized(new JwtSecurityTokenHandler().WriteToken(jwt));
+
+        (await client.GetAsync("/api/auth/admin/unlink-requests")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.PostAsJsonAsync($"/api/auth/admin/unlink-requests/{Guid.NewGuid()}/reject", new { reason = "x" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task UnlinkAdmin_ModeratorIsPartyToLink_RequestHiddenAndActionsNotFoundButAdminCan()
+    {
+        Account learner = await RegisterAsync("Adult", "Learner");
+        HttpClient moderator = await LoginModeratorAsync();
+        SupportLinkDto link = await AcceptAsync(learner.Client, (await InviteAsync(moderator, "Supporter")).Token);
+        await RequestAndEscalateAsync(learner.Client, link.Id);
+        HttpClient admin = await LoginAdminAsync();
+
+        List<AdminUnlinkRequestDto> moderatorView = await PagedHttp.GetAllAsync<AdminUnlinkRequestDto>(
+            moderator, "/api/auth/admin/unlink-requests", Json);
+        moderatorView.Should().NotContain(r => r.LinkId == link.Id);
+
+        List<AdminUnlinkRequestDto> adminView = await PagedHttp.GetAllAsync<AdminUnlinkRequestDto>(
+            admin, "/api/auth/admin/unlink-requests", Json);
+        AdminUnlinkRequestDto request = adminView.Should().ContainSingle(r => r.LinkId == link.Id).Subject;
+
+        (await moderator.PostAsJsonAsync($"/api/auth/admin/unlink-requests/{request.Id}/reject", new { reason = "x" }))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await moderator.PostAsJsonAsync($"/api/auth/admin/unlink-requests/{request.Id}/complete", new { reason = "x" }))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await LinkStatusAsync(link.Id)).Should().Be(SupportLinkStatus.Active);
+
+        (await admin.PostAsJsonAsync($"/api/auth/admin/unlink-requests/{request.Id}/complete", new { reason = "Escalated" }))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await LinkStatusAsync(link.Id)).Should().Be(SupportLinkStatus.Revoked);
     }
 
     [Fact]

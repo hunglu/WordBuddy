@@ -126,7 +126,7 @@ internal sealed class SupportLinkRepository : ISupportLinkRepository
             .ToListAsync(ct);
 
     public async Task<PagedResult<UnlinkRequest>> GetEscalatedUnlinkRequestsAsync(
-        int page, int pageSize, bool includeChildLearners, CancellationToken ct = default)
+        int page, int pageSize, bool includeChildLearners, Guid? excludePartyUserId, CancellationToken ct = default)
     {
         IQueryable<UnlinkRequest> query = _dbContext.UnlinkRequests.Where(r => r.Status == UnlinkRequestStatus.OverrideRequested);
         if (!includeChildLearners)
@@ -134,6 +134,12 @@ internal sealed class SupportLinkRepository : ISupportLinkRepository
             query = query.Where(r => _dbContext.SupportLinks
                 .Join(_dbContext.Users, l => l.LearnerId, u => u.Id, (l, u) => new { l.Id, u.AgeGroup })
                 .Any(x => x.Id == r.LinkId && x.AgeGroup != AgeGroup.Child));
+        }
+
+        if (excludePartyUserId is Guid partyId)
+        {
+            query = query.Where(r => !_dbContext.SupportLinks
+                .Any(l => l.Id == r.LinkId && (l.LearnerId == partyId || l.SupporterId == partyId)));
         }
 
         return await query.OrderBy(r => r.EscalatedAtUtc).ThenBy(r => r.Id).ToPagedResultAsync(page, pageSize, ct);
@@ -144,6 +150,9 @@ internal sealed class SupportLinkRepository : ISupportLinkRepository
             .Where(l => l.Id == linkId)
             .Join(_dbContext.Users, l => l.LearnerId, u => u.Id, (l, u) => u.AgeGroup)
             .AnyAsync(a => a == AgeGroup.Child, ct);
+
+    public Task<bool> IsLinkPartyAsync(Guid linkId, Guid userId, CancellationToken ct = default) =>
+        _dbContext.SupportLinks.AnyAsync(l => l.Id == linkId && (l.LearnerId == userId || l.SupporterId == userId), ct);
 
     public async Task<IReadOnlyList<SupportLink>> GetLinksByIdsAsync(IReadOnlyCollection<Guid> linkIds, CancellationToken ct = default) =>
         await _dbContext.SupportLinks.Where(l => linkIds.Contains(l.Id)).ToListAsync(ct);

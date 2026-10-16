@@ -39,7 +39,7 @@ public sealed class AdminSupportLinksController : ControllerBase
         CancellationToken ct = default)
     {
         Result<PagedResult<AdminUnlinkRequestDto>> result = await _getUnlinkRequests.HandleAsync(
-            new GetUnlinkRequestsForAdminQuery(page, pageSize, User.IsAdmin()), ct);
+            new GetUnlinkRequestsForAdminQuery(page, pageSize, User.IsAdmin(), User.IsAdmin() ? null : User.GetUserId()), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

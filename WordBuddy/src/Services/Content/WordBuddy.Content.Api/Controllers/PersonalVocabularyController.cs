@@ -236,7 +236,7 @@ public sealed class PersonalVocabularyController : ControllerBase
     public async Task<IActionResult> Moderate(Guid id, [FromBody] ModerateVocabularyWordRequest request, CancellationToken ct)
     {
         Result result = await _moderate.HandleAsync(
-            new ModerateSharedVocabularyWordCommand(id, request.Approve, request.VisibleToChildren, User.GetUserId()), ct);
+            new ModerateSharedVocabularyWordCommand(id, request.Approve, request.VisibleToChildren, User.GetUserId(), User.IsAdmin()), ct);
 
         if (result.IsFailure)
         {

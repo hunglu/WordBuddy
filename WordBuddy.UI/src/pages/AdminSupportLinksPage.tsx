@@ -52,7 +52,7 @@ export function AdminSupportLinksPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Support links (admin)</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">Support links{isAdmin ? ' (admin)' : ''}</h1>
       <p className="mt-2 text-wb-ink-muted">Every action is audited with your reason.</p>
       {!isAdmin && (
         <p className="mt-1 text-sm text-wb-ink-muted">Requests of child learners go to an admin.</p>

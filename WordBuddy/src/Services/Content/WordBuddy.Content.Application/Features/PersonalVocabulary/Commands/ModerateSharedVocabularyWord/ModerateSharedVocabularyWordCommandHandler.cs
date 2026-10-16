@@ -49,6 +49,14 @@ public sealed class ModerateSharedVocabularyWordCommandHandler : ICommandHandler
             return Result.Failure(wordResult.Error);
         }
 
+        if (!command.ActorIsAdmin && wordResult.Value.OwnerUserId == command.ModeratorUserId)
+        {
+            _logger.LogWarning("ModerateSharedVocabularyWordCommand blocked: non-admin moderator owns the word, WordId={WordId}", command.WordId);
+            return Result.Failure(Error.Conflict(
+                "PersonalVocabularyWord.ModerateOwnWordForbidden",
+                "A moderator cannot moderate a word they own. Another moderator or an admin must review it."));
+        }
+
         Result moderationResult = command.Approve
             ? wordResult.Value.Approve(command.VisibleToChildren, command.ModeratorUserId)
             : wordResult.Value.Reject(command.ModeratorUserId);

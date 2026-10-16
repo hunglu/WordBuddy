@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Identity.Domain;
 using WordBuddy.Identity.Infrastructure.Persistence;
+using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Identity.Infrastructure.Seeding;
 
@@ -47,7 +48,11 @@ public static class DataSeeder
 
             if (seed.IsModerator)
             {
-                user.SetModerator(true);
+                Result moderator = user.SetModerator(true);
+                if (moderator.IsFailure)
+                {
+                    throw new InvalidOperationException($"Seed user cannot be a moderator: {moderator.Error.Code}");
+                }
             }
 
             await dbContext.Users.AddAsync(user);
