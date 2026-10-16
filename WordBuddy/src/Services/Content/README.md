@@ -20,23 +20,29 @@ independence model this follows.
 | POST | `/api/media/upload` | Bearer | Uploads a media file (max 50MB; jpeg/png/mp3/wav/mp4) |
 | GET | `/api/media/{id}` | Anonymous | Streams a previously uploaded media file |
 | DELETE | `/api/vocabulary/{id}?confirm=true` | Bearer | Removes a word from the caller's list (see delete rule below) |
-| GET | `/api/lessons/admin` | Bearer, `AdminOnly` | Pages drafts and published lessons; `?type=`, `?level=`, `?isPublished=` + paging |
+| GET | `/api/lessons/admin` | Bearer, `ManageContent` | Pages drafts and published lessons; `?type=`, `?level=`, `?isPublished=` + paging |
 | GET | `/api/vocabulary/mine` | Bearer | Pages the caller's own words, newest first (paging) |
 | GET | `/api/vocabulary/shared` | Bearer | Pages the community word pool; `?search=` (contains, case-insensitive) + paging; `isMine` is `true` only on the caller's own words; children only get child-visible words |
-| GET | `/api/vocabulary/moderation/pending` | Bearer, `AdminOnly` | Pages words waiting for moderation (paging) |
-| GET | `/api/vocabulary/moderation/autofill-pending` | Bearer, `AdminOnly` | Pages auto-filled words waiting for child approval (paging) |
+| GET | `/api/vocabulary/moderation/pending` | Bearer, `ManageContent` | Pages words waiting for moderation (paging) |
+| GET | `/api/vocabulary/moderation/autofill-pending` | Bearer, `ManageContent` | Pages auto-filled words waiting for child approval (paging) |
+| POST | `/api/vocabulary/moderation/{id}` | Bearer, `ManageContent` | Approves or rejects a pending-review word |
+| POST | `/api/vocabulary/moderation/autofill/{senseId}/approve` | Bearer, `ManageContent` | Approves an auto-filled word for every child |
 | GET | `/api/vocabulary/learners/{id}/pending-approvals` | Bearer, supporter | Pages one learner's words waiting for approval (paging) |
 | GET | `/api/vocabulary/groups/{groupId}/words` | Bearer, group owner | Pages the word assignment history, newest first (paging) |
 | POST | `/api/vocabulary/admin/learner-words/republish` | Bearer, `AdminOnly` | Backfill: republishes `LearnerWordAdded` for every learner link; returns `{ published }` |
-| GET | `/api/vocabulary/admin/lexemes` | Bearer, `AdminOnly` | Pages lexemes; `?search=` matches any part of the word (prefix matches first), `?partOfSpeech=`, `?cefrLevel=`, `?page=`, `?pageSize=` (1-100, default 25) |
-| GET | `/api/vocabulary/admin/lexemes/{id}` | Bearer, `AdminOnly` | One lexeme with audio and catalog senses; private learner senses are only counted |
-| PUT | `/api/vocabulary/admin/lexemes/{id}` | Bearer, `AdminOnly` | Replaces the dictionary fields (POS required); `409` if a sibling already has that POS |
-| PUT | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` | Bearer, `AdminOnly` | Uploads one MP3 (`file`, max 5 MB) for `en-GB` or `en-US` |
-| DELETE | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` | Bearer, `AdminOnly` | Unlinks the audio; the file and the `MediaAsset` row are deleted only when nothing else uses them |
+| GET | `/api/vocabulary/admin/lexemes` | Bearer, `ManageContent` | Pages lexemes; `?search=` matches any part of the word (prefix matches first), `?partOfSpeech=`, `?cefrLevel=`, `?page=`, `?pageSize=` (1-100, default 25) |
+| GET | `/api/vocabulary/admin/lexemes/{id}` | Bearer, `ManageContent` | One lexeme with audio and catalog senses; private learner senses are only counted |
+| PUT | `/api/vocabulary/admin/lexemes/{id}` | Bearer, `ManageContent` | Replaces the dictionary fields (POS required); `409` if a sibling already has that POS |
+| PUT | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` | Bearer, `ManageContent` | Uploads one MP3 (`file`, max 5 MB) for `en-GB` or `en-US` |
+| DELETE | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` | Bearer, `ManageContent` | Unlinks the audio; the file and the `MediaAsset` row are deleted only when nothing else uses them |
 
 Every paged route takes `?page=` (default 1, min 1) and `?pageSize=` (default 25, 1-100); other values
 return 400. A page past the end returns `200` with empty `items` and the real `totalCount`. The body is
 `{ items, page, pageSize, totalCount }` (`WordBuddy.Shared.Kernel.PagedResult<T>`).
+
+`ManageContent` (WB-56) = `is_admin = true` OR (`moderator = true` AND `age_group != Child`). It covers lesson authoring
+(`/api/lessons/admin/**`), lexeme admin (`/api/vocabulary/admin/lexemes/**`) and the word moderation routes. The
+`learner-words/republish` backfill stays `AdminOnly`.
 
 There are no internal (service-to-service) endpoints. The vocabulary id remap table and the
 `/internal/vocabulary-remaps` routes were removed (migration `DropVocabularyWordIdRemaps`).

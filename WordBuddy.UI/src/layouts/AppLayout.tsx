@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { Link, Outlet, matchPath, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent, isAdmin } from '../utils/roles'
 
 /** A sidebar navigation entry. */
 interface NavItem {
@@ -32,12 +33,16 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/groups', label: 'Groups', icon: '👥', end: false },
 ]
 
-const ADMIN_NAV_ITEMS: NavItem[] = [
+/** Content work: admins and adult moderators. */
+const CONTENT_NAV_ITEMS: NavItem[] = [
   { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true },
   { to: '/admin/lessons', label: 'Lesson authoring', icon: '✏️', end: false },
   { to: '/admin/lexemes', label: 'Lexemes', icon: '📖', end: false },
   { to: '/admin/support-links', label: 'Support links', icon: '🔗', end: true },
 ]
+
+/** Admin only: user and role management. */
+const ADMIN_ONLY_NAV_ITEMS: NavItem[] = [{ to: '/admin/users', label: 'Users & roles', icon: '🔑', end: true }]
 
 /**
  * Whether a nav item is the selected one for `pathname`: exact match on `activePaths` when set,
@@ -52,7 +57,11 @@ function isItemActive(item: NavItem, pathname: string): boolean {
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
   const { user, logout } = useAuthStore()
-  const navItems: NavItem[] = user?.isAdmin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS
+  const navItems: NavItem[] = [
+    ...NAV_ITEMS,
+    ...(canManageContent(user) ? CONTENT_NAV_ITEMS : []),
+    ...(isAdmin(user) ? ADMIN_ONLY_NAV_ITEMS : []),
+  ]
   const { pathname } = useLocation()
 
   return (

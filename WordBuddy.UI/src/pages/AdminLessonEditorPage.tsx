@@ -10,6 +10,7 @@ import { LessonStatusBadge } from '../components/admin-lessons/LessonStatusBadge
 import { cardClass, inputClass, primaryButtonClass, softButtonClass } from '../components/support/supportUi'
 import { useAdminLesson, useCreateLesson, useSetLessonPublished, useUpdateLesson } from '../hooks/useAdminLessons'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent } from '../utils/roles'
 import type { LessonFormValues } from '../types'
 
 const lessonSchema = z.object({
@@ -28,14 +29,14 @@ const DEFAULT_VALUES: LessonFormValues = {
   targetAgeGroup: 'Child',
 }
 
-/** `/admin/lessons/new` and `/admin/lessons/:id` — create or edit a lesson and its words. Admin only. */
+/** `/admin/lessons/new` and `/admin/lessons/:id` — create or edit a lesson and its words. Admin or moderator. */
 export function AdminLessonEditorPage(): ReactElement {
   const { id } = useParams<{ id: string }>()
   const isNew: boolean = id === undefined
   const navigate = useNavigate()
-  const isAdmin: boolean = useAuthStore((state) => state.user?.isAdmin) === true
+  const canManage: boolean = canManageContent(useAuthStore((state) => state.user))
 
-  const lesson = useAdminLesson(id, isAdmin)
+  const lesson = useAdminLesson(id, canManage)
   const create = useCreateLesson()
   const update = useUpdateLesson()
   const setPublished = useSetLessonPublished()
@@ -59,8 +60,8 @@ export function AdminLessonEditorPage(): ReactElement {
       : undefined,
   })
 
-  // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
-  if (!isAdmin) {
+  // Server-side, `ManageContent` already rejects a non-admin call — this is a UX guard.
+  if (!canManage) {
     return <Navigate to="/" replace />
   }
 

@@ -30,6 +30,12 @@ public interface IUserRepository
     /// <summary>Returns one page of users (read-only), ordered by id. Used by the profile backfill.</summary>
     Task<IReadOnlyList<User>> GetPageAsync(int skip, int take, CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns one page of adult accounts (read-only), ordered by display name then id. <paramref name="search"/>
+    /// matches email or display name (contains); null or empty means no filter.
+    /// </summary>
+    Task<PagedResult<User>> GetAdultsPagedAsync(string? search, int page, int pageSize, CancellationToken ct = default);
+
     /// <summary>Saves changes to tracked users.</summary>
     Task<Result> SaveChangesAsync(CancellationToken ct = default);
 }

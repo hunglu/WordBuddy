@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Identity.Domain;
 using WordBuddy.Identity.Infrastructure.Persistence;
+using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Identity.Infrastructure.Seeding;
 
@@ -13,13 +14,15 @@ namespace WordBuddy.Identity.Infrastructure.Seeding;
 /// </summary>
 public static class DataSeeder
 {
-    private sealed record SeedUser(string Email, string DisplayName, string Password, AgeGroup AgeGroup, bool IsAdmin);
+    private sealed record SeedUser(string Email, string DisplayName, string Password, AgeGroup AgeGroup, bool IsAdmin, bool IsModerator = false);
 
     private static readonly SeedUser[] SeedUsers =
     [
         new("admin@wordbuddy.com", "Admin", "Admin@123", AgeGroup.Adult, IsAdmin: true),
         // Adult learner used by the e2e/ui suite (E2E_TEST_EMAIL / E2E_TEST_PASSWORD defaults).
         new("learner@example.com", "Learner", "ChangeMe123!", AgeGroup.Adult, IsAdmin: false),
+        // Adult moderator used by the e2e suite.
+        new("moderator@wordbuddy.com", "Moderator", "Moderator@123", AgeGroup.Adult, IsAdmin: false, IsModerator: true),
     ];
 
     public static async Task MigrateAndSeedAsync(IServiceProvider services)
@@ -42,6 +45,15 @@ public static class DataSeeder
                 BCrypt.Net.BCrypt.HashPassword(seed.Password, workFactor: 12),
                 seed.AgeGroup,
                 seed.IsAdmin);
+
+            if (seed.IsModerator)
+            {
+                Result moderator = user.SetModerator(true);
+                if (moderator.IsFailure)
+                {
+                    throw new InvalidOperationException($"Seed user cannot be a moderator: {moderator.Error.Code}");
+                }
+            }
 
             await dbContext.Users.AddAsync(user);
             created++;

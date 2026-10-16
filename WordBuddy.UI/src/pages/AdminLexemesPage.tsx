@@ -7,6 +7,7 @@ import { cardClass, inputClass, softButtonClass } from '../components/support/su
 import { useAdminLexemes } from '../hooks/useAdminLexemes'
 import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent } from '../utils/roles'
 import type { CefrLevel, PartOfSpeech } from '../types'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -25,9 +26,9 @@ const PARTS_OF_SPEECH: PartOfSpeech[] = [
 ]
 const CEFR_LEVELS: CefrLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
 
-/** `/admin/lexemes` — search and page through the dictionary headwords. Admin only. */
+/** `/admin/lexemes` — search and page through the dictionary headwords. Admin or moderator. */
 export function AdminLexemesPage(): ReactElement {
-  const isAdmin: boolean = useAuthStore((state) => state.user?.isAdmin) === true
+  const canManage: boolean = canManageContent(useAuthStore((state) => state.user))
 
   const [searchText, setSearchText] = useState('')
   const [search, setSearch] = useState('')
@@ -52,12 +53,12 @@ export function AdminLexemesPage(): ReactElement {
       cefrLevel: cefrLevel === '' ? undefined : cefrLevel,
       ...pagination.params,
     },
-    isAdmin,
+    canManage,
   )
   pagination.clamp(lexemes.data?.totalCount)
 
-  // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard.
-  if (!isAdmin) {
+  // Server-side, `ManageContent` already rejects a non-admin call — this is a UX guard.
+  if (!canManage) {
     return <Navigate to="/" replace />
   }
 

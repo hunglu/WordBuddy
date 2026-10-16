@@ -24,7 +24,7 @@ namespace WordBuddy.Content.Api.Controllers;
 /// Admins see drafts here; learners never do.</summary>
 [ApiController]
 [Route("api/lessons/admin")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = ServiceCollectionExtensions.ManageContentPolicy)]
 public sealed class LessonsAdminController : ControllerBase
 {
     private readonly IQueryHandler<GetAdminLessonsQuery, PagedResult<AdminLessonDto>> _getLessons;

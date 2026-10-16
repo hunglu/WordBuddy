@@ -3,7 +3,7 @@ feature: Vocabulary autofill
 services: Content
 audience: Both
 state: shipped
-last-updated-by: WB-55_apply-paging-to-table-list
+last-updated-by: WB-56_moderator-role-to-assist-admin
 ---
 
 # Vocabulary autofill
@@ -63,8 +63,8 @@ flowchart LR
 | POST | `/api/vocabulary/autofill/{senseId}/add-to-mine` | Content | `ChildHasSupporter` |
 | GET | `/api/vocabulary/learners/{learnerId}/pending-approvals` | Content | `AdultOrAdmin` + `CanSupportLearner` |
 | POST | `/api/vocabulary/learners/{learnerId}/words/{senseId}/approve` | Content | `AdultOrAdmin` + `CanSupportLearner` |
-| GET | `/api/vocabulary/moderation/autofill-pending` | Content | `AdminOnly` |
-| POST | `/api/vocabulary/moderation/autofill/{senseId}/approve` | Content | `AdminOnly` |
+| GET | `/api/vocabulary/moderation/autofill-pending` | Content | `ManageContent` |
+| POST | `/api/vocabulary/moderation/autofill/{senseId}/approve` | Content | `ManageContent` |
 
 Word DTOs (`mine`, `shared`, lesson detail) gained optional `partOfSpeech`, `ipaUk`, `ipaUs`, `audioUkUrl`, `audioUsUrl`, `examples`, `translations`, enrichment lists, `origin`, `awaitingApproval`.
 
@@ -87,3 +87,4 @@ None.
 
 - `WB-25_vocabulary-autofill` (#25, PR #37) — auto-fill lookup via catalog / dictionary / Claude; enrichment fields; child approval by supporter or admin; Development-only fake clients
 - `WB-55_apply-paging-to-table-list` (#55, PR #57) — paged autofill approval lists
+- `WB-56_moderator-role-to-assist-admin` (#56, PR #58) — autofill approval queue opens to adult moderators (`ManageContent`)

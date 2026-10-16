@@ -7,15 +7,16 @@ import { Pager } from '../components/Pager'
 import { usePagination } from '../hooks/usePagination'
 import { usePendingVocabularyModeration, useModerateVocabularyWord } from '../hooks/useVocabulary'
 import { useAuthStore } from '../store/authStore'
+import { canManageContent } from '../utils/roles'
 
 export function VocabularyModerationPage(): ReactElement {
   const user = useAuthStore((state) => state.user)
   const [searchParams, setSearchParams] = useSearchParams()
   const tab: 'shared' | 'autofill' = searchParams.get('tab') === 'autofill' ? 'autofill' : 'shared'
 
-  // Server-side, `AdminOnly` already rejects a non-admin call — this is a UX guard, not the
+  // Server-side, `ManageContent` already rejects a call without the right — this is a UX guard, not the
   // real enforcement.
-  if (!user?.isAdmin) {
+  if (!canManageContent(user)) {
     return <Navigate to="/vocabulary" replace />
   }
 

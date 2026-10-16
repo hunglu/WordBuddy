@@ -38,6 +38,9 @@ public sealed class User : Entity
     /// <summary>Gets a value indicating whether this adult account holds the Guardian role (can allow challenges for linked children).</summary>
     public bool IsGuardian { get; private set; }
 
+    /// <summary>Gets a value indicating whether this adult account holds the Moderator role (manages content and escalated adult unlinks).</summary>
+    public bool IsModerator { get; private set; }
+
     /// <summary>Gets the optional date of birth. Never logged, never put in events or tokens (only the <see cref="AgeBand"/> is shared).</summary>
     public DateOnly? DateOfBirth { get; private set; }
 
@@ -131,6 +134,27 @@ public sealed class User : Entity
         IsGuardian = isGuardian;
         return Result.Success();
     }
+
+    /// <summary>Grants or removes the Moderator role. Only adult, non-admin accounts can hold it; revoke always succeeds.</summary>
+    public Result SetModerator(bool isModerator)
+    {
+        if (isModerator && AgeGroup != AgeGroup.Adult)
+        {
+            return Result.Failure(UserErrors.ModeratorMustBeAdult);
+        }
+
+        if (isModerator && IsAdmin)
+        {
+            return Result.Failure(UserErrors.ModeratorNotForAdmin);
+        }
+
+        IsModerator = isModerator;
+        return Result.Success();
+    }
+
+    /// <summary>The rule any delete-account feature must call first: an admin account cannot be deleted.</summary>
+    public Result EnsureCanBeDeleted() =>
+        IsAdmin ? Result.Failure(UserErrors.AdminCannotBeDeleted) : Result.Success();
 
     /// <summary>
     /// Sets or clears the date of birth. Rules: not in the future; age 3 to 120; a Child account must be

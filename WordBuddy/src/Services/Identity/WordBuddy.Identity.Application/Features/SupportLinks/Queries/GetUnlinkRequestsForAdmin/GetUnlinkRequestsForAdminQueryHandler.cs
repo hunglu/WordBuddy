@@ -36,7 +36,7 @@ public sealed class GetUnlinkRequestsForAdminQueryHandler : IQueryHandler<GetUnl
             return Result.Failure<PagedResult<AdminUnlinkRequestDto>>(Error.Validation("GetUnlinkRequestsForAdmin.Validation", validation.ToString()));
         }
 
-        PagedResult<UnlinkRequest> requests = await _links.GetEscalatedUnlinkRequestsAsync(query.Page, query.PageSize, ct);
+        PagedResult<UnlinkRequest> requests = await _links.GetEscalatedUnlinkRequestsAsync(query.Page, query.PageSize, query.IncludeChildLearners, query.ExcludePartyUserId, ct);
         IReadOnlyList<SupportLink> links = await _links.GetLinksByIdsAsync(requests.Items.Select(r => r.LinkId).ToList(), ct);
         Dictionary<Guid, SupportLink> linkById = links.ToDictionary(l => l.Id);
 

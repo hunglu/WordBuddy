@@ -3,7 +3,7 @@ feature: Lexeme admin
 services: Content | UI
 audience: Adult
 state: shipped
-last-updated-by: WB-55_apply-paging-to-table-list
+last-updated-by: WB-56_moderator-role-to-assist-admin
 ---
 
 # Lexeme admin
@@ -20,7 +20,7 @@ Admins search lexemes, read their catalog senses, correct dictionary fields and 
 
 ## Rules
 
-- **Child vs adult:** admin only. Every endpoint has `[Authorize(Policy = "AdminOnly")]`: anonymous → 401, adult and child learner → 403. UI redirects non-admins to `/`; the nav item shows for admins only.
+- **Child vs adult:** admin and adult moderator. Every endpoint has `[Authorize(Policy = "ManageContent")]`: anonymous → 401, adult learner and child → 403. UI redirects everyone else to `/`; the nav item shows for admins and adult moderators only.
 - **Privacy:** the detail view shows full text for catalog senses (System or Shared) only. Private, pending and rejected learner senses appear as a count. The lemma shown is the catalog spelling (ADR 0004).
 - **Search:** "contains" on the normalized lemma, with `\ % _ [` escaped; prefix matches rank first. Scans the unique index; no new index. Revisit past about 100 000 lexemes.
 - **Edit:** full replace of the editable fields. POS is required. Too-long values give 400, never truncation. Word forms: trimmed, de-duplicated, max 20.
@@ -35,11 +35,11 @@ Admins search lexemes, read their catalog senses, correct dictionary fields and 
 
 | Method | Route | Service | Auth policy |
 |---|---|---|---|
-| GET | `/api/vocabulary/admin/lexemes?search=&partOfSpeech=&cefrLevel=&page=&pageSize=` | Content | `AdminOnly` |
-| GET | `/api/vocabulary/admin/lexemes/{id}` | Content | `AdminOnly` |
-| PUT | `/api/vocabulary/admin/lexemes/{id}` (204; 400, 404, 409) | Content | `AdminOnly` |
-| PUT | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` (multipart `file`; 200 `MediaAssetDto`) | Content | `AdminOnly` |
-| DELETE | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` (204) | Content | `AdminOnly` |
+| GET | `/api/vocabulary/admin/lexemes?search=&partOfSpeech=&cefrLevel=&page=&pageSize=` | Content | `ManageContent` |
+| GET | `/api/vocabulary/admin/lexemes/{id}` | Content | `ManageContent` |
+| PUT | `/api/vocabulary/admin/lexemes/{id}` (204; 400, 404, 409) | Content | `ManageContent` |
+| PUT | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` (multipart `file`; 200 `MediaAssetDto`) | Content | `ManageContent` |
+| DELETE | `/api/vocabulary/admin/lexemes/{id}/audio/{locale}` (204) | Content | `ManageContent` |
 
 `{locale}` is `en-GB` or `en-US`. `pageSize` 1 to 100 (default 25).
 
@@ -65,3 +65,4 @@ Admins search lexemes, read their catalog senses, correct dictionary fields and 
 
 - `WB-50_lexeme-admin-view` — admin lexeme list, edit and audio management (#50)
 - `WB-55_apply-paging-to-table-list` (#55, PR #57) — lexeme list moved to the shared paged type and pager
+- `WB-56_moderator-role-to-assist-admin` (#56, PR #58) — lexeme admin opens to adult moderators (`ManageContent` replaces `AdminOnly`)

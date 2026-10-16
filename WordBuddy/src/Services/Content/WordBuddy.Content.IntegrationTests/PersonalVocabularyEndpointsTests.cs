@@ -108,6 +108,45 @@ public sealed class PersonalVocabularyEndpointsTests
     }
 
     [Fact]
+    public async Task Moderate_ModeratorOwnsWord_Returns403AndAdminOwnerCanModerate()
+    {
+        Guid moderatorId = Guid.NewGuid();
+        HttpClient moderator = _factory.CreateClient();
+        moderator.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", TestJwtTokenFactory.CreateToken(moderatorId, "Adult", isAdmin: false, isModerator: true));
+        HttpClient admin = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: true);
+
+        Guid ownWordId = await AddAndShareAsync(moderator);
+        HttpResponseMessage own = await moderator.PostAsJsonAsync(
+            $"/api/vocabulary/moderation/{ownWordId}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: true));
+        own.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await GetListAsync(admin, "/api/vocabulary/moderation/pending")).Should().Contain(w => w.Id == ownWordId);
+
+        // Another user's word is fine for the moderator.
+        HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
+        Guid otherWordId = await AddAndShareAsync(owner);
+        (await moderator.PostAsJsonAsync(
+            $"/api/vocabulary/moderation/{otherWordId}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: false)))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // An admin may moderate a word they own.
+        Guid adminWordId = await AddAndShareAsync(admin);
+        (await admin.PostAsJsonAsync(
+            $"/api/vocabulary/moderation/{adminWordId}", new ModerateVocabularyWordRequest(Approve: true, VisibleToChildren: false)))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    private static async Task<Guid> AddAndShareAsync(HttpClient client)
+    {
+        HttpResponseMessage add = await client.PostAsJsonAsync(
+            "/api/vocabulary", new AddPersonalVocabularyWordRequest($"word{Guid.NewGuid():N}"[..12], "a definition", null));
+        add.StatusCode.Should().Be(HttpStatusCode.Created);
+        Guid id = await add.Content.ReadFromJsonAsync<Guid>();
+        (await client.PostAsync($"/api/vocabulary/{id}/share", content: null)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        return id;
+    }
+
+    [Fact]
     public async Task ShareAndDelete_NonOwnerCaller_ReturnsNotFound()
     {
         HttpClient owner = await CreateClientAsync(Guid.NewGuid(), "Adult", isAdmin: false);
