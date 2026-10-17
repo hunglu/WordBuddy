@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { problemMessage } from '../../api/supportLinks'
 import { useAssignWordsToGroup, useGroupWordAssignments } from '../../hooks/useGroups'
 import { usePagination } from '../../hooks/usePagination'
@@ -7,7 +8,7 @@ import { useSharedVocabularyWords } from '../../hooks/useVocabulary'
 import type { GroupWordAssignmentResult, LearnerGroupDetail } from '../../types'
 import { Pager } from '../Pager'
 import { cardClass, formatDate, inputClass, primaryButtonClass } from '../support/supportUi'
-import { NO_ACCESS_MESSAGE, inlineErrorClass, isForbidden } from './groupUi'
+import { inlineErrorClass, isForbidden } from './groupUi'
 
 /** Most words the server accepts in one assign call. */
 const MAX_WORDS_PER_CALL = 50
@@ -19,6 +20,7 @@ type GroupWordsTabProps = Readonly<{ group: LearnerGroupDetail }>
 
 /** Words tab: pick words from the shared pool, give them to every active member, and see the history. */
 export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
+  const { t } = useTranslation('groups')
   const poolPaging = usePagination()
   const historyPaging = usePagination()
   const resetPool = poolPaging.reset
@@ -65,15 +67,14 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className={cardClass} aria-label="Assign words">
-        <h2 className="text-xl font-bold text-wb-ink">Assign words</h2>
+      <section className={cardClass} aria-label={t('words.assignHeading')}>
+        <h2 className="text-xl font-bold text-wb-ink">{t('words.assignHeading')}</h2>
         <p className="text-sm text-wb-ink-muted">
-          The words go on the list of every active member now. New members do not get earlier words. Words that are not
-          cleared for children are skipped.
+          {t('words.assignHint')}
         </p>
 
         <label htmlFor="group-word-filter" className="mt-3 block text-sm font-semibold text-wb-ink">
-          Search the shared pool
+          {t('words.searchLabel')}
         </label>
         <input
           id="group-word-filter"
@@ -83,9 +84,9 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
           className={inputClass}
         />
 
-        {pool.isLoading && <p className="mt-2 text-wb-ink-muted">Loading words…</p>}
-        {pool.isError && <p className={`mt-2 ${inlineErrorClass}`}>Couldn't load the shared words right now.</p>}
-        {pool.data && pool.data.totalCount === 0 && <p className="mt-2 text-wb-ink-muted">No words found.</p>}
+        {pool.isLoading && <p className="mt-2 text-wb-ink-muted">{t('words.loading')}</p>}
+        {pool.isError && <p className={`mt-2 ${inlineErrorClass}`}>{t('words.loadFailed')}</p>}
+        {pool.data && pool.data.totalCount === 0 && <p className="mt-2 text-wb-ink-muted">{t('words.none')}</p>}
 
         {visibleWords.length > 0 && (
           <ul className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto">
@@ -114,8 +115,8 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
             pageSize={poolPaging.pageSize}
             totalCount={pool.data.totalCount}
             onPageChange={poolPaging.setPage}
-            label="Shared word pages"
-            itemLabel="words"
+            label={t('words.pages')}
+            itemLabel={t('words.items')}
           />
         )}
 
@@ -125,31 +126,31 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
           onClick={submit}
           className={`${primaryButtonClass} mt-3`}
         >
-          Assign {selected.length > 0 ? `${selected.length} word${selected.length === 1 ? '' : 's'}` : 'words'}
+          {selected.length > 0 ? t('words.assignSome', { count: selected.length }) : t('words.assignNone')}
         </button>
-        {activeCount === 0 && <p className="mt-2 text-sm text-wb-ink-muted">Add at least one active member first.</p>}
+        {activeCount === 0 && <p className="mt-2 text-sm text-wb-ink-muted">{t('words.needMember')}</p>}
 
         {assign.isError && (
           <p className={`mt-2 ${inlineErrorClass}`}>
-            {isForbidden(assign.error) ? NO_ACCESS_MESSAGE : problemMessage(assign.error, 'Could not assign the words.')}
+            {isForbidden(assign.error) ? t('noAccess') : problemMessage(assign.error, t('words.assignFailed'))}
           </p>
         )}
         {result && (
           <p className="mt-3 text-wb-ink" role="status">
-            Added {result.added}, already had {result.alreadyHad}, skipped for children {result.skippedForChildren}.
+            {t('words.result', { added: result.added, already: result.alreadyHad, skipped: result.skippedForChildren })}
           </p>
         )}
       </section>
 
-      <section className={cardClass} aria-label="Assignment history">
-        <h2 className="text-xl font-bold text-wb-ink">History</h2>
-        {history.isLoading && <p className="mt-2 text-wb-ink-muted">Loading the history…</p>}
+      <section className={cardClass} aria-label={t('words.assignmentHistory')}>
+        <h2 className="text-xl font-bold text-wb-ink">{t('words.history')}</h2>
+        {history.isLoading && <p className="mt-2 text-wb-ink-muted">{t('words.historyLoading')}</p>}
         {history.isError && (
           <p className={`mt-2 ${inlineErrorClass}`}>
-            {isForbidden(history.error) ? NO_ACCESS_MESSAGE : "Couldn't load the history right now."}
+            {isForbidden(history.error) ? t('noAccess') : t('words.historyFailed')}
           </p>
         )}
-        {history.data && history.data.totalCount === 0 && <p className="mt-2 text-wb-ink-muted">No words assigned yet.</p>}
+        {history.data && history.data.totalCount === 0 && <p className="mt-2 text-wb-ink-muted">{t('words.historyNone')}</p>}
         {history.data && history.data.items.length > 0 && (
           <ul className="mt-3 flex flex-col gap-2">
             {history.data.items.map((item) => (
@@ -166,8 +167,8 @@ export function GroupWordsTab({ group }: GroupWordsTabProps): ReactElement {
             pageSize={historyPaging.pageSize}
             totalCount={history.data.totalCount}
             onPageChange={historyPaging.setPage}
-            label="History pages"
-            itemLabel="words"
+            label={t('words.historyPages')}
+            itemLabel={t('words.items')}
           />
         )}
       </section>

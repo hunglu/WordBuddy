@@ -1,27 +1,33 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { problemMessage } from '../../api/supportLinks'
 import { useChangePassword } from '../../hooks/useProfile'
 import { cardClass, inputClass, primaryButtonClass } from '../support/supportUi'
 
-const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, 'Enter your current password'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Use at most 128 characters'),
-    confirmPassword: z.string(),
-  })
-  .refine((values) => values.newPassword === values.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  })
+function makeChangePasswordSchema(t: TFunction<'profile'>) {
+  return z
+    .object({
+      currentPassword: z.string().min(1, t('validation.currentRequired')),
+      newPassword: z.string().min(8, t('validation.passwordMin')).max(128, t('validation.passwordMax')),
+      confirmPassword: z.string(),
+    })
+    .refine((values) => values.newPassword === values.confirmPassword, {
+      message: t('validation.mismatch'),
+      path: ['confirmPassword'],
+    })
+}
 
-type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>
+type ChangePasswordFormValues = z.infer<ReturnType<typeof makeChangePasswordSchema>>
 
 /** Change password: current, new and confirm. Fields clear after a successful change. */
 export function ChangePasswordForm(): ReactElement {
+  const { t } = useTranslation('profile')
   const change = useChangePassword()
+  const changePasswordSchema = useMemo(() => makeChangePasswordSchema(t), [t])
   const {
     register,
     handleSubmit,
@@ -43,10 +49,10 @@ export function ChangePasswordForm(): ReactElement {
       )}
       noValidate
     >
-      <h2 className="text-xl font-bold text-wb-ink">Change password</h2>
+      <h2 className="text-xl font-bold text-wb-ink">{t('password.heading')}</h2>
 
       <label htmlFor="currentPassword" className="mt-3 block text-sm font-semibold text-wb-ink">
-        Current password
+        {t('password.current')}
       </label>
       <input
         id="currentPassword"
@@ -58,13 +64,13 @@ export function ChangePasswordForm(): ReactElement {
       {errors.currentPassword && <p className="mt-1 text-sm text-wb-danger">{errors.currentPassword.message}</p>}
 
       <label htmlFor="newPassword" className="mt-3 block text-sm font-semibold text-wb-ink">
-        New password
+        {t('password.new')}
       </label>
       <input id="newPassword" type="password" autoComplete="new-password" {...register('newPassword')} className={inputClass} />
       {errors.newPassword && <p className="mt-1 text-sm text-wb-danger">{errors.newPassword.message}</p>}
 
       <label htmlFor="confirmPassword" className="mt-3 block text-sm font-semibold text-wb-ink">
-        Confirm new password
+        {t('password.confirm')}
       </label>
       <input
         id="confirmPassword"
@@ -76,11 +82,11 @@ export function ChangePasswordForm(): ReactElement {
       {errors.confirmPassword && <p className="mt-1 text-sm text-wb-danger">{errors.confirmPassword.message}</p>}
 
       <button type="submit" disabled={change.isPending} className={`mt-4 block ${primaryButtonClass}`}>
-        Change password
+        {t('password.submit')}
       </button>
-      {change.isSuccess && <p className="mt-2 text-sm text-wb-ink">Password changed.</p>}
+      {change.isSuccess && <p className="mt-2 text-sm text-wb-ink">{t('password.changed')}</p>}
       {change.isError && (
-        <p className="mt-2 text-sm text-wb-danger">{problemMessage(change.error, 'Could not change the password.')}</p>
+        <p className="mt-2 text-sm text-wb-danger">{problemMessage(change.error, t('password.failed'))}</p>
       )}
     </form>
   )

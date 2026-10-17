@@ -24,6 +24,10 @@ public sealed record UpdateProfileRequest(string? Alias, string? AvatarId);
 /// <param name="TimeZoneId">IANA id, for example <c>Asia/Ho_Chi_Minh</c>; null clears.</param>
 public sealed record UpdateTimeZoneRequest(string? TimeZoneId);
 
+/// <summary>Body of <c>PUT api/auth/profile/language</c>.</summary>
+/// <param name="Language">Language code, for example <c>vi</c>; null clears.</param>
+public sealed record UpdateLanguageRequest(string? Language);
+
 /// <summary>Body of <c>PUT /api/auth/admin/users/{id}/guardian</c>.</summary>
 /// <param name="IsGuardian">True grants the Guardian role (adults only); false removes it.</param>
 public sealed record SetGuardianRequest(bool IsGuardian);

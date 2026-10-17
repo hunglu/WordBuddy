@@ -26,6 +26,7 @@ using WordBuddy.Identity.Application.Features.Users.Queries.GetUsersForAdmin;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateDateOfBirth;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateDisplayName;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileAliasAvatar;
+using WordBuddy.Identity.Application.Features.Profile.Commands.UpdatePreferredLanguage;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileTimeZone;
 using WordBuddy.Identity.Application.Features.Profile.Queries.GetCurrentUser;
 using WordBuddy.Identity.Application.Features.SupportLinks;
@@ -63,6 +64,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IValidator<UpdateProfileAliasAvatarCommand>, UpdateProfileAliasAvatarCommandValidator>();
         services.AddScoped<ICommandHandler<UpdateProfileTimeZoneCommand, UserDto>, UpdateProfileTimeZoneCommandHandler>();
         services.AddScoped<IValidator<UpdateProfileTimeZoneCommand>, UpdateProfileTimeZoneCommandValidator>();
+        services.AddScoped<ICommandHandler<UpdatePreferredLanguageCommand, UserDto>, UpdatePreferredLanguageCommandHandler>();
+        services.AddScoped<IValidator<UpdatePreferredLanguageCommand>, UpdatePreferredLanguageCommandValidator>();
         services.AddScoped<ICommandHandler<UpdateDateOfBirthCommand, AuthTokenDto>, UpdateDateOfBirthCommandHandler>();
         services.AddScoped<IValidator<UpdateDateOfBirthCommand>, UpdateDateOfBirthCommandValidator>();
         services.AddScoped<ICommandHandler<UpdateDisplayNameCommand, UserDto>, UpdateDisplayNameCommandHandler>();

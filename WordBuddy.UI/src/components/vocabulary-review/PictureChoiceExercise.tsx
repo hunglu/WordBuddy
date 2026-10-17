@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ExerciseOption, VocabularyExercise } from '../../types'
 import { ChoiceOptions } from './ChoiceOptions'
 import type { ExerciseAnswer } from './sessionQueue'
@@ -12,6 +13,7 @@ interface PictureChoiceExerciseProps {
 
 /** Shows the exercise picture; the learner picks the matching word. Hint = show the definition. */
 export function PictureChoiceExercise({ exercise, onAnswer }: PictureChoiceExerciseProps): ReactElement {
+  const { t } = useTranslation('review')
   const elapsed = useResponseTimer()
   const [hintUsed, setHintUsed] = useState(false)
   const [answered, setAnswered] = useState(false)
@@ -24,9 +26,9 @@ export function PictureChoiceExercise({ exercise, onAnswer }: PictureChoiceExerc
 
   return (
     <div data-testid="exercise-picture-choice">
-      <p className="text-wb-ink-muted">Which word matches the picture?</p>
+      <p className="text-wb-ink-muted">{t('picture.question')}</p>
       {prompt.imageUrl && (
-        <img src={prompt.imageUrl} alt="What is this?" className="mx-auto mt-4 max-h-56 rounded-wb-card object-contain" />
+        <img src={prompt.imageUrl} alt={t('picture.alt')} className="mx-auto mt-4 max-h-56 rounded-wb-card object-contain" />
       )}
       {hintUsed ? (
         <p className="mt-3 text-wb-ink-muted">{prompt.definition}</p>
@@ -37,7 +39,7 @@ export function PictureChoiceExercise({ exercise, onAnswer }: PictureChoiceExerc
           disabled={answered}
           className="mt-3 text-sm font-semibold text-wb-ink-muted hover:underline"
         >
-          Show a hint
+          {t('hint')}
         </button>
       )}
       <ChoiceOptions options={exercise.options} disabled={answered} onPick={handlePick} />

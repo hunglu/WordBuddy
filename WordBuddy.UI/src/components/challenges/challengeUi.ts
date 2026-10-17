@@ -1,31 +1,20 @@
-import type { Challenge, ChallengeMetric, ChallengeStatus } from '../../types'
-
-export const metricLabel: Record<ChallengeMetric, string> = {
-  MemoryPoints: 'Memory points',
-  DueReviewsCorrect: 'Days with a correct review',
-  RecallUpgrades: 'Words moved to recall',
-  ListeningCorrect: 'Correct listening reviews',
-}
-
-export const statusLabel: Record<ChallengeStatus, string> = {
-  Scheduled: 'Soon',
-  Open: 'Open to join',
-  Running: 'Running',
-  Finished: 'Finished',
-}
+import type { TFunction } from 'i18next'
+import { currentLocale } from '../../i18n'
+import type { Challenge } from '../../types'
 
 /** One short line that explains the goal of a challenge. */
-export function goalText(challenge: Pick<Challenge, 'kind' | 'metric' | 'target'>): string {
-  const metric = metricLabel[challenge.metric]
+export function goalText(t: TFunction<'challenges'>, challenge: Pick<Challenge, 'kind' | 'metric' | 'target'>): string {
+  const metric: string = t(`metric.${challenge.metric}`)
   return challenge.kind === 'Target' && challenge.target !== null
-    ? `${metric}: reach ${challenge.target}`
-    : `${metric}: most wins`
+    ? t('goalTarget', { metric, target: challenge.target })
+    : t('goalRanked', { metric })
 }
 
-/** Date range for display, for example `10/11/2026 to 10/18/2026`. */
-export function periodText(startsAtUtc: string, endsAtUtc: string): string {
-  const start = new Date(startsAtUtc).toLocaleDateString()
+/** Date range for display in the current UI language, for example `10/11/2026 to 10/18/2026`. */
+export function periodText(t: TFunction<'challenges'>, startsAtUtc: string, endsAtUtc: string): string {
+  const locale: string = currentLocale()
+  const start: string = new Date(startsAtUtc).toLocaleDateString(locale)
   // The end is exclusive: show the last day that counts.
-  const end = new Date(new Date(endsAtUtc).getTime() - 1).toLocaleDateString()
-  return `${start} to ${end}`
+  const end: string = new Date(new Date(endsAtUtc).getTime() - 1).toLocaleDateString(locale)
+  return t('period', { start, end })
 }

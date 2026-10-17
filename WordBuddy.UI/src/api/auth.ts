@@ -13,6 +13,8 @@ export interface RegisterPayload {
   ageGroup: AgeGroup
   /** IANA time zone id of the browser. Optional. */
   timeZoneId?: string
+  /** Current UI language code. Optional. */
+  preferredLanguage?: string
 }
 
 export async function loginUser(payload: LoginPayload): Promise<AuthToken> {
@@ -28,6 +30,12 @@ export async function registerUser(payload: RegisterPayload): Promise<AuthToken>
 /** Sets (or clears with `null`) the caller IANA time zone. Returns the fresh profile. */
 export async function updateTimeZone(timeZoneId: string | null): Promise<User> {
   const { data } = await apiClient.put<User>('/auth/profile/time-zone', { timeZoneId })
+  return data
+}
+
+/** Sets (or clears with `null`) the caller preferred UI language. Returns the fresh profile. */
+export async function updatePreferredLanguage(language: string | null): Promise<User> {
+  const { data } = await apiClient.put<User>('/auth/profile/language', { language })
   return data
 }
 

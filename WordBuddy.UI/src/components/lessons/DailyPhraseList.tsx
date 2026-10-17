@@ -1,7 +1,9 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { DailyPhrase } from '../../types'
 
 export function DailyPhraseList({ phrases }: { phrases: DailyPhrase[] }): ReactElement {
+  const { t } = useTranslation('lessons')
   return (
     <ul className="flex flex-col gap-3">
       {phrases.map((phrase) => (
@@ -12,7 +14,7 @@ export function DailyPhraseList({ phrases }: { phrases: DailyPhrase[] }): ReactE
             {phrase.audio && (
               <button
                 type="button"
-                aria-label="Play audio"
+                aria-label={t('list.playAudio')}
                 onClick={() => new Audio(phrase.audio!.url).play()}
                 className="flex h-9 w-9 items-center justify-center rounded-wb-pill bg-wb-secondary text-wb-on-secondary hover:bg-wb-secondary-hover"
               >
@@ -24,7 +26,7 @@ export function DailyPhraseList({ phrases }: { phrases: DailyPhrase[] }): ReactE
                 href={phrase.video.url}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Watch video"
+                aria-label={t('list.watchVideo')}
                 className="flex h-9 w-9 items-center justify-center rounded-wb-pill bg-wb-secondary text-wb-on-secondary hover:bg-wb-secondary-hover"
               >
                 🎬

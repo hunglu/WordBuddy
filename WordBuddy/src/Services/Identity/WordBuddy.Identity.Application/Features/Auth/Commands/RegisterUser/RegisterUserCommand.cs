@@ -9,4 +9,5 @@ public sealed record RegisterUserCommand(
     string Password,
     string DisplayName,
     AgeGroup AgeGroup,
-    string? TimeZoneId = null) : ICommand<AuthTokenDto>;
+    string? TimeZoneId = null,
+    string? PreferredLanguage = null) : ICommand<AuthTokenDto>;

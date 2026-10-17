@@ -1,7 +1,9 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VocabularyItem } from '../../types'
 
 export function VocabularyList({ items }: { items: VocabularyItem[] }): ReactElement {
+  const { t } = useTranslation('lessons')
   return (
     <ul className="flex flex-col gap-3">
       {items.map((item) => (
@@ -11,7 +13,7 @@ export function VocabularyList({ items }: { items: VocabularyItem[] }): ReactEle
             {item.audio && (
               <button
                 type="button"
-                aria-label={`Play pronunciation of ${item.word}`}
+                aria-label={t('list.playPronunciation', { word: item.word })}
                 onClick={() => new Audio(item.audio!.url).play()}
                 className="flex h-9 w-9 items-center justify-center rounded-wb-pill bg-wb-primary text-wb-on-primary hover:bg-wb-primary-hover"
               >
@@ -20,7 +22,7 @@ export function VocabularyList({ items }: { items: VocabularyItem[] }): ReactEle
             )}
           </div>
           {item.awaitingApproval ? (
-            <p className="mt-1 text-sm font-semibold text-wb-ink-muted">Waiting for approval</p>
+            <p className="mt-1 text-sm font-semibold text-wb-ink-muted">{t('list.awaiting')}</p>
           ) : (
             <>
               <p className="mt-1 text-wb-ink">{item.definition}</p>

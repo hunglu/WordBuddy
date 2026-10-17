@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { WordsAdded } from '../../types'
 import { cardClass } from '../support/supportUi'
 
@@ -13,14 +14,15 @@ function supporterTotal(bucket: WordsAdded): number {
 
 /** Words added per day or week: the learner's own against supporters'. Plain bars, no chart library. */
 export function WordsAddedChart({ added, unit }: WordsAddedChartProps): ReactElement {
+  const { t } = useTranslation('dashboard')
   const max = added.reduce((highest, bucket) => Math.max(highest, bucket.self + supporterTotal(bucket)), 0)
   const barPx = (count: number): number => (max === 0 ? 0 : Math.round((count / max) * MAX_BAR_PX))
 
   return (
-    <section className={cardClass} aria-label="Words added">
-      <h2 className="text-lg font-bold text-wb-ink">Words added per {unit}</h2>
+    <section className={cardClass} aria-label={t('added.titleDay')}>
+      <h2 className="text-lg font-bold text-wb-ink">{unit === 'day' ? t('added.titleDay') : t('added.titleWeek')}</h2>
       {added.length === 0 ? (
-        <p className="mt-2 text-wb-ink-muted">No words added in this period.</p>
+        <p className="mt-2 text-wb-ink-muted">{t('added.none')}</p>
       ) : (
         <>
           <ul className="mt-4 flex items-end gap-2 overflow-x-auto pb-1">
@@ -45,11 +47,11 @@ export function WordsAddedChart({ added, unit }: WordsAddedChartProps): ReactEle
           <p className="mt-2 flex gap-4 text-sm text-wb-ink-muted">
             <span>
               <span className="mr-1 inline-block h-3 w-3 rounded-sm bg-wb-primary align-middle" />
-              Added by the learner
+              {t('added.byLearner')}
             </span>
             <span>
               <span className="mr-1 inline-block h-3 w-3 rounded-sm bg-wb-secondary align-middle" />
-              Added by supporters
+              {t('added.bySupporters')}
             </span>
           </p>
         </>

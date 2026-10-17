@@ -11,6 +11,7 @@ public static class UserErrors
     public static readonly Error AliasTaken = Error.Conflict("User.AliasTaken", "This alias is already taken.");
     public static readonly Error UnknownAvatar = Error.Validation("User.UnknownAvatar", "The avatar is not in the catalog.");
     public static readonly Error UnknownTimeZone = Error.Validation("User.UnknownTimeZone", "The time zone id is not known.");
+    public static readonly Error InvalidLanguage = Error.Validation("User.InvalidLanguage", "The language code is not valid.");
     public static readonly Error GuardianMustBeAdult = Error.Validation("User.GuardianMustBeAdult", "Only an adult account can hold the Guardian role.");
     public static readonly Error ModeratorMustBeAdult = Error.Validation("User.ModeratorMustBeAdult", "Only an adult account can hold the Moderator role.");
     public static readonly Error ModeratorNotForAdmin = Error.Validation("User.ModeratorNotForAdmin", "An admin already has every right and cannot be a moderator.");

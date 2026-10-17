@@ -1,4 +1,5 @@
-import type { SupportLinkStatus, SupportRelationship } from '../../types'
+import { currentLocale } from '../../i18n'
+import type { SupportRelationship } from '../../types'
 
 /** Shared Tailwind class strings for the support-link screens (wb- tokens only). */
 export const inputClass =
@@ -19,13 +20,6 @@ export const softButtonClass =
 export const cardClass = 'rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card'
 
 export const RELATIONSHIPS: SupportRelationship[] = ['Parent', 'Teacher', 'Partner', 'Other']
-
-export const statusLabel: Record<SupportLinkStatus, string> = {
-  Invited: 'Invited',
-  PendingPrimaryApproval: 'Waiting for Primary approval',
-  Active: 'Active',
-  Revoked: 'Ended',
-}
 
 /** Emoji per avatar id of the backend catalog. Unknown ids fall back to a neutral face. */
 export const AVATAR_EMOJI: Record<string, string> = {
@@ -49,10 +43,10 @@ export function avatarEmoji(avatarId: string | null | undefined): string {
 /** Display text of a plain `yyyy-MM-dd` date (no time zone shift). */
 export function formatPlainDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number)
-  return new Date(year, month - 1, day).toLocaleDateString()
+  return new Date(year, month - 1, day).toLocaleDateString(currentLocale())
 }
 
 /** Local date of an ISO timestamp, for display. */
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString()
+  return new Date(iso).toLocaleDateString(currentLocale())
 }

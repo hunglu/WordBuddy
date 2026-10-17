@@ -1,0 +1,33 @@
+export const common = {
+  loading: 'Loading…',
+  save: 'Save',
+  saving: 'Saving…',
+  cancel: 'Cancel',
+  delete: 'Delete',
+  deleting: 'Deleting…',
+  edit: 'Edit',
+  close: 'Close',
+  back: 'Back',
+  create: 'Create',
+  add: 'Add',
+  remove: 'Remove',
+  retry: 'Try again',
+  saved: 'Saved.',
+  ageGroup: { Child: 'Child', Adult: 'Adult' },
+  genericError: 'Something went wrong. Please try again.',
+  language: {
+    label: 'Language',
+    saveFailed: 'Your language is changed on this device, but we could not save it to your profile.',
+  },
+  pager: {
+    previous: 'Previous',
+    next: 'Next',
+    pageOf: 'Page {{page}} of {{total}} · {{count}} {{items}}',
+    items: 'items',
+  },
+  supporterGate: {
+    title: 'Add a supporter',
+    body: 'Before you start learning, a grown-up needs to support you. Create a code and share it with them.',
+    action: 'Add a supporter',
+  },
+} as const

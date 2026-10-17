@@ -8,6 +8,8 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   login: (auth: AuthToken) => void
+  /** Replaces the persisted user (profile edits) without touching the token. */
+  updateUser: (user: User) => void
   logout: () => void
 }
 
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
           user: auth.user,
           isAuthenticated: true,
         }),
+      updateUser: (user) => set({ user }),
       logout: () =>
         set({ token: null, expiresAtUtc: null, user: null, isAuthenticated: false }),
     }),

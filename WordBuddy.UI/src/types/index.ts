@@ -54,6 +54,8 @@ export interface User {
   dateOfBirth?: string | null
   /** Age band derived from the date of birth, or null. */
   ageBand?: AgeBand | null
+  /** Preferred UI language code (for example `vi`), or null when unset. Older persisted sessions may not have it. */
+  preferredLanguage: string | null
 }
 
 /** One adult account on the admin role screen (`GET /api/auth/admin/users`). */

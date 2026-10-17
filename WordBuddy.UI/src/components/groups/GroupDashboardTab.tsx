@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { MAX_PAGE_SIZE } from '../../api/paging'
 import { useGroupDashboard, useGroupMembers } from '../../hooks/useGroups'
 import type { DashboardRange, LearnerGroupDetail } from '../../types'
 import { avatarEmoji, cardClass, primaryButtonClass, softButtonClass } from '../support/supportUi'
-import { NO_ACCESS_MESSAGE, inlineErrorClass, isForbidden } from './groupUi'
+import { inlineErrorClass, isForbidden } from './groupUi'
 
 const RANGES: readonly DashboardRange[] = [7, 30, 90]
 
@@ -17,6 +18,7 @@ function percent(value: number | null): string {
 
 /** Dashboard tab: one row per active member (avatar and public name only), group totals, 7/30/90 day range. */
 export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactElement {
+  const { t } = useTranslation('groups')
   const [days, setDays] = useState<DashboardRange>(30)
   const activeCount: number = group.activeMemberCount
   const { data, isLoading, isError, error } = useGroupDashboard(group.id, days, activeCount > 0)
@@ -25,10 +27,10 @@ export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactEleme
   const membersById = new Map((members.data?.items ?? []).map((member) => [member.learnerId, member]))
 
   return (
-    <section className={cardClass} aria-label="Group dashboard">
+    <section className={cardClass} aria-label={t('dashboard.heading')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-wb-ink">Group dashboard</h2>
-        <div className="flex gap-2" role="group" aria-label="Period">
+        <h2 className="text-xl font-bold text-wb-ink">{t('dashboard.heading')}</h2>
+        <div className="flex gap-2" role="group" aria-label={t('dashboard.period')}>
           {RANGES.map((range) => (
             <button
               key={range}
@@ -37,40 +39,45 @@ export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactEleme
               onClick={() => setDays(range)}
               className={days === range ? primaryButtonClass : softButtonClass}
             >
-              {range} days
+              {t('dashboard.days', { count: range })}
             </button>
           ))}
         </div>
       </div>
 
       {activeCount === 0 && (
-        <p className="mt-3 text-wb-ink-muted">The dashboard shows when the group has an active member.</p>
+        <p className="mt-3 text-wb-ink-muted">{t('dashboard.needMember')}</p>
       )}
-      {activeCount > 0 && isLoading && <p className="mt-3 text-wb-ink-muted">Loading the dashboard…</p>}
+      {activeCount > 0 && isLoading && <p className="mt-3 text-wb-ink-muted">{t('dashboard.loading')}</p>}
       {isError && (
         <p className={`mt-3 ${inlineErrorClass}`}>
-          {isForbidden(error) ? NO_ACCESS_MESSAGE : "Couldn't load the dashboard right now. Please try again later."}
+          {isForbidden(error) ? t('noAccess') : t('dashboard.loadFailed')}
         </p>
       )}
 
       {data && (
         <>
           <p className="mt-3 text-sm text-wb-ink-muted">
-            {data.from} to {data.to} · {data.totals.memberCount} members · median retention{' '}
-            {percent(data.totals.medianRetention)} · {data.totals.membersActiveThisWeek} active this week
+            {t('dashboard.summary', {
+              from: data.from,
+              to: data.to,
+              members: data.totals.memberCount,
+              retention: percent(data.totals.medianRetention),
+              active: data.totals.membersActiveThisWeek,
+            })}
           </p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm text-wb-ink">
               <thead>
                 <tr className="border-b border-wb-border-control">
-                  <th className="py-2 pr-3">Learner</th>
-                  <th className="py-2 pr-3">Streak</th>
-                  <th className="py-2 pr-3">Active days</th>
-                  <th className="py-2 pr-3">Retention</th>
-                  <th className="py-2 pr-3">Leeches</th>
-                  <th className="py-2 pr-3">Last active</th>
+                  <th className="py-2 pr-3">{t('dashboard.learner')}</th>
+                  <th className="py-2 pr-3">{t('dashboard.streak')}</th>
+                  <th className="py-2 pr-3">{t('dashboard.activeDays')}</th>
+                  <th className="py-2 pr-3">{t('dashboard.retention')}</th>
+                  <th className="py-2 pr-3">{t('dashboard.leeches')}</th>
+                  <th className="py-2 pr-3">{t('dashboard.lastActive')}</th>
                   <th className="py-2 pr-3">
-                    <span className="sr-only">Details</span>
+                    <span className="sr-only">{t('dashboard.details')}</span>
                   </th>
                 </tr>
               </thead>
@@ -83,7 +90,7 @@ export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactEleme
                         <span className="mr-2 text-xl" aria-hidden="true">
                           {avatarEmoji(member?.avatarId)}
                         </span>
-                        <span className="font-semibold">{member?.publicName ?? 'Learner'}</span>
+                        <span className="font-semibold">{member?.publicName ?? t('dashboard.unknownLearner')}</span>
                       </td>
                       <td className="py-2 pr-3">{row.currentStreakDays}</td>
                       <td className="py-2 pr-3">{row.activeDays}</td>
@@ -92,7 +99,7 @@ export function GroupDashboardTab({ group }: GroupDashboardTabProps): ReactEleme
                       <td className="py-2 pr-3">{row.lastActiveDate ?? '—'}</td>
                       <td className="py-2 pr-3">
                         <Link to={`/dashboard/learners/${row.learnerId}`} className="text-wb-primary underline">
-                          Open
+                          {t('dashboard.open')}
                         </Link>
                       </td>
                     </tr>

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
 import { Pager } from '../components/Pager'
@@ -10,7 +11,6 @@ import {
   formatDate,
   inputClass,
   primaryButtonClass,
-  statusLabel,
   successButtonClass,
 } from '../components/support/supportUi'
 import {
@@ -27,6 +27,7 @@ const REASON_MAX = 500
 
 /** `/admin/support-links` — complete or reject escalated unlinks (admin and moderator); hand Primary over (admin only). */
 export function AdminSupportLinksPage(): ReactElement {
+  const { t } = useTranslation(['admin', 'support'])
   const user = useAuthStore((state) => state.user)
   const canManage: boolean = canManageContent(user)
   const isAdmin: boolean = isAdminUser(user)
@@ -52,17 +53,17 @@ export function AdminSupportLinksPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Support links{isAdmin ? ' (admin)' : ''}</h1>
-      <p className="mt-2 text-wb-ink-muted">Every action is audited with your reason.</p>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{isAdmin ? t('admin:supportLinks.titleAdmin') : t('admin:supportLinks.title')}</h1>
+      <p className="mt-2 text-wb-ink-muted">{t('admin:supportLinks.audited')}</p>
       {!isAdmin && (
-        <p className="mt-1 text-sm text-wb-ink-muted">Requests of child learners go to an admin.</p>
+        <p className="mt-1 text-sm text-wb-ink-muted">{t('admin:supportLinks.childrenToAdmin')}</p>
       )}
 
       <section className="mt-6">
-        <h2 className="text-2xl font-bold text-wb-ink">Escalated unlink requests</h2>
-        {requests.isLoading && <p className="mt-3 text-wb-ink-muted">Loading…</p>}
-        {requests.isError && <p className="mt-3 text-wb-danger">Couldn't load unlink requests right now.</p>}
-        {requests.data && requests.data.totalCount === 0 && <p className="mt-3 text-wb-ink-muted">Nothing waiting.</p>}
+        <h2 className="text-2xl font-bold text-wb-ink">{t('admin:supportLinks.escalated')}</h2>
+        {requests.isLoading && <p className="mt-3 text-wb-ink-muted">{t('admin:supportLinks.loading')}</p>}
+        {requests.isError && <p className="mt-3 text-wb-danger">{t('admin:supportLinks.loadFailed')}</p>}
+        {requests.data && requests.data.totalCount === 0 && <p className="mt-3 text-wb-ink-muted">{t('admin:supportLinks.nothing')}</p>}
 
         <div className="mt-3 flex flex-col gap-3">
           {requests.data?.items.map((request) => {
@@ -71,14 +72,17 @@ export function AdminSupportLinksPage(): ReactElement {
             return (
               <div key={request.id} className={cardClass}>
                 <p className="text-sm text-wb-ink-muted">
-                  Link {request.linkId} · learner {request.learnerId} · supporter {request.supporterId}
+                  {t('admin:supportLinks.linkLine', { link: request.linkId, learner: request.learnerId, supporter: request.supporterId })}
                 </p>
                 <p className="text-sm text-wb-ink-muted">
-                  Requested by the {request.requestedBySide.toLowerCase()} side on {formatDate(request.requestedAtUtc)}
-                  {request.escalatedAtUtc ? `, escalated on ${formatDate(request.escalatedAtUtc)}` : ''}
+                  {t('admin:supportLinks.requestedBy', {
+                    side: t(`admin:supportLinks.side.${request.requestedBySide}`),
+                    date: formatDate(request.requestedAtUtc),
+                  })}
+                  {request.escalatedAtUtc ? t('admin:supportLinks.escalatedOn', { date: formatDate(request.escalatedAtUtc) }) : ''}
                 </p>
                 <label htmlFor={`reason-${request.id}`} className="mt-3 block text-sm font-semibold text-wb-ink">
-                  Reason
+                  {t('admin:supportLinks.reason')}
                 </label>
                 <textarea
                   id={`reason-${request.id}`}
@@ -95,7 +99,7 @@ export function AdminSupportLinksPage(): ReactElement {
                     onClick={() => resolve.mutate({ id: request.id, reason: reason.trim(), complete: true })}
                     className={successButtonClass}
                   >
-                    Complete unlink
+                    {t('admin:supportLinks.complete')}
                   </button>
                   <button
                     type="button"
@@ -103,7 +107,7 @@ export function AdminSupportLinksPage(): ReactElement {
                     onClick={() => resolve.mutate({ id: request.id, reason: reason.trim(), complete: false })}
                     className={dangerButtonClass}
                   >
-                    Reject
+                    {t('admin:supportLinks.reject')}
                   </button>
                 </div>
               </div>
@@ -116,16 +120,16 @@ export function AdminSupportLinksPage(): ReactElement {
             pageSize={requestsPaging.pageSize}
             totalCount={requests.data.totalCount}
             onPageChange={requestsPaging.setPage}
-            label="Unlink request pages"
-            itemLabel="requests"
+            label={t('admin:supportLinks.pages')}
+            itemLabel={t('admin:supportLinks.items')}
           />
         )}
-        {resolve.isError && <p className="mt-2 text-sm text-wb-danger">{problemMessage(resolve.error, 'That did not work.')}</p>}
+        {resolve.isError && <p className="mt-2 text-sm text-wb-danger">{problemMessage(resolve.error, t('admin:supportLinks.failed'))}</p>}
       </section>
 
       {isAdmin && (
       <section className="mt-10">
-        <h2 className="text-2xl font-bold text-wb-ink">Primary handover</h2>
+        <h2 className="text-2xl font-bold text-wb-ink">{t('admin:supportLinks.handover.heading')}</h2>
         <form
           className={`mt-3 ${cardClass}`}
           onSubmit={(e) => {
@@ -136,20 +140,20 @@ export function AdminSupportLinksPage(): ReactElement {
           }}
         >
           <label htmlFor="learnerId" className="block text-sm font-semibold text-wb-ink">
-            Child learner id
+            {t('admin:supportLinks.handover.childId')}
           </label>
           <input id="learnerId" value={learnerId} onChange={(e) => setLearnerId(e.target.value)} className={inputClass} />
           <button type="submit" disabled={learnerId.trim().length === 0} className={`mt-3 ${primaryButtonClass}`}>
-            Load links
+            {t('admin:supportLinks.handover.load')}
           </button>
         </form>
 
-        {learnerLinks.isError && <p className="mt-3 text-wb-danger">Couldn't load this learner's links.</p>}
+        {learnerLinks.isError && <p className="mt-3 text-wb-danger">{t('admin:supportLinks.handover.loadFailed')}</p>}
         {learnerLinks.data && (
           <div className={`mt-3 ${cardClass}`}>
-            {learnerLinks.data.totalCount === 0 && <p className="text-wb-ink-muted">No links.</p>}
+            {learnerLinks.data.totalCount === 0 && <p className="text-wb-ink-muted">{t('admin:supportLinks.handover.none')}</p>}
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-semibold text-wb-ink">New Primary</legend>
+              <legend className="text-sm font-semibold text-wb-ink">{t('admin:supportLinks.handover.newPrimary')}</legend>
               {learnerLinks.data.items.map((link) => (
                 <label key={link.id} className="flex items-center gap-2 text-sm text-wb-ink">
                   <input
@@ -159,8 +163,8 @@ export function AdminSupportLinksPage(): ReactElement {
                     checked={newPrimaryLinkId === link.id}
                     onChange={() => setNewPrimaryLinkId(link.id)}
                   />
-                  Supporter {link.supporterId} · {statusLabel[link.status]}
-                  {link.isPrimary ? ' · current Primary' : ''}
+                  {t('admin:supportLinks.handover.supporterLine', { id: link.supporterId, status: t(`support:status.${link.status}`) })}
+                  {link.isPrimary ? t('admin:supportLinks.handover.current') : ''}
                 </label>
               ))}
             </fieldset>
@@ -169,11 +173,11 @@ export function AdminSupportLinksPage(): ReactElement {
               pageSize={linksPaging.pageSize}
               totalCount={learnerLinks.data.totalCount}
               onPageChange={linksPaging.setPage}
-              label="Learner link pages"
-              itemLabel="links"
+              label={t('admin:supportLinks.handover.pages')}
+              itemLabel={t('admin:supportLinks.handover.items')}
             />
             <label htmlFor="handoverReason" className="mt-3 block text-sm font-semibold text-wb-ink">
-              Reason
+              {t('admin:supportLinks.reason')}
             </label>
             <textarea
               id="handoverReason"
@@ -194,10 +198,10 @@ export function AdminSupportLinksPage(): ReactElement {
               }
               className={`mt-3 ${primaryButtonClass}`}
             >
-              Hand over Primary
+              {t('admin:supportLinks.handover.submit')}
             </button>
-            {handover.isSuccess && <p className="mt-2 text-sm text-wb-ink">Primary handed over.</p>}
-            {handover.isError && <p className="mt-2 text-sm text-wb-danger">{problemMessage(handover.error, 'Handover failed.')}</p>}
+            {handover.isSuccess && <p className="mt-2 text-sm text-wb-ink">{t('admin:supportLinks.handover.done')}</p>}
+            {handover.isError && <p className="mt-2 text-sm text-wb-danger">{problemMessage(handover.error, t('admin:supportLinks.handover.failed'))}</p>}
           </div>
         )}
       </section>

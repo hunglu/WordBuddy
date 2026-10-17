@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
 import { motion } from 'framer-motion'
-import { useState, type ReactElement } from 'react'
+import { useMemo, useState, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import { CARD_PAGE_SIZE } from '../api/paging'
@@ -24,16 +26,20 @@ import { useAuthStore } from '../store/authStore'
 import { shareStatusClasses } from '../theme/variants'
 import type { PersonalVocabularyWord } from '../types'
 
-const wordSchema = z.object({
-  word: z.string().min(1, 'Word is required').max(200),
-  definition: z.string().min(1, 'Definition is required').max(2000),
-  example: z.string().max(500).optional(),
-  personalContext: z.string().max(500).optional(),
-})
+function makeWordSchema(t: TFunction<'vocabulary'>) {
+  return z.object({
+    word: z.string().min(1, t('validation.wordRequired')).max(200),
+    definition: z.string().min(1, t('validation.definitionRequired')).max(2000),
+    example: z.string().max(500).optional(),
+    personalContext: z.string().max(500).optional(),
+  })
+}
 
-type WordFormValues = z.infer<typeof wordSchema>
+type WordFormValues = z.infer<ReturnType<typeof makeWordSchema>>
 
 export function VocabularyBuilderPage(): ReactElement {
+  const { t } = useTranslation(['vocabulary', 'common'])
+  const wordSchema = useMemo(() => makeWordSchema(t), [t])
   const user = useAuthStore((state) => state.user)
   const pagination = usePagination(CARD_PAGE_SIZE)
   const { data: page, isLoading, isError } = useMyVocabularyWords(pagination.params)
@@ -77,7 +83,7 @@ export function VocabularyBuilderPage(): ReactElement {
     setWordToConfirm(null)
   }
 
-  const deleteErrorMessage = "Couldn't delete this word right now. Please try again."
+  const deleteErrorMessage: string = t('vocabulary:builder.deleteFailed')
 
   const {
     register,
@@ -111,29 +117,29 @@ export function VocabularyBuilderPage(): ReactElement {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold text-wb-ink">My Vocabulary</h1>
+        <h1 className="text-3xl font-extrabold text-wb-ink">{t('vocabulary:builder.title')}</h1>
         <div className="flex gap-2">
           <Link
             to="/vocabulary/review"
             className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card"
           >
-            Start Review
+            {t('vocabulary:builder.startReview')}
           </Link>
           <Link
             to="/vocabulary/shared"
             className="rounded-wb-md bg-wb-primary-soft px-4 py-2 text-sm font-bold text-wb-ink hover:bg-wb-primary-soft-hover"
           >
-            Browse Shared Pool
+            {t('vocabulary:builder.browsePool')}
           </Link>
         </div>
       </div>
 
       <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4 rounded-wb-card bg-wb-surface-card p-6 shadow-wb-card">
-        <h2 className="text-xl font-bold text-wb-ink">Add a word</h2>
+        <h2 className="text-xl font-bold text-wb-ink">{t('vocabulary:builder.addHeading')}</h2>
 
         <div>
           <label htmlFor="word" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Word
+            {t('vocabulary:builder.word')}
           </label>
           <div className="flex gap-2">
             <input
@@ -146,7 +152,7 @@ export function VocabularyBuilderPage(): ReactElement {
               onClick={onAutofill}
               className="whitespace-nowrap rounded-wb-md bg-wb-secondary px-4 py-2 text-sm font-bold text-wb-on-secondary shadow-wb-card hover:bg-wb-secondary-hover"
             >
-              Auto-fill
+              {t('vocabulary:builder.autofill')}
             </button>
           </div>
           {errors.word && <p className="mt-1 text-sm text-wb-danger">{errors.word.message}</p>}
@@ -160,7 +166,7 @@ export function VocabularyBuilderPage(): ReactElement {
 
         <div>
           <label htmlFor="definition" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Definition
+            {t('vocabulary:builder.definition')}
           </label>
           <textarea
             id="definition"
@@ -173,7 +179,7 @@ export function VocabularyBuilderPage(): ReactElement {
 
         <div>
           <label htmlFor="example" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Example (optional)
+            {t('vocabulary:builder.example')}
           </label>
           <textarea
             id="example"
@@ -193,7 +199,7 @@ export function VocabularyBuilderPage(): ReactElement {
 
         {addWord.isError && (
           <p role="alert" className="text-sm text-wb-danger">
-            Couldn't add this word right now. Please try again.
+            {t('vocabulary:builder.addFailed')}
           </p>
         )}
 
@@ -202,12 +208,12 @@ export function VocabularyBuilderPage(): ReactElement {
           disabled={addWord.isPending}
           className="self-start rounded-wb-md bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
         >
-          {addWord.isPending ? 'Adding…' : 'Add word'}
+          {addWord.isPending ? t('vocabulary:builder.adding') : t('vocabulary:builder.add')}
         </button>
       </form>
 
-      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading your words…</p>}
-      {isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load your vocabulary right now.</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">{t('vocabulary:builder.loading')}</p>}
+      {isError && <p className="mt-8 text-lg text-wb-danger">{t('vocabulary:builder.loadFailed')}</p>}
 
       {deleteWord.isError && !wordToConfirm && (
         <p role="alert" className="mt-4 text-lg text-wb-danger">
@@ -216,7 +222,7 @@ export function VocabularyBuilderPage(): ReactElement {
       )}
 
       {page && page.totalCount === 0 && (
-        <p className="mt-8 text-lg text-wb-ink-muted">You haven't added any words yet — start above!</p>
+        <p className="mt-8 text-lg text-wb-ink-muted">{t('vocabulary:builder.empty')}</p>
       )}
 
       {words && words.length > 0 && (
@@ -227,7 +233,7 @@ export function VocabularyBuilderPage(): ReactElement {
                 <span
                   className={`whitespace-nowrap rounded-wb-pill border px-3 py-1 text-xs font-semibold ${shareStatusClasses[word.shareStatus]}`}
                 >
-                  {word.shareStatus}
+                  {t(`vocabulary:shareStatus.${word.shareStatus}`)}
                 </span>
               </div>
               {editingId === word.id ? (
@@ -251,7 +257,7 @@ export function VocabularyBuilderPage(): ReactElement {
                     onClick={() => setEditingId(word.id)}
                     className="rounded-wb-md bg-wb-primary-soft px-3 py-1.5 text-sm font-semibold text-wb-ink hover:bg-wb-primary-soft-hover"
                   >
-                    Edit
+                    {t('vocabulary:builder.edit')}
                   </button>
                 )}
                 {user?.ageGroup !== 'Child' && word.isAuthor && (word.shareStatus === 'Private' || word.shareStatus === 'Rejected') && (
@@ -261,7 +267,7 @@ export function VocabularyBuilderPage(): ReactElement {
                     disabled={requestShare.isPending}
                     className="rounded-wb-md bg-wb-success-soft px-3 py-1.5 text-sm font-semibold text-wb-success-soft-ink hover:bg-wb-success-soft-hover disabled:opacity-60"
                   >
-                    Share
+                    {t('vocabulary:builder.share')}
                   </button>
                 )}
                 <button
@@ -270,7 +276,7 @@ export function VocabularyBuilderPage(): ReactElement {
                   disabled={deleteWord.isPending}
                   className="rounded-wb-md bg-wb-danger-soft px-3 py-1.5 text-sm font-semibold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
                 >
-                  Delete
+                  {t('common:delete')}
                 </button>
               </div>
             </div>
@@ -284,8 +290,8 @@ export function VocabularyBuilderPage(): ReactElement {
           pageSize={pagination.pageSize}
           totalCount={page.totalCount}
           onPageChange={pagination.setPage}
-          label="My vocabulary pages"
-          itemLabel="words"
+          label={t('vocabulary:builder.pages')}
+          itemLabel={t('vocabulary:builder.items')}
         />
       )}
 

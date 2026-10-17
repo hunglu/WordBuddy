@@ -66,7 +66,7 @@ Multipliers are config: `Vocabulary:Grading:AgeBandMultiplier` in Progress.
 
 ## Pending changes
 
-None.
+- `WB-59_multilingual-ui-english-and-vietnamese` — preferred UI language (`en`/`vi`) saved to the profile (#59)
 
 ## Change history
 

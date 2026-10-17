@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
 import { problemMessage } from '../api/supportLinks'
@@ -13,13 +15,19 @@ import { useAuthStore } from '../store/authStore'
 import { canManageContent } from '../utils/roles'
 import type { LessonFormValues } from '../types'
 
-const lessonSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(200, 'Title can have up to 200 characters'),
-  description: z.string().trim().min(1, 'Description is required').max(2000, 'Description can have up to 2000 characters'),
-  type: z.enum(['Vocabulary', 'Grammar', 'DailyPhrase']),
-  level: z.enum(['Beginner', 'Intermediate', 'Advanced']),
-  targetAgeGroup: z.enum(['Child', 'Adult']),
-})
+function makeLessonSchema(t: TFunction<'admin'>) {
+  return z.object({
+    title: z.string().trim().min(1, t('lessonEditor.validation.titleRequired')).max(200, t('lessonEditor.validation.titleMax')),
+    description: z
+      .string()
+      .trim()
+      .min(1, t('lessonEditor.validation.descriptionRequired'))
+      .max(2000, t('lessonEditor.validation.descriptionMax')),
+    type: z.enum(['Vocabulary', 'Grammar', 'DailyPhrase']),
+    level: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+    targetAgeGroup: z.enum(['Child', 'Adult']),
+  })
+}
 
 const DEFAULT_VALUES: LessonFormValues = {
   title: '',
@@ -31,6 +39,8 @@ const DEFAULT_VALUES: LessonFormValues = {
 
 /** `/admin/lessons/new` and `/admin/lessons/:id` — create or edit a lesson and its words. Admin or moderator. */
 export function AdminLessonEditorPage(): ReactElement {
+  const { t } = useTranslation(['admin', 'lessons'])
+  const lessonSchema = useMemo(() => makeLessonSchema(t), [t])
   const { id } = useParams<{ id: string }>()
   const isNew: boolean = id === undefined
   const navigate = useNavigate()
@@ -80,11 +90,11 @@ export function AdminLessonEditorPage(): ReactElement {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <Link to="/admin/lessons" className="text-sm font-semibold text-wb-ink-muted hover:underline">
-        ← All lessons
+        {t('admin:lessonEditor.back')}
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-extrabold text-wb-ink">{isNew ? 'New lesson' : (data?.title ?? 'Lesson')}</h1>
+        <h1 className="text-3xl font-extrabold text-wb-ink">{isNew ? t('admin:lessonEditor.newTitle') : (data?.title ?? t('admin:lessonEditor.fallbackTitle'))}</h1>
         {data && <LessonStatusBadge isPublished={data.isPublished} />}
         {data && (
           <button
@@ -93,25 +103,25 @@ export function AdminLessonEditorPage(): ReactElement {
             onClick={() => setPublished.mutate({ id: data.id, publish: !data.isPublished })}
             className={softButtonClass}
           >
-            {data.isPublished ? 'Unpublish' : 'Publish'}
+            {data.isPublished ? t('admin:lessons.unpublish') : t('admin:lessons.publish')}
           </button>
         )}
       </div>
-      {isNew && <p className="mt-1 text-wb-ink-muted">New lessons start as drafts. Add words after you save, then publish.</p>}
+      {isNew && <p className="mt-1 text-wb-ink-muted">{t('admin:lessonEditor.newHint')}</p>}
       {setPublished.isError && (
         <p role="alert" className="mt-2 text-sm font-semibold text-wb-danger">
-          {problemMessage(setPublished.error, 'Could not change the status.')}
+          {problemMessage(setPublished.error, t('admin:lessons.statusFailed'))}
         </p>
       )}
 
-      {!isNew && lesson.isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading the lesson…</p>}
-      {!isNew && lesson.isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load this lesson right now.</p>}
+      {!isNew && lesson.isLoading && <p className="mt-8 text-lg text-wb-ink-muted">{t('admin:lessonEditor.loading')}</p>}
+      {!isNew && lesson.isError && <p className="mt-8 text-lg text-wb-danger">{t('admin:lessonEditor.loadFailed')}</p>}
 
       {(isNew || data) && (
         <form onSubmit={handleSubmit(onSubmit)} className={`mt-6 grid gap-4 md:grid-cols-2 ${cardClass}`}>
           <div className="md:col-span-2">
             <label htmlFor="lesson-title" className="mb-1 block text-sm font-semibold text-wb-ink">
-              Title
+              {t('admin:lessonEditor.title')}
             </label>
             <input id="lesson-title" type="text" className={inputClass} {...register('title')} />
             {errors.title && <p className="mt-1 text-sm text-wb-danger">{errors.title.message}</p>}
@@ -119,7 +129,7 @@ export function AdminLessonEditorPage(): ReactElement {
 
           <div className="md:col-span-2">
             <label htmlFor="lesson-description" className="mb-1 block text-sm font-semibold text-wb-ink">
-              Description
+              {t('admin:lessonEditor.description')}
             </label>
             <textarea id="lesson-description" rows={3} className={inputClass} {...register('description')} />
             {errors.description && <p className="mt-1 text-sm text-wb-danger">{errors.description.message}</p>}
@@ -127,45 +137,45 @@ export function AdminLessonEditorPage(): ReactElement {
 
           <div>
             <label htmlFor="lesson-type" className="mb-1 block text-sm font-semibold text-wb-ink">
-              Type
+              {t('admin:lessonEditor.type')}
             </label>
             <select id="lesson-type" disabled={!isNew} className={inputClass} {...register('type')}>
-              <option value="Vocabulary">Vocabulary</option>
-              <option value="Grammar">Grammar</option>
-              <option value="DailyPhrase">Daily phrase</option>
+              <option value="Vocabulary">{t('admin:lessons.type.Vocabulary')}</option>
+              <option value="Grammar">{t('admin:lessons.type.Grammar')}</option>
+              <option value="DailyPhrase">{t('admin:lessons.type.DailyPhrase')}</option>
             </select>
-            {!isNew && <p className="mt-1 text-xs text-wb-ink-muted">The type cannot change after the lesson is created.</p>}
+            {!isNew && <p className="mt-1 text-xs text-wb-ink-muted">{t('admin:lessonEditor.typeLocked')}</p>}
           </div>
 
           <div>
             <label htmlFor="lesson-level" className="mb-1 block text-sm font-semibold text-wb-ink">
-              Level
+              {t('admin:lessonEditor.level')}
             </label>
             <select id="lesson-level" className={inputClass} {...register('level')}>
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
+              <option value="Beginner">{t('lessons:level.Beginner')}</option>
+              <option value="Intermediate">{t('lessons:level.Intermediate')}</option>
+              <option value="Advanced">{t('lessons:level.Advanced')}</option>
             </select>
           </div>
 
           <div>
             <label htmlFor="lesson-age" className="mb-1 block text-sm font-semibold text-wb-ink">
-              Made for
+              {t('admin:lessonEditor.madeFor')}
             </label>
             <select id="lesson-age" className={inputClass} {...register('targetAgeGroup')}>
-              <option value="Child">Children (adults see it too)</option>
-              <option value="Adult">Adults only (children cannot open it)</option>
+              <option value="Child">{t('admin:lessonEditor.forChild')}</option>
+              <option value="Adult">{t('admin:lessonEditor.forAdult')}</option>
             </select>
           </div>
 
           <div className="flex items-end gap-3 md:col-span-2">
             <button type="submit" disabled={create.isPending || update.isPending || (!isNew && !isDirty)} className={primaryButtonClass}>
-              {isNew ? 'Create draft' : 'Save changes'}
+              {isNew ? t('admin:lessonEditor.createDraft') : t('admin:lessonEditor.saveChanges')}
             </button>
-            {update.isSuccess && !isDirty && <span className="text-sm font-semibold text-wb-success">Saved</span>}
+            {update.isSuccess && !isDirty && <span className="text-sm font-semibold text-wb-success">{t('admin:lessonEditor.saved')}</span>}
             {saveError !== null && saveError !== undefined && (
               <span role="alert" className="text-sm font-semibold text-wb-danger">
-                {problemMessage(saveError, 'Could not save the lesson.')}
+                {problemMessage(saveError, t('admin:lessonEditor.saveFailed'))}
               </span>
             )}
           </div>
@@ -174,7 +184,7 @@ export function AdminLessonEditorPage(): ReactElement {
 
       {data?.type === 'Vocabulary' && <LessonSensesPanel lessonId={data.id} senses={data.senses} />}
       {data && data.type !== 'Vocabulary' && (
-        <p className="mt-6 text-wb-ink-muted">Words can only be added to vocabulary lessons.</p>
+        <p className="mt-6 text-wb-ink-muted">{t('admin:lessonEditor.onlyVocabulary')}</p>
       )}
     </motion.div>
   )

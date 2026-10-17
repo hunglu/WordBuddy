@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
 import { Pager } from '../components/Pager'
@@ -17,6 +18,7 @@ const badgeClass = 'rounded-full bg-wb-hover-tint px-2 py-0.5 text-xs font-semib
 
 /** `/admin/users` — list adult accounts and grant or revoke the Moderator role. Admin only. */
 export function AdminUsersPage(): ReactElement {
+  const { t } = useTranslation('admin')
   const admin: boolean = isAdmin(useAuthStore((state) => state.user))
 
   const [searchText, setSearchText] = useState('')
@@ -44,11 +46,11 @@ export function AdminUsersPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Users &amp; roles</h1>
-      <p className="mt-2 text-wb-ink-muted">Role changes apply at the user&apos;s next sign-in.</p>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{t('users.title')}</h1>
+      <p className="mt-2 text-wb-ink-muted">{t('users.hint')}</p>
 
       <label htmlFor="userSearch" className="mt-6 block text-sm font-semibold text-wb-ink">
-        Search by name or email
+        {t('users.search')}
       </label>
       <input
         id="userSearch"
@@ -58,9 +60,9 @@ export function AdminUsersPage(): ReactElement {
         className={inputClass}
       />
 
-      {users.isLoading && <p className="mt-4 text-wb-ink-muted">Loading…</p>}
-      {users.isError && <p className="mt-4 text-wb-danger">Couldn&apos;t load users right now.</p>}
-      {users.data && users.data.totalCount === 0 && <p className="mt-4 text-wb-ink-muted">No users found.</p>}
+      {users.isLoading && <p className="mt-4 text-wb-ink-muted">{t('users.loading')}</p>}
+      {users.isError && <p className="mt-4 text-wb-danger">{t('users.loadFailed')}</p>}
+      {users.data && users.data.totalCount === 0 && <p className="mt-4 text-wb-ink-muted">{t('users.none')}</p>}
 
       <div className="mt-4 flex flex-col gap-3">
         {users.data?.items.map((user) => (
@@ -69,9 +71,9 @@ export function AdminUsersPage(): ReactElement {
               <p className="font-semibold text-wb-ink">{user.displayName}</p>
               <p className="text-sm text-wb-ink-muted">{user.email}</p>
               <div className="mt-2 flex gap-2">
-                {user.isAdmin && <span className={badgeClass}>Admin</span>}
-                {user.isModerator && <span className={badgeClass}>Moderator</span>}
-                {user.isGuardian && <span className={badgeClass}>Guardian</span>}
+                {user.isAdmin && <span className={badgeClass}>{t('users.admin')}</span>}
+                {user.isModerator && <span className={badgeClass}>{t('users.moderator')}</span>}
+                {user.isGuardian && <span className={badgeClass}>{t('users.guardian')}</span>}
               </div>
             </div>
             {!user.isAdmin && (
@@ -81,7 +83,7 @@ export function AdminUsersPage(): ReactElement {
                 onClick={() => setModerator.mutate({ id: user.id, isModerator: !user.isModerator })}
                 className={user.isModerator ? dangerButtonClass : primaryButtonClass}
               >
-                {user.isModerator ? 'Revoke Moderator' : 'Grant Moderator'}
+                {user.isModerator ? t('users.revoke') : t('users.grant')}
               </button>
             )}
           </div>
@@ -94,12 +96,12 @@ export function AdminUsersPage(): ReactElement {
           pageSize={pagination.pageSize}
           totalCount={users.data.totalCount}
           onPageChange={pagination.setPage}
-          label="User pages"
-          itemLabel="users"
+          label={t('users.pages')}
+          itemLabel={t('users.items')}
         />
       )}
       {setModerator.isError && (
-        <p className="mt-2 text-sm text-wb-danger">{problemMessage(setModerator.error, 'That did not work.')}</p>
+        <p className="mt-2 text-sm text-wb-danger">{problemMessage(setModerator.error, t('users.failed'))}</p>
       )}
     </motion.div>
   )

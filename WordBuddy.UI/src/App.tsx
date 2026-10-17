@@ -7,6 +7,7 @@ import { isSupporterRequiredError } from './api/supportLinks'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ChildSupporterGate } from './components/support/ChildSupporterGate'
 import { CURRENT_USER_KEY } from './hooks/useSupportLinks'
+import { useLanguageSync } from './hooks/useLanguageSync'
 import { AppLayout } from './layouts/AppLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardPage } from './pages/DashboardPage'
@@ -99,6 +100,8 @@ function AnimatedRoutes(): ReactElement {
 }
 
 function App(): ReactElement {
+  useLanguageSync()
+
   return (
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">

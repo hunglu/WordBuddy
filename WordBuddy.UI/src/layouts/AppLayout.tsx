@@ -1,12 +1,17 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, Outlet, matchPath, useLocation } from 'react-router-dom'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import type { nav } from '../i18n/locales/en/nav'
 import { useAuthStore } from '../store/authStore'
 import { canManageContent, isAdmin } from '../utils/roles'
+
+type NavLabelKey = keyof typeof nav.items
 
 /** A sidebar navigation entry. */
 interface NavItem {
   to: string
-  label: string
+  labelKey: NavLabelKey
   icon: string
   end: boolean
   /**
@@ -17,32 +22,32 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Home', icon: '🏠', end: true },
-  { to: '/lessons', label: 'Lessons', icon: '📚', end: false },
+  { to: '/', labelKey: 'home', icon: '🏠', end: true },
+  { to: '/lessons', labelKey: 'lessons', icon: '📚', end: false },
   {
     to: '/vocabulary',
-    label: 'My Vocabulary',
+    labelKey: 'vocabulary',
     icon: '📝',
     end: true,
   },
-  { to: '/vocabulary/review', label: 'Review', icon: '🧠', end: true },
-  { to: '/challenges', label: 'Challenges', icon: '🏆', end: false },
-  { to: '/vocabulary/shared', label: 'Shared Pool', icon: '🌍', end: true },
-  { to: '/progress', label: 'My Progress', icon: '✅', end: false },
-  { to: '/support', label: 'Supporters', icon: '🤝', end: false },
-  { to: '/groups', label: 'Groups', icon: '👥', end: false },
+  { to: '/vocabulary/review', labelKey: 'review', icon: '🧠', end: true },
+  { to: '/challenges', labelKey: 'challenges', icon: '🏆', end: false },
+  { to: '/vocabulary/shared', labelKey: 'shared', icon: '🌍', end: true },
+  { to: '/progress', labelKey: 'progress', icon: '✅', end: false },
+  { to: '/support', labelKey: 'supporters', icon: '🤝', end: false },
+  { to: '/groups', labelKey: 'groups', icon: '👥', end: false },
 ]
 
 /** Content work: admins and adult moderators. */
 const CONTENT_NAV_ITEMS: NavItem[] = [
-  { to: '/vocabulary/moderation', label: 'Moderation', icon: '🛡️', end: true },
-  { to: '/admin/lessons', label: 'Lesson authoring', icon: '✏️', end: false },
-  { to: '/admin/lexemes', label: 'Lexemes', icon: '📖', end: false },
-  { to: '/admin/support-links', label: 'Support links', icon: '🔗', end: true },
+  { to: '/vocabulary/moderation', labelKey: 'moderation', icon: '🛡️', end: true },
+  { to: '/admin/lessons', labelKey: 'lessonAuthoring', icon: '✏️', end: false },
+  { to: '/admin/lexemes', labelKey: 'lexemes', icon: '📖', end: false },
+  { to: '/admin/support-links', labelKey: 'supportLinks', icon: '🔗', end: true },
 ]
 
 /** Admin only: user and role management. */
-const ADMIN_ONLY_NAV_ITEMS: NavItem[] = [{ to: '/admin/users', label: 'Users & roles', icon: '🔑', end: true }]
+const ADMIN_ONLY_NAV_ITEMS: NavItem[] = [{ to: '/admin/users', labelKey: 'users', icon: '🔑', end: true }]
 
 /**
  * Whether a nav item is the selected one for `pathname`: exact match on `activePaths` when set,
@@ -56,6 +61,7 @@ function isItemActive(item: NavItem, pathname: string): boolean {
 
 /** Sidebar + top bar shell for all protected pages — large icons and labels, child-friendly. */
 export function AppLayout(): ReactElement {
+  const { t } = useTranslation('nav')
   const { user, logout } = useAuthStore()
   const navItems: NavItem[] = [
     ...NAV_ITEMS,
@@ -86,7 +92,7 @@ export function AppLayout(): ReactElement {
               }`}
             >
               <span className="text-2xl">{item.icon}</span>
-              {item.label}
+              {t(`items.${item.labelKey}`)}
             </Link>
           )
         })}
@@ -95,15 +101,16 @@ export function AppLayout(): ReactElement {
           <span className="text-2xl">👤</span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-wb-ink">{user?.displayName}</p>
-            <p className="text-xs text-wb-ink-muted">My profile</p>
+            <p className="text-xs text-wb-ink-muted">{t('myProfile')}</p>
           </div>
         </Link>
+        <LanguageSwitcher />
         <button
           type="button"
           onClick={logout}
           className="rounded-wb-lg px-4 py-3 text-left text-lg font-semibold text-wb-danger hover:bg-wb-danger-soft"
         >
-          Log out
+          {t('logOut')}
         </button>
       </aside>
 
