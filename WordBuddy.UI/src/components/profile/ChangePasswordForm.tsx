@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { problemMessage } from '../../api/supportLinks'
 import { useChangePassword } from '../../hooks/useProfile'
 import { cardClass, inputClass, primaryButtonClass } from '../support/supportUi'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 function makeChangePasswordSchema(t: TFunction<'profile'>) {
   return z
@@ -31,12 +32,14 @@ export function ChangePasswordForm(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     reset,
     formState: { errors },
   } = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   })
+  useRetranslateFormErrors(errors, trigger)
 
   return (
     <form

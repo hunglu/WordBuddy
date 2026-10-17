@@ -13,6 +13,7 @@ import { avatarEmoji, cardClass, inputClass, primaryButtonClass, softButtonClass
 import { useCreateGroup, useJoinedGroups, useLeaveGroup, useOwnedGroups } from '../hooks/useGroups'
 import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
 function makeCreateGroupSchema(t: TFunction<'groups'>) {
   return z.object({
@@ -47,9 +48,11 @@ export function GroupsPage(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     reset,
     formState: { errors },
   } = useForm<CreateGroupFormValues>({ resolver: zodResolver(createGroupSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   function onCreate(values: CreateGroupFormValues): void {
     createGroup.mutate(values.name, {

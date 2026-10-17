@@ -13,7 +13,7 @@ references to any other WordBuddy service or shared project — see the root
 |---|---|---|---|
 | POST | `/api/auth/register` | Anonymous | Creates a new account, returns a JWT. Optional `timeZoneId` (IANA id; unknown id → `400`) |
 | POST | `/api/auth/login` | Anonymous | Authenticates an existing account, returns a JWT |
-| PUT | `/api/auth/profile/language` | Bearer | Sets or clears the caller preferred UI language (`{ "language": "vi" }`); malformed code -> `400 User.InvalidLanguage` |
+| PUT | `/api/auth/profile/language` | Bearer | Sets or clears the caller preferred UI language (`{ "language": "vi" }`); malformed code -> `400 UpdatePreferredLanguage.Validation` |
 | PUT | `/api/auth/profile/time-zone` | Bearer | Sets or clears the caller IANA time zone (`{ "timeZoneId": "Asia/Ho_Chi_Minh" }`); unknown id → `400 User.UnknownTimeZone` |
 | PUT | `/api/auth/admin/users/{id}/guardian` | `AdminOnly` | Grants or removes the Guardian role (`{ "isGuardian": true }`); a child account → `400 User.GuardianMustBeAdult`; non-admin → `403` |
 | PUT | `/api/auth/admin/users/{id}/moderator` | `AdminOnly` | Grants or removes the Moderator role (`{ "isModerator": true }`) → `204`; a child → `400 User.ModeratorMustBeAdult`; an admin → `400 User.ModeratorNotForAdmin`; unknown id → `404` |

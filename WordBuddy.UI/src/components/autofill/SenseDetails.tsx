@@ -30,7 +30,7 @@ type SenseDetailsProps = Readonly<{ sense: SenseDetailsData }>
  * badge are shown — never the definition.
  */
 export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
-  const { t } = useTranslation('vocabulary')
+  const { t } = useTranslation(['vocabulary', 'admin'])
   const play = (url: string): void => {
     void new Audio(url).play()
   }
@@ -40,7 +40,7 @@ export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
       <>
         <div className={styles.header}>
           <p className={styles.word}>{sense.word}</p>
-          {sense.partOfSpeech && <span className={styles.pos}>{sense.partOfSpeech}</span>}
+          {sense.partOfSpeech && <span className={styles.pos}>{t(`admin:pos.${sense.partOfSpeech}`)}</span>}
         </div>
         <span className={styles.waiting}>{t('sense.waiting')}</span>
         <p className={styles.ipa}>{t('sense.willCheck')}</p>
@@ -60,7 +60,7 @@ export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
     <>
       <div className={styles.header}>
         <p className={styles.word}>{sense.word}</p>
-        {sense.partOfSpeech && <span className={styles.pos}>{sense.partOfSpeech}</span>}
+        {sense.partOfSpeech && <span className={styles.pos}>{t(`admin:pos.${sense.partOfSpeech}`)}</span>}
       </div>
 
       {(sense.ipaUk || sense.ipaUs || sense.audioUkUrl || sense.audioUsUrl) && (

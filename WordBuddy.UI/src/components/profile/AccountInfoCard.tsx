@@ -8,6 +8,7 @@ import { problemMessage } from '../../api/supportLinks'
 import { useUpdateDisplayName } from '../../hooks/useProfile'
 import type { User } from '../../types'
 import { cardClass, inputClass, primaryButtonClass } from '../support/supportUi'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 function makeDisplayNameSchema(t: TFunction<'profile'>) {
   return z.object({
@@ -27,11 +28,13 @@ export function AccountInfoCard({ user }: AccountInfoCardProps): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<DisplayNameFormValues>({
     resolver: zodResolver(displayNameSchema),
     defaultValues: { displayName: user.displayName },
   })
+  useRetranslateFormErrors(errors, trigger)
   const isChild = user.ageGroup === 'Child'
 
   return (

@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { problemCode } from '../../api/supportLinks'
 import { useUpdateMyWord } from '../../hooks/useVocabulary'
 import type { PersonalVocabularyWord } from '../../types'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 function makeEditSchema(t: TFunction<'vocabulary'>) {
   return z.object({
@@ -32,11 +33,13 @@ export function EditWordForm({ word, onClose }: EditWordFormProps): ReactElement
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
     defaultValues: { word: word.word, definition: word.definition, example: word.example ?? '' },
   })
+  useRetranslateFormErrors(errors, trigger)
 
   const onSubmit = handleSubmit((values) => {
     updateWord.mutate(

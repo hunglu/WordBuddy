@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { loginUser } from '../api/auth'
 import { problemMessage } from '../api/supportLinks'
 import { useAuthStore } from '../store/authStore'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
 function makeLoginSchema(t: TFunction<'auth'>) {
   return z.object({
@@ -29,8 +30,10 @@ export function LoginPage(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   const mutation = useMutation({
     mutationFn: loginUser,

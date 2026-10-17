@@ -21,6 +21,9 @@ export const errors = {
       PasswordTooWeak: 'The new password is not valid.',
       InvalidLanguage: 'The language is not valid.',
     },
+    UpdatePreferredLanguage: {
+      Validation: 'The language is not valid.',
+    },
   },
   generic: 'Something went wrong. Please try again.',
   noAccess: 'You do not have access to this page.',

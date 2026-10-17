@@ -14,6 +14,7 @@ import { useAdminLesson, useCreateLesson, useSetLessonPublished, useUpdateLesson
 import { useAuthStore } from '../store/authStore'
 import { canManageContent } from '../utils/roles'
 import type { LessonFormValues } from '../types'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
 function makeLessonSchema(t: TFunction<'admin'>) {
   return z.object({
@@ -54,6 +55,7 @@ export function AdminLessonEditorPage(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors, isDirty },
   } = useForm<LessonFormValues>({
     resolver: zodResolver(lessonSchema),
@@ -69,6 +71,7 @@ export function AdminLessonEditorPage(): ReactElement {
         }
       : undefined,
   })
+  useRetranslateFormErrors(errors, trigger)
 
   // Server-side, `ManageContent` already rejects a non-admin call — this is a UX guard.
   if (!canManage) {

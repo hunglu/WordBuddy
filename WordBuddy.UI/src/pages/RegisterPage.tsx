@@ -12,6 +12,7 @@ import { problemMessage } from '../api/supportLinks'
 import { useAuthStore } from '../store/authStore'
 import { browserTimeZone } from '../utils/timeZone'
 import type { AgeGroup } from '../types'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
 function makeRegisterSchema(t: TFunction<'auth'>) {
   return z
@@ -44,10 +45,12 @@ export function RegisterPage(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     setValue,
     watch,
     formState: { errors },
   } = useForm<RegisterFormValues>({ resolver: zodResolver(registerSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   const ageGroup = watch('ageGroup')
 

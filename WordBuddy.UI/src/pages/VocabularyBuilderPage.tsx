@@ -25,6 +25,7 @@ import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
 import { shareStatusClasses } from '../theme/variants'
 import type { PersonalVocabularyWord } from '../types'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
 function makeWordSchema(t: TFunction<'vocabulary'>) {
   return z.object({
@@ -88,12 +89,14 @@ export function VocabularyBuilderPage(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     reset,
     getValues,
     setValue,
     watch,
     formState: { errors },
   } = useForm<WordFormValues>({ resolver: zodResolver(wordSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   const onSubmit = handleSubmit((values) => {
     addWord.mutate(

@@ -8,6 +8,7 @@ import { problemMessage } from '../../api/supportLinks'
 import { useUpdateLexeme } from '../../hooks/useAdminLexemes'
 import type { AdminLexemeDetail, CefrLevel, PartOfSpeech, UpdateLexemeValues } from '../../types'
 import { inputClass, primaryButtonClass } from '../support/supportUi'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 const PARTS_OF_SPEECH = [
   'Noun',
@@ -112,12 +113,14 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors, isDirty },
   } = useForm<LexemeFormInput, unknown, LexemeFormValues>({
     resolver: zodResolver(lexemeSchema),
     // Fills the form when the lexeme loads and resets it to the saved values after every save.
     values: toFormValues(lexeme),
   })
+  useRetranslateFormErrors(errors, trigger)
 
   const onSubmit = (values: LexemeFormValues): void => {
     update.mutate({ id: lexeme.id, values: toRequest(values) })

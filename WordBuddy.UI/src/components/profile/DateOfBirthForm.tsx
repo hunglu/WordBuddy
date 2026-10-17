@@ -8,6 +8,7 @@ import { problemMessage } from '../../api/supportLinks'
 import { useUpdateDateOfBirth } from '../../hooks/useProfile'
 import type { User } from '../../types'
 import { cardClass, inputClass, primaryButtonClass } from '../support/supportUi'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 /** Today as `yyyy-MM-dd` in the browser time zone. */
 function todayIso(): string {
@@ -38,11 +39,13 @@ export function DateOfBirthForm({ user }: DateOfBirthFormProps): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<DateOfBirthFormValues>({
     resolver: zodResolver(dateOfBirthSchema),
     defaultValues: { dateOfBirth: user.dateOfBirth ?? '' },
   })
+  useRetranslateFormErrors(errors, trigger)
   const isChild = user.ageGroup === 'Child'
 
   return (

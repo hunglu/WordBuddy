@@ -7,6 +7,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { useUpdatePersonalContext } from '../../hooks/useVocabulary'
 import { PersonalContextField } from './PersonalContextField'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 function makeNoteSchema(t: TFunction<'vocabulary'>) {
   return z.object({
@@ -31,6 +32,7 @@ export function PersonalContextEditor({ wordId, note }: PersonalContextEditorPro
   const {
     register,
     handleSubmit,
+    trigger,
     reset,
     control,
     formState: { errors },
@@ -38,6 +40,7 @@ export function PersonalContextEditor({ wordId, note }: PersonalContextEditorPro
     resolver: zodResolver(noteSchema),
     defaultValues: { personalContext: note ?? '' },
   })
+  useRetranslateFormErrors(errors, trigger)
   const draft = useWatch({ control, name: 'personalContext' }) ?? ''
 
   const open = (): void => {

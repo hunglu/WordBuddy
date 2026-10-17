@@ -23,6 +23,9 @@ export const errors: TranslationOf<typeof en> = {
       PasswordTooWeak: 'Mật khẩu mới không hợp lệ.',
       InvalidLanguage: 'Ngôn ngữ không hợp lệ.',
     },
+    UpdatePreferredLanguage: {
+      Validation: 'Ngôn ngữ không hợp lệ.',
+    },
   },
   generic: 'Có lỗi xảy ra. Vui lòng thử lại.',
   noAccess: 'Bạn không có quyền xem trang này.',

@@ -36,6 +36,8 @@ export function useUpdatePreferredLanguage() {
   const updateUser = useAuthStore((state) => state.updateUser)
   return useMutation({
     mutationFn: updatePreferredLanguage,
+    // One save at a time, so quick switches cannot finish out of order.
+    scope: { id: 'preferred-language' },
     onSuccess: (user) => {
       queryClient.setQueryData(CURRENT_USER_KEY, user)
       updateUser(user)

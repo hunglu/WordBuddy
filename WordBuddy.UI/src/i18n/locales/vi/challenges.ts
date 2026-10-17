@@ -25,7 +25,7 @@ export const challenges: TranslationOf<typeof en> = {
     ListeningCorrect: 'Số lần nghe đúng',
   },
   goalTarget: '{{metric}}: đạt {{target}}',
-  goalRanked: '{{metric}}: nhiều nhất thắng',
+  goalRanked: '{{metric}}: ai cao nhất sẽ thắng',
   period: '{{start}} đến {{end}}',
   card: {
     joined: 'Đã tham gia',
