@@ -1,14 +1,61 @@
 # Review: Multilingual UI (English and Vietnamese)
 
-PR: #60 · Round 1 · Reviewed commit: d51293a · 2026-10-17T16:07:06+07:00
+PR: #60 · Round 2 · Reviewed commit: 6dd36ce · 2026-10-17T17:25:22+07:00
 
 ## Verdict
+
+Changes requested — one major: the new auto-save runs on a restored session too, so a stale persisted user can overwrite a language chosen on another device.
+
+Checks run: `npm run build` passes at `6dd36ce`. The CRLF churn is gone (`--ignore-cr-at-eol` gives the same stat as the plain diff).
+
+## Round 1 findings — status
+
+| # | Round 1 finding | Status | Evidence |
+|---|---|---|---|
+| 1 | Reload reverts a failed save | Resolved | `useLanguageSync.ts:18,27` — the restored user id is kept in a ref; the profile language is applied only when the id differs |
+| 2 | Overlapping PUTs | Resolved | `useProfile.ts:40` — `scope: { id: 'preferred-language' }` |
+| 3 | No save when profile has no language | Resolved, but see new finding 1 | `useLanguageSync.ts:30-31` |
+| 4 | `preferredLanguage` should be optional | Resolved | `types/index.ts:58` |
+| 5 | Raw part of speech on autofill card | Resolved | `SenseDetails.tsx:43,63` use `admin:pos.*` |
+| 6 | README error code | Resolved | README says `UpdatePreferredLanguage.Validation`; code seeded in `en`/`vi` `errors.ts` |
+| 7 | CRLF → LF churn | Resolved | `App.tsx` 3 lines, `VocabularyBuilderPage.tsx` 65, `AdminLessonEditorPage.tsx` 81 vs `main` |
+| 8 | Form errors keep old language | Resolved | `useRetranslateFormErrors` in all 11 forms that use `zodResolver` |
+| 9 | Awkward `goalRanked` copy | Resolved | `vi/challenges.ts:28` |
+
+## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | major | `WordBuddy.UI/src/hooks/useLanguageSync.ts:25-31` | The auto-save also runs for a **restored** session. The persisted user is never refreshed from `/me`, so `preferredLanguage` can be stale (`undefined` in every session persisted before this release, or `null` after a failed save). Scenario: a learner is logged in on phone and laptop before release → after release, picks `vi` on the laptop (saved) → opens the phone, browser in English → restored user has no language → phone saves `en` → the explicit `vi` choice is lost; the next laptop login switches to English. | Auto-save only on a real login, where the user comes fresh from the login reply: `else if (restoredUserId.current !== userId && isSupportedLanguage(i18n.language))`. This also removes the duplicate PUT that React `StrictMode` sends in dev on mount. |
+| 2 | nit | `WordBuddy.UI/src/hooks/useLanguageSync.ts:30` | An **unsupported** profile code is overwritten, not ignored. Plan: "Unknown or unsupported codes fall back to `en`". Scenario: a third language `fr` ships; a tab still running the old bundle logs in → saves `en` over `fr`. | Auto-save only when `preferredLanguage` is `null`/`undefined`; leave unsupported codes as they are. |
+
+Verified, no finding:
+
+- **Restored session:** ref = persisted id → profile language not applied → device choice kept. Matches round 1 fix.
+- **Logout → login same user:** logout sets the ref to `undefined` → the next login applies the profile language.
+- **User switch:** a different id never equals the ref → the new user's profile language is applied.
+- **No loop:** the save `onSuccess` calls `updateUser`; the id does not change, so the effect (deps `[userId]`) does not rerun. `login(auth)` in date-of-birth and password changes keeps the same id too.
+- **Register:** sends `i18n.language`, so the profile is never `null` after register → no extra save.
+- **`useRetranslateFormErrors`:** triggers only `Object.keys(errors)`. With a resolver, RHF `trigger(names)` updates only those names, so untouched fields get no error. The first render is skipped (`previousLanguage` ref). RHF sets `control._options = props` during render, so `trigger` in the effect uses the new-language schema. No form uses `setError`/`errors.root`, so no server error is cleared.
+- **Sanity pass (whole PR):** round 1 checks still hold (backend, migration + diagram, typed keys, child vs adult). The fix round touches only the UI, the README and the plan folder.
+
+## Plan conformance
+
+- All `tasks.md` items are reflected in the diff. E2E tasks moved to `/test`, as the plan says.
+- Fix round stays inside the round 1 findings. No out-of-scope change.
+
+## Previous rounds
+
+
+**Round 1** · PR: #60 · Reviewed commit: d51293a · 2026-10-17T16:07:06+07:00
+
+### Verdict
 
 Changes requested — one major: after a failed save, a page reload reverts the UI to the old profile language.
 
 Checks run: `npm run build` passes (key parity and typed keys hold). Identity language tests pass (25 unit, 8 integration).
 
-## Findings
+### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
@@ -32,7 +79,7 @@ Verified, no finding:
 - **`problemMessage`:** nested dotted codes resolve through i18next `deepFind`. Unmapped codes in `vi` fall back to translated text.
 - **Vietnamese copy:** the text is natural and short. Child screens (nav, review, gate, dashboard) use simple words.
 
-## Plan conformance
+### Plan conformance
 
 - All `tasks.md` items are reflected in the diff. E2E tasks moved to `/test`, as the plan says.
 - ADR `docs/adr/0006-ui-i18n.md` is added. The `CLAUDE.md` rule is proposed, not edited.
