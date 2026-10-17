@@ -99,11 +99,16 @@ function AnimatedRoutes(): ReactElement {
   )
 }
 
-function App(): ReactElement {
+/** Runs language sync inside the QueryClientProvider; always mounted, logged in or not. */
+function LanguageSync(): null {
   useLanguageSync()
+  return null
+}
 
+function App(): ReactElement {
   return (
     <QueryClientProvider client={queryClient}>
+      <LanguageSync />
       <MotionConfig reducedMotion="user">
         <BrowserRouter>
           <AnimatedRoutes />

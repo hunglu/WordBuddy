@@ -1,14 +1,14 @@
 ---
 title: WB-59_Multilingual UI (English and Vietnamese)
-status: changes-requested
+status: implemented
 type: new
 issue: 59
 pr: 60
 affects: docs/features/WB-59_multilingual-ui-english-and-vietnamese.md, docs/features/user-profile.md
 supersedes: none
-version: 8.0
+version: 9.0
 created: 2026-10-17T11:25:26+07:00
-updated: 2026-10-17T17:37:07+07:00
+updated: 2026-10-17T17:45:12+07:00
 ---
 
 ## Problem
