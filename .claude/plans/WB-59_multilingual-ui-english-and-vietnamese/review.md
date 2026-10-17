@@ -1,14 +1,62 @@
 # Review: Multilingual UI (English and Vietnamese)
 
-PR: #60 · Round 2 · Reviewed commit: 6dd36ce · 2026-10-17T17:25:22+07:00
+PR: #60 · Round 3 · Reviewed commit: 374c5dd · 2026-10-17T17:37:07+07:00
 
 ## Verdict
+
+Changes requested — one blocker: `App` calls `useLanguageSync()` outside `QueryClientProvider`, so the app throws on every load and shows a blank screen.
+
+Checks run: `npm run build` passes at `374c5dd` (the type check cannot catch a missing provider). The bug came in with fix round 1 (`6dd36ce`); round 2 missed it.
+
+## Round 2 findings — status
+
+| # | Round 2 finding | Status | Evidence |
+|---|---|---|---|
+| 1 | Restored session auto-saves | Resolved | `useLanguageSync.ts:18,28` — the ref starts at the persisted id, so the first run returns before any apply or save |
+| 2 | Unsupported code overwritten | Resolved | `useLanguageSync.ts:32` — saves only when `preferredLanguage == null` |
+
+## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| 1 | blocker | `WordBuddy.UI/src/App.tsx:103` with `WordBuddy.UI/src/hooks/useLanguageSync.ts:16` | `App` calls `useLanguageSync()` **before** it renders `<QueryClientProvider>`. The hook calls `useUpdatePreferredLanguage()` → `useQueryClient()` + `useMutation()`. With no provider above, TanStack Query 5.102 throws `No QueryClient set, use QueryClientProvider to set one` (`QueryClientProvider.js:9`). Scenario: any visitor opens any page → `App` throws during render → no error boundary → blank screen, for children and adults, logged in or not. Since `6dd36ce`. | Call the hook from a component **inside** the provider that is **always mounted**, e.g. a `LanguageSync` component that returns `null`, rendered inside `<QueryClientProvider>`, or call it at the top of `AnimatedRoutes`. Do not put it in `AppLayout`/`ProtectedRoute`: they mount after login, so the ref would start at the new id and treat a real login as a restored session. |
+
+## Ref logic (`handledUserId`) — verified
+
+Assumes the hook runs in an always-mounted component (as now, and after the fix above).
+
+| Case | Flow | Result |
+|---|---|---|
+| Restored session | ref = persisted id (zustand `persist` hydrates from localStorage synchronously) → `handled === userId` → return | Device language kept, no PUT ✔ |
+| Real login | ref `undefined` → set to id → apply profile language, or save once if `null`/`undefined` | ✔ |
+| StrictMode dev re-run | React keeps refs across the simulated remount → second run sees `handled === userId` → return | One PUT ✔ |
+| Logout → same user | `logout()` → `userId` undefined → ref reset → next login is handled | ✔ (401 interceptor and `ProtectedRoute` expiry both call `logout()`) |
+| User B after A, no logout | id differs → handled → B's language applied / saved | ✔ |
+| Failed save | ref already set → no retry this session; reload → restored → no retry; next real login (`preferredLanguage` still `null`) → one retry | No loop ✔ |
+| Save success | `onSuccess` → `updateUser` → same id → effect does not rerun | No loop ✔ |
+| Password / date-of-birth change | `login(auth)` with same id → skipped | No PUT ✔ |
+
+## Sanity pass (whole PR)
+
+- The fix round touches only `useLanguageSync.ts` and the plan folder.
+- Round 1 and round 2 checks still hold: backend, migration + diagram, typed keys, child vs adult, form re-translation.
+
+## Plan conformance
+
+- All `tasks.md` items are reflected in the diff. E2E tasks moved to `/test`, as the plan says.
+- Fix round stays inside the round 2 findings. No out-of-scope change.
+
+## Previous rounds
+
+**Round 2** · PR: #60 · Reviewed commit: 6dd36ce · 2026-10-17T17:25:22+07:00
+
+### Verdict
 
 Changes requested — one major: the new auto-save runs on a restored session too, so a stale persisted user can overwrite a language chosen on another device.
 
 Checks run: `npm run build` passes at `6dd36ce`. The CRLF churn is gone (`--ignore-cr-at-eol` gives the same stat as the plain diff).
 
-## Round 1 findings — status
+### Round 1 findings — status
 
 | # | Round 1 finding | Status | Evidence |
 |---|---|---|---|
@@ -22,7 +70,7 @@ Checks run: `npm run build` passes at `6dd36ce`. The CRLF churn is gone (`--igno
 | 8 | Form errors keep old language | Resolved | `useRetranslateFormErrors` in all 11 forms that use `zodResolver` |
 | 9 | Awkward `goalRanked` copy | Resolved | `vi/challenges.ts:28` |
 
-## Findings
+### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
@@ -39,13 +87,10 @@ Verified, no finding:
 - **`useRetranslateFormErrors`:** triggers only `Object.keys(errors)`. With a resolver, RHF `trigger(names)` updates only those names, so untouched fields get no error. The first render is skipped (`previousLanguage` ref). RHF sets `control._options = props` during render, so `trigger` in the effect uses the new-language schema. No form uses `setError`/`errors.root`, so no server error is cleared.
 - **Sanity pass (whole PR):** round 1 checks still hold (backend, migration + diagram, typed keys, child vs adult). The fix round touches only the UI, the README and the plan folder.
 
-## Plan conformance
+### Plan conformance
 
 - All `tasks.md` items are reflected in the diff. E2E tasks moved to `/test`, as the plan says.
 - Fix round stays inside the round 1 findings. No out-of-scope change.
-
-## Previous rounds
-
 
 **Round 1** · PR: #60 · Reviewed commit: d51293a · 2026-10-17T16:07:06+07:00
 
