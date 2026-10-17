@@ -1,30 +1,39 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import axios from 'axios'
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { loginUser } from '../api/auth'
+import { problemMessage } from '../api/supportLinks'
 import { useAuthStore } from '../store/authStore'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
-const loginSchema = z.object({
-  email: z.string().email('Enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
-})
+function makeLoginSchema(t: TFunction<'auth'>) {
+  return z.object({
+    email: z.string().email(t('validation.emailInvalid')),
+    password: z.string().min(1, t('validation.passwordRequired')),
+  })
+}
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type LoginFormValues = z.infer<ReturnType<typeof makeLoginSchema>>
 
 export function LoginPage(): ReactElement {
+  const { t } = useTranslation('auth')
   const navigate = useNavigate()
+  const loginSchema = useMemo(() => makeLoginSchema(t), [t])
   const login = useAuthStore((state) => state.login)
 
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   const mutation = useMutation({
     mutationFn: loginUser,
@@ -34,12 +43,7 @@ export function LoginPage(): ReactElement {
     },
   })
 
-  const errorMessage = axios.isAxiosError(mutation.error)
-    ? ((mutation.error.response?.data as { detail?: string } | undefined)?.detail ??
-      'Email or password is incorrect.')
-    : mutation.isError
-      ? 'Something went wrong. Please try again.'
-      : null
+  const errorMessage: string | null = mutation.isError ? problemMessage(mutation.error, t('login.failed')) : null
 
   return (
     <motion.div
@@ -47,12 +51,12 @@ export function LoginPage(): ReactElement {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <h2 className="mb-4 text-center text-lg font-semibold text-wb-ink">Welcome back!</h2>
+      <h2 className="mb-4 text-center text-lg font-semibold text-wb-ink">{t('login.welcome')}</h2>
 
       <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="flex flex-col gap-4">
         <div>
           <label htmlFor="email" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Email
+            {t('login.email')}
           </label>
           <input
             id="email"
@@ -66,7 +70,7 @@ export function LoginPage(): ReactElement {
 
         <div>
           <label htmlFor="password" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Password
+            {t('login.password')}
           </label>
           <input
             id="password"
@@ -87,14 +91,14 @@ export function LoginPage(): ReactElement {
           disabled={mutation.isPending}
           className="rounded-wb-md bg-wb-primary py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
         >
-          {mutation.isPending ? 'Logging in…' : 'Log in'}
+          {mutation.isPending ? t('login.submitting') : t('login.submit')}
         </button>
       </form>
 
       <p className="mt-4 text-center text-sm text-wb-ink">
-        New here?{' '}
+        {t('login.newHere')}{' '}
         <Link to="/register" className="font-semibold text-wb-ink-muted hover:underline">
-          Create an account
+          {t('login.createAccount')}
         </Link>
       </p>
     </motion.div>

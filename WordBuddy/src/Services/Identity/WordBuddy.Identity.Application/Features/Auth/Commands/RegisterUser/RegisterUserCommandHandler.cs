@@ -71,6 +71,13 @@ public sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserCom
             return Result.Failure<AuthTokenDto>(zone.Error);
         }
 
+        Result language = user.SetPreferredLanguage(command.PreferredLanguage);
+        if (language.IsFailure)
+        {
+            _logger.LogWarning("RegisterUserCommand rejected: ErrorCode={ErrorCode}", language.Error.Code);
+            return Result.Failure<AuthTokenDto>(language.Error);
+        }
+
         // Staged in the outbox: the event commits together with the new user.
         await _profileEvents.PublishAsync(user, _time.GetUtcNow().UtcDateTime, ct);
 

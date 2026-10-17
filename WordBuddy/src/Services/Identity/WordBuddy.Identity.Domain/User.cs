@@ -35,6 +35,9 @@ public sealed class User : Entity
     /// <summary>Gets the optional IANA time zone id (for example <c>Asia/Ho_Chi_Minh</c>). Defines the learner's local day.</summary>
     public string? TimeZoneId { get; private set; }
 
+    /// <summary>Gets the optional preferred UI language code (for example <c>vi</c>). Null means follow the device.</summary>
+    public string? PreferredLanguage { get; private set; }
+
     /// <summary>Gets a value indicating whether this adult account holds the Guardian role (can allow challenges for linked children).</summary>
     public bool IsGuardian { get; private set; }
 
@@ -64,6 +67,12 @@ public sealed class User : Entity
 
     /// <summary>Maximum time zone id length.</summary>
     public const int TimeZoneIdMaxLength = 64;
+
+    /// <summary>Maximum preferred language code length.</summary>
+    public const int PreferredLanguageMaxLength = 10;
+
+    private static readonly System.Text.RegularExpressions.Regex LanguageCodePattern =
+        new("^[a-z]{2,3}(-[a-z0-9]{2,8})?$", System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     public User(Guid id, string email, string displayName, string passwordHash, AgeGroup ageGroup, bool isAdmin)
         : base(id)
@@ -120,6 +129,25 @@ public sealed class User : Entity
         }
 
         TimeZoneId = trimmed;
+        return Result.Success();
+    }
+
+    /// <summary>Whether <paramref name="code"/> looks like a language code (for example <c>en</c>, <c>vi</c>, <c>pt-br</c>). Format only.</summary>
+    public static bool IsValidLanguageCode(string code) =>
+        !string.IsNullOrWhiteSpace(code)
+        && code.Trim().Length <= PreferredLanguageMaxLength
+        && LanguageCodePattern.IsMatch(code.Trim().ToLowerInvariant());
+
+    /// <summary>Sets the preferred UI language (trimmed, lower-cased; null or blank clears). A malformed code returns <see cref="UserErrors.InvalidLanguage"/>.</summary>
+    public Result SetPreferredLanguage(string? language)
+    {
+        string? normalized = string.IsNullOrWhiteSpace(language) ? null : language.Trim().ToLowerInvariant();
+        if (normalized is not null && !IsValidLanguageCode(normalized))
+        {
+            return Result.Failure(UserErrors.InvalidLanguage);
+        }
+
+        PreferredLanguage = normalized;
         return Result.Success();
     }
 

@@ -1,0 +1,20 @@
+export const nav = {
+  items: {
+    home: 'Home',
+    lessons: 'Lessons',
+    vocabulary: 'My Vocabulary',
+    review: 'Review',
+    challenges: 'Challenges',
+    shared: 'Shared Pool',
+    progress: 'My Progress',
+    supporters: 'Supporters',
+    groups: 'Groups',
+    moderation: 'Moderation',
+    lessonAuthoring: 'Lesson authoring',
+    lexemes: 'Lexemes',
+    supportLinks: 'Support links',
+    users: 'Users & roles',
+  },
+  myProfile: 'My profile',
+  logOut: 'Log out',
+} as const

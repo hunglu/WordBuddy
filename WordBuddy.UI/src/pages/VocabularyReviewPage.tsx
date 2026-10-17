@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { problemCode } from '../api/supportLinks'
 import { ListeningChoiceExercise } from '../components/vocabulary-review/ListeningChoiceExercise'
@@ -34,11 +35,12 @@ const PRIMARY_BUTTON =
 
 /** Daily vocabulary review: runs the SRS session with 3 exercise types. The server builds each exercise and checks each answer. */
 export function VocabularyReviewPage(): ReactElement {
+  const { t } = useTranslation('review')
   const session = useVocabularySession()
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Review</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{t('title')}</h1>
       <div className="mt-6">{renderBody()}</div>
     </motion.div>
   )
@@ -47,24 +49,24 @@ export function VocabularyReviewPage(): ReactElement {
     if (session.isError) {
       return (
         <div className="flex flex-col items-start gap-3">
-          <p className="text-lg text-wb-danger">Couldn't load your review right now.</p>
+          <p className="text-lg text-wb-danger">{t('loadFailed')}</p>
           <button type="button" onClick={() => void session.refetch()} className={PRIMARY_BUTTON}>
-            Try again
+            {t('tryAgain')}
           </button>
         </div>
       )
     }
 
     if (session.isLoading || !session.data) {
-      return <p className="text-lg text-wb-ink-muted">Getting today's words ready…</p>
+      return <p className="text-lg text-wb-ink-muted">{t('preparing')}</p>
     }
 
     if (session.data.dueItems.length + session.data.newItems.length === 0) {
       return (
         <div>
-          <p className="text-lg text-wb-ink-muted">Nothing to review today. Add some words to your list!</p>
+          <p className="text-lg text-wb-ink-muted">{t('nothing')}</p>
           <Link to="/vocabulary" className="mt-4 inline-block font-semibold text-wb-ink-muted hover:underline">
-            Back to My Vocabulary
+            {t('backToVocabulary')}
           </Link>
         </div>
       )
@@ -79,6 +81,7 @@ interface ReviewSessionProps {
 }
 
 function ReviewSession({ session }: ReviewSessionProps): ReactElement {
+  const { t } = useTranslation('review')
   const [state, dispatch] = useReducer(sessionReducer, undefined, () =>
     createSessionState(session.dueItems, session.newItems),
   )
@@ -108,11 +111,11 @@ function ReviewSession({ session }: ReviewSessionProps): ReactElement {
   return (
     <div className="flex flex-col items-center">
       <p className="mb-2 text-wb-ink-muted">
-        {state.queue.length} left · {state.correct} correct
+        {t('progress', { left: state.queue.length, correct: state.correct })}
       </p>
       {nearlyDone && (
         <p data-testid="time-cap-notice" className="mb-4 font-semibold text-wb-highlight">
-          Nearly done — a few more words!
+          {t('nearlyDone')}
         </p>
       )}
 
@@ -149,6 +152,7 @@ interface ExerciseCardProps {
  * server's verdict. The browser never knows the right answer before the server replies.
  */
 function ExerciseCard({ sessionId, senseId, onNext, onSkip }: ExerciseCardProps): ReactElement {
+  const { t } = useTranslation('review')
   const createExercise = useCreateExercise()
   const recordReview = useRecordReview()
   const requested = useRef(false)
@@ -210,19 +214,19 @@ function ExerciseCard({ sessionId, senseId, onNext, onSkip }: ExerciseCardProps)
   if (loadFailed) {
     return (
       <div className="flex flex-col items-center gap-3">
-        <p className="text-wb-danger">Couldn't load this word.</p>
+        <p className="text-wb-danger">{t('wordLoadFailed')}</p>
         <button type="button" onClick={loadExercise} className={PRIMARY_BUTTON}>
-          Try again
+          {t('tryAgain')}
         </button>
         <button type="button" onClick={onSkip} className="text-sm font-semibold text-wb-ink-muted hover:underline">
-          Skip this word
+          {t('skip')}
         </button>
       </div>
     )
   }
 
   if (!exercise) {
-    return <p className="text-wb-ink-muted">Getting your word ready…</p>
+    return <p className="text-wb-ink-muted">{t('wordPreparing')}</p>
   }
 
   return (
@@ -236,22 +240,22 @@ function ExerciseCard({ sessionId, senseId, onNext, onSkip }: ExerciseCardProps)
       {result && (
         <div data-testid="answer-feedback" className="mt-6 flex flex-col items-center gap-3">
           <p className={`text-lg font-bold ${result.isCorrect ? 'text-wb-success' : 'text-wb-danger'}`}>
-            {result.isCorrect ? 'Correct!' : `The answer was "${result.correctAnswer}".`}
+            {result.isCorrect ? t('correct') : t('wrong', { answer: result.correctAnswer })}
           </p>
           <button type="button" onClick={() => onNext(result.isCorrect)} className={PRIMARY_BUTTON}>
-            Next
+            {t('next')}
           </button>
         </div>
       )}
 
       {saveFailed && submitted && (
         <div data-testid="answer-save-failed" className="mt-6 flex flex-col items-center gap-3">
-          <p className="text-sm text-wb-danger">Couldn't save this answer.</p>
+          <p className="text-sm text-wb-danger">{t('saveFailed')}</p>
           <button type="button" onClick={() => send(submitted)} className={PRIMARY_BUTTON}>
-            Try again
+            {t('tryAgain')}
           </button>
           <button type="button" onClick={onSkip} className="text-sm font-semibold text-wb-ink-muted hover:underline">
-            Skip this word
+            {t('skip')}
           </button>
         </div>
       )}

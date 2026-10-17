@@ -42,7 +42,7 @@ Then('the typo word is gone from their vocabulary list', async ({ page }) => {
 
 When('they submit the word for sharing', async ({ page }) => {
   await wordCard(page, typoWord).getByRole('button', { name: 'Share', exact: true }).click()
-  await expect(wordCard(page, typoWord).getByText('PendingReview')).toBeVisible()
+  await expect(wordCard(page, typoWord).getByText('Pending review')).toBeVisible()
 })
 
 Then('the word has no Edit button', async ({ page }) => {

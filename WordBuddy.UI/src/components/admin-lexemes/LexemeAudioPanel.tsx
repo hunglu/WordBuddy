@@ -1,5 +1,6 @@
 import type { ChangeEvent, ReactElement } from 'react'
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { problemMessage } from '../../api/supportLinks'
 import { useRemoveLexemeAudio, useUploadLexemeAudio } from '../../hooks/useAdminLexemes'
 import type { AdminLexemeDetail, AudioLocale } from '../../types'
@@ -18,6 +19,7 @@ type LocaleRowProps = Readonly<{
 
 /** Play, upload and remove for one locale. */
 function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactElement {
+  const { t } = useTranslation('admin')
   const upload = useUploadLexemeAudio()
   const remove = useRemoveLexemeAudio()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -31,11 +33,11 @@ function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactE
     event.target.value = ''
     if (!file) return
     if (file.type !== 'audio/mpeg' && file.type !== 'audio/mp3') {
-      setFileError('Choose an MP3 file.')
+      setFileError(t('audio.chooseMp3'))
       return
     }
     if (file.size > MAX_AUDIO_BYTES) {
-      setFileError('The file can be at most 5 MB.')
+      setFileError(t('audio.tooBig'))
       return
     }
     setFileError(null)
@@ -52,10 +54,10 @@ function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactE
   return (
     <li className="flex flex-wrap items-center gap-3 border-t border-wb-border-subtle py-3 first:border-t-0">
       <span className="w-28 font-bold text-wb-ink">{label}</span>
-      <span className="w-24 text-sm text-wb-ink-muted">{assetId ? 'Audio set' : 'No audio'}</span>
+      <span className="w-24 text-sm text-wb-ink-muted">{assetId ? t('audio.set') : t('audio.none')}</span>
       {assetId && (
-        <button type="button" onClick={play} className={softButtonClass} aria-label={`Play ${label} audio`}>
-          ▶ Play
+        <button type="button" onClick={play} className={softButtonClass} aria-label={t('audio.playAria', { label })}>
+          {t('audio.play')}
         </button>
       )}
       <input
@@ -64,15 +66,15 @@ function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactE
         type="file"
         accept="audio/mpeg,audio/mp3"
         className="sr-only"
-        aria-label={`Upload ${label} audio`}
+        aria-label={t('audio.uploadAria', { label })}
         onChange={onFile}
       />
       <button type="button" disabled={upload.isPending} onClick={() => fileInput.current?.click()} className={softButtonClass}>
-        {upload.isPending ? 'Uploading…' : assetId ? 'Replace' : 'Upload MP3'}
+        {upload.isPending ? t('audio.uploading') : assetId ? t('audio.replace') : t('audio.upload')}
       </button>
       {assetId && (
         <button type="button" onClick={() => setConfirmOpen(true)} className={dangerButtonClass}>
-          Remove
+          {t('audio.remove')}
         </button>
       )}
       {fileError && (
@@ -82,17 +84,17 @@ function LocaleRow({ lexemeId, locale, label, assetId }: LocaleRowProps): ReactE
       )}
       {upload.isError && (
         <p role="alert" className="w-full text-sm font-semibold text-wb-danger">
-          {problemMessage(upload.error, 'Could not upload the audio.')}
+          {problemMessage(upload.error, t('audio.uploadFailed'))}
         </p>
       )}
       <ConfirmDialog
         open={confirmOpen}
-        title={`Remove the ${label} audio?`}
-        message="The audio file is deleted unless another item still uses it."
-        confirmLabel="Remove"
-        pendingLabel="Removing…"
+        title={t('audio.removeTitle', { label })}
+        message={t('audio.removeMessage')}
+        confirmLabel={t('audio.remove')}
+        pendingLabel={t('confirm.removing')}
         isPending={remove.isPending}
-        errorMessage={remove.isError ? problemMessage(remove.error, 'Could not remove the audio.') : null}
+        errorMessage={remove.isError ? problemMessage(remove.error, t('audio.removeFailed')) : null}
         onCancel={() => {
           remove.reset()
           setConfirmOpen(false)
@@ -107,13 +109,14 @@ type LexemeAudioPanelProps = Readonly<{ lexeme: AdminLexemeDetail }>
 
 /** Pronunciation audio of a lexeme, British and American. */
 export function LexemeAudioPanel({ lexeme }: LexemeAudioPanelProps): ReactElement {
+  const { t } = useTranslation('admin')
   return (
     <section className={`mt-6 ${cardClass}`}>
-      <h2 className="text-xl font-bold text-wb-ink">Pronunciation audio</h2>
-      <p className="mt-1 text-sm text-wb-ink-muted">One MP3 per accent, up to 5 MB. A new file replaces the old one.</p>
+      <h2 className="text-xl font-bold text-wb-ink">{t('audio.heading')}</h2>
+      <p className="mt-1 text-sm text-wb-ink-muted">{t('audio.hint')}</p>
       <ul className="mt-3">
-        <LocaleRow lexemeId={lexeme.id} locale="en-GB" label="British (UK)" assetId={lexeme.audioUkAssetId} />
-        <LocaleRow lexemeId={lexeme.id} locale="en-US" label="American (US)" assetId={lexeme.audioUsAssetId} />
+        <LocaleRow lexemeId={lexeme.id} locale="en-GB" label={t('audio.uk')} assetId={lexeme.audioUkAssetId} />
+        <LocaleRow lexemeId={lexeme.id} locale="en-US" label={t('audio.us')} assetId={lexeme.audioUsAssetId} />
       </ul>
     </section>
   )

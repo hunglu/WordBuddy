@@ -24,6 +24,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Lexeme admin | `lexeme-admin.md` | shipped |
 | List paging | `WB-55_apply-paging-to-table-list.md` | shipped |
 | Moderator role | `WB-56_moderator-role-to-assist-admin.md` | shipped |
+| Multilingual UI (en/vi) | `WB-59_multilingual-ui-english-and-vietnamese.md` | shipped |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.

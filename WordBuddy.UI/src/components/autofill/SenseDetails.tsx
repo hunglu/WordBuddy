@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PartOfSpeech, SenseTranslation } from '../../types'
 import styles from './SenseCard.module.css'
 
@@ -23,14 +24,13 @@ export type SenseDetailsData = Readonly<{
 
 type SenseDetailsProps = Readonly<{ sense: SenseDetailsData }>
 
-const LOCALE_LABEL: Record<string, string> = { vi: 'Vietnamese' }
-
 /**
  * Word header (POS, IPA, UK/US audio) plus definition, examples, translations and enrichment lists.
  * When `awaitingApproval` is set (child, not approved yet) only the word and a "Waiting for approval"
  * badge are shown — never the definition.
  */
 export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
+  const { t } = useTranslation(['vocabulary', 'admin'])
   const play = (url: string): void => {
     void new Audio(url).play()
   }
@@ -40,10 +40,10 @@ export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
       <>
         <div className={styles.header}>
           <p className={styles.word}>{sense.word}</p>
-          {sense.partOfSpeech && <span className={styles.pos}>{sense.partOfSpeech}</span>}
+          {sense.partOfSpeech && <span className={styles.pos}>{t(`admin:pos.${sense.partOfSpeech}`)}</span>}
         </div>
-        <span className={styles.waiting}>Waiting for approval</span>
-        <p className={styles.ipa}>A supporter will check this word first.</p>
+        <span className={styles.waiting}>{t('sense.waiting')}</span>
+        <p className={styles.ipa}>{t('sense.willCheck')}</p>
       </>
     )
   }
@@ -51,16 +51,16 @@ export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
   const examples = sense.examples ?? []
   const translations = sense.translations ?? []
   const lists: ReadonlyArray<readonly [string, readonly string[]]> = [
-    ['Synonyms', sense.synonyms ?? []],
-    ['Antonyms', sense.antonyms ?? []],
-    ['Word partners', sense.collocations ?? []],
+    [t('sense.synonyms'), sense.synonyms ?? []],
+    [t('sense.antonyms'), sense.antonyms ?? []],
+    [t('sense.partners'), sense.collocations ?? []],
   ]
 
   return (
     <>
       <div className={styles.header}>
         <p className={styles.word}>{sense.word}</p>
-        {sense.partOfSpeech && <span className={styles.pos}>{sense.partOfSpeech}</span>}
+        {sense.partOfSpeech && <span className={styles.pos}>{t(`admin:pos.${sense.partOfSpeech}`)}</span>}
       </div>
 
       {(sense.ipaUk || sense.ipaUs || sense.audioUkUrl || sense.audioUsUrl) && (
@@ -90,13 +90,13 @@ export function SenseDetails({ sense }: SenseDetailsProps): ReactElement {
         </ul>
       )}
 
-      {translations.map((t) => (
-        <p key={t.locale} className={styles.translation}>
-          {LOCALE_LABEL[t.locale] ?? t.locale}: {t.text}
+      {translations.map((translation) => (
+        <p key={translation.locale} className={styles.translation}>
+          {translation.locale === 'vi' ? t('sense.locale.vi') : translation.locale}: {translation.text}
         </p>
       ))}
 
-      {sense.registerNote && <p className={styles.translation}>Note: {sense.registerNote}</p>}
+      {sense.registerNote && <p className={styles.translation}>{t('sense.note', { note: sense.registerNote })}</p>}
 
       {lists
         .filter(([, items]) => items.length > 0)

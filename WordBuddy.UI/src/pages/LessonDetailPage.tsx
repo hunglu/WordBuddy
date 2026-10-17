@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { recordProgress } from '../api/progress'
 import { getLessonDetail } from '../api/lessons'
@@ -9,6 +10,7 @@ import { GrammarRuleList } from '../components/lessons/GrammarRuleList'
 import { VocabularyList } from '../components/lessons/VocabularyList'
 
 export function LessonDetailPage(): ReactElement {
+  const { t } = useTranslation('lessons')
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
@@ -24,11 +26,11 @@ export function LessonDetailPage(): ReactElement {
   })
 
   if (isLoading) {
-    return <p className="text-lg text-wb-ink-muted">Loading lesson…</p>
+    return <p className="text-lg text-wb-ink-muted">{t('detail.loading')}</p>
   }
 
   if (isError || !lesson) {
-    return <p className="text-lg text-wb-danger">Couldn't load this lesson right now.</p>
+    return <p className="text-lg text-wb-danger">{t('detail.loadFailed')}</p>
   }
 
   return (
@@ -48,7 +50,7 @@ export function LessonDetailPage(): ReactElement {
         disabled={completeMutation.isPending || completeMutation.isSuccess}
         className="mt-8 rounded-wb-md bg-wb-success px-6 py-3 text-lg font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card disabled:opacity-60"
       >
-        {completeMutation.isSuccess ? 'Completed! 🎉' : completeMutation.isPending ? 'Saving…' : 'Mark as Complete'}
+        {completeMutation.isSuccess ? t('detail.completed') : completeMutation.isPending ? t('detail.saving') : t('detail.complete')}
       </button>
     </motion.div>
   )

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { AutofillApprovalsPanel } from '../components/autofill/AutofillApprovalsPanel'
 import { Pager } from '../components/Pager'
@@ -10,6 +11,7 @@ import { useAuthStore } from '../store/authStore'
 import { canManageContent } from '../utils/roles'
 
 export function VocabularyModerationPage(): ReactElement {
+  const { t } = useTranslation('admin')
   const user = useAuthStore((state) => state.user)
   const [searchParams, setSearchParams] = useSearchParams()
   const tab: 'shared' | 'autofill' = searchParams.get('tab') === 'autofill' ? 'autofill' : 'shared'
@@ -22,10 +24,10 @@ export function VocabularyModerationPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Vocabulary Moderation</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{t('moderation.title')}</h1>
 
       <div role="tablist" className="mt-4 flex gap-2">
-        {TABS.map(([key, label]) => (
+        {TABS.map((key) => (
           <button
             key={key}
             type="button"
@@ -36,7 +38,7 @@ export function VocabularyModerationPage(): ReactElement {
               tab === key ? 'bg-wb-primary text-wb-on-primary' : 'bg-wb-primary-soft text-wb-ink hover:bg-wb-primary-soft-hover'
             }`}
           >
-            {label}
+            {t(`moderation.tabs.${key}`)}
           </button>
         ))}
       </div>
@@ -47,13 +49,11 @@ export function VocabularyModerationPage(): ReactElement {
 }
 
 /** Tabs of the moderation page (URL `?tab=`). */
-const TABS = [
-  ['shared', 'Shared words'],
-  ['autofill', 'Auto-filled words'],
-] as const
+const TABS = ['shared', 'autofill'] as const
 
 /** The original moderation queue: learner words asking to join the shared pool. */
 function SharedWordsQueue(): ReactElement {
+  const { t } = useTranslation('admin')
   const pagination = usePagination()
   const { data: page, isLoading, isError } = usePendingVocabularyModeration(pagination.params)
   pagination.clamp(page?.totalCount)
@@ -63,13 +63,13 @@ function SharedWordsQueue(): ReactElement {
 
   return (
     <>
-      <p className="mt-2 text-wb-ink-muted">Words awaiting approval before they join the shared pool.</p>
+      <p className="mt-2 text-wb-ink-muted">{t('moderation.intro')}</p>
 
-      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading the moderation queue…</p>}
-      {isError && <p className="mt-8 text-lg text-wb-danger">Couldn't load the moderation queue right now.</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">{t('moderation.loading')}</p>}
+      {isError && <p className="mt-8 text-lg text-wb-danger">{t('moderation.loadFailed')}</p>}
 
       {page && page.totalCount === 0 && (
-        <p className="mt-8 text-lg text-wb-ink-muted">Nothing pending review right now.</p>
+        <p className="mt-8 text-lg text-wb-ink-muted">{t('moderation.none')}</p>
       )}
 
       {words && words.length > 0 && (
@@ -91,7 +91,7 @@ function SharedWordsQueue(): ReactElement {
                       setVisibleToChildrenByWord((prev) => ({ ...prev, [word.id]: e.target.checked }))
                     }
                   />
-                  Visible to children
+                  {t('moderation.visible')}
                 </label>
 
                 <div className="mt-3 flex gap-2">
@@ -101,7 +101,7 @@ function SharedWordsQueue(): ReactElement {
                     disabled={moderate.isPending}
                     className="rounded-wb-md bg-wb-success px-4 py-2 text-sm font-bold text-wb-on-success hover:bg-wb-success-hover shadow-wb-card disabled:opacity-60"
                   >
-                    Approve
+                    {t('moderation.approve')}
                   </button>
                   <button
                     type="button"
@@ -109,7 +109,7 @@ function SharedWordsQueue(): ReactElement {
                     disabled={moderate.isPending}
                     className="rounded-wb-md bg-wb-danger-soft px-4 py-2 text-sm font-bold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
                   >
-                    Reject
+                    {t('moderation.reject')}
                   </button>
                 </div>
               </div>
@@ -124,8 +124,8 @@ function SharedWordsQueue(): ReactElement {
           pageSize={pagination.pageSize}
           totalCount={page.totalCount}
           onPageChange={pagination.setPage}
-          label="Moderation queue pages"
-          itemLabel="words"
+          label={t('moderation.pages')}
+          itemLabel={t('moderation.items')}
         />
       )}
     </>

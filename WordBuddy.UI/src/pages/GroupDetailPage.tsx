@@ -1,25 +1,23 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
 import { GroupDashboardTab } from '../components/groups/GroupDashboardTab'
 import { GroupMembersTab } from '../components/groups/GroupMembersTab'
 import { GroupWordsTab } from '../components/groups/GroupWordsTab'
-import { NO_ACCESS_MESSAGE, inlineErrorClass, isForbidden } from '../components/groups/groupUi'
+import { inlineErrorClass, isForbidden } from '../components/groups/groupUi'
 import { dangerButtonClass, inputClass, primaryButtonClass, softButtonClass } from '../components/support/supportUi'
 import { useDeleteGroup, useGroup, useRenameGroup } from '../hooks/useGroups'
 
 type GroupTab = 'members' | 'words' | 'dashboard'
 
-const TABS: readonly { id: GroupTab; label: string }[] = [
-  { id: 'members', label: 'Members' },
-  { id: 'words', label: 'Words' },
-  { id: 'dashboard', label: 'Dashboard' },
-]
+const TABS: readonly GroupTab[] = ['members', 'words', 'dashboard']
 
 /** `/groups/:groupId` — the owner's view of one group: members, words and dashboard. */
 export function GroupDetailPage(): ReactElement {
+  const { t } = useTranslation('groups')
   const { groupId = '' } = useParams<{ groupId: string }>()
   const navigate = useNavigate()
   const { data: group, isLoading, isError, error } = useGroup(groupId)
@@ -43,14 +41,14 @@ export function GroupDetailPage(): ReactElement {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <Link to="/groups" className="text-sm text-wb-primary underline">
-        All groups
+        {t('detail.all')}
       </Link>
 
-      {isLoading && <p className="mt-6 text-lg text-wb-ink-muted">Loading the group…</p>}
+      {isLoading && <p className="mt-6 text-lg text-wb-ink-muted">{t('detail.loading')}</p>}
 
       {isError && (
         <p className={`mt-6 text-lg ${inlineErrorClass}`}>
-          {isForbidden(error) ? NO_ACCESS_MESSAGE : "Couldn't load the group right now. Please try again later."}
+          {isForbidden(error) ? t('noAccess') : t('detail.loadFailed')}
         </p>
       )}
 
@@ -62,7 +60,7 @@ export function GroupDetailPage(): ReactElement {
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <label htmlFor="rename-group" className="sr-only">
-                  Group name
+                  {t('detail.nameLabel')}
                 </label>
                 <input
                   id="rename-group"
@@ -72,53 +70,53 @@ export function GroupDetailPage(): ReactElement {
                   className={inputClass}
                 />
                 <button type="button" disabled={renameGroup.isPending} onClick={submitRename} className={primaryButtonClass}>
-                  Save
+                  {t('save', { ns: 'common' })}
                 </button>
                 <button type="button" onClick={() => setNewName(null)} className={softButtonClass}>
-                  Cancel
+                  {t('cancel', { ns: 'common' })}
                 </button>
               </div>
             )}
             <div className="flex gap-2">
               {newName === null && (
                 <button type="button" onClick={() => setNewName(group.name)} className={softButtonClass}>
-                  Rename
+                  {t('detail.rename')}
                 </button>
               )}
               {!confirmDelete ? (
                 <button type="button" onClick={() => setConfirmDelete(true)} className={dangerButtonClass}>
-                  Delete
+                  {t('delete', { ns: 'common' })}
                 </button>
               ) : (
                 <>
                   <button type="button" disabled={deleteGroup.isPending} onClick={submitDelete} className={dangerButtonClass}>
-                    Delete group and remove all members
+                    {t('detail.deleteGroup')}
                   </button>
                   <button type="button" onClick={() => setConfirmDelete(false)} className={softButtonClass}>
-                    Keep
+                    {t('detail.keep')}
                   </button>
                 </>
               )}
             </div>
           </div>
           {renameGroup.isError && (
-            <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(renameGroup.error, 'Could not rename the group.')}</p>
+            <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(renameGroup.error, t('detail.renameFailed'))}</p>
           )}
           {deleteGroup.isError && (
-            <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(deleteGroup.error, 'Could not delete the group.')}</p>
+            <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(deleteGroup.error, t('detail.deleteFailed'))}</p>
           )}
 
-          <div className="mt-6 flex gap-2" role="tablist" aria-label="Group sections">
+          <div className="mt-6 flex gap-2" role="tablist" aria-label={t('detail.sections')}>
             {TABS.map((item) => (
               <button
-                key={item.id}
+                key={item}
                 type="button"
                 role="tab"
-                aria-selected={tab === item.id}
-                onClick={() => setTab(item.id)}
-                className={tab === item.id ? primaryButtonClass : softButtonClass}
+                aria-selected={tab === item}
+                onClick={() => setTab(item)}
+                className={tab === item ? primaryButtonClass : softButtonClass}
               >
-                {item.label}
+                {t(`detail.tabs.${item}`)}
               </button>
             ))}
           </div>

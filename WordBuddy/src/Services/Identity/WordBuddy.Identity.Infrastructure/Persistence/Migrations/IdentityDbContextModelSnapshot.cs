@@ -484,6 +484,10 @@ namespace WordBuddy.Identity.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("PreferredLanguage")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<string>("TimeZoneId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");

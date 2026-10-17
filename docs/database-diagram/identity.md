@@ -1,7 +1,7 @@
 # Identity — database diagram
 
 Database `WordBuddyIdentity` · source: `IdentityDbContextModelSnapshot.cs` ·
-last migration: `20261015144248_AddUserIsModerator`
+last migration: `20261017083349_AddPreferredLanguage`
 
 ```mermaid
 erDiagram
@@ -21,6 +21,7 @@ erDiagram
         bool IsGuardian "default false; adults only; set by an admin"
         date DateOfBirth "nullable; never logged or sent in events or tokens"
         bool IsModerator "default false; adults only, non-admin; set by an admin"
+        string PreferredLanguage "nullable, max 10; UI language code such as en or vi"
     }
     SupportLinks {
         guid Id PK

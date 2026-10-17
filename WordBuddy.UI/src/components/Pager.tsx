@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { softButtonClass } from './support/supportUi'
 
 interface PagerProps {
@@ -8,12 +9,13 @@ interface PagerProps {
   onPageChange: (page: number) => void
   /** Accessible name of the navigation, e.g. "Lexeme pages". */
   label: string
-  /** Plural noun after the count, e.g. "lexemes". */
+  /** Translated plural noun after the count, e.g. "lexemes". Defaults to a generic "items". */
   itemLabel?: string
 }
 
 /** Previous / Next with "Page X of Y · N items". Renders nothing when the list is empty. */
-export function Pager({ page, pageSize, totalCount, onPageChange, label, itemLabel = 'items' }: PagerProps) {
+export function Pager({ page, pageSize, totalCount, onPageChange, label, itemLabel }: PagerProps) {
+  const { t } = useTranslation('common')
   if (totalCount <= 0) {
     return null
   }
@@ -24,10 +26,10 @@ export function Pager({ page, pageSize, totalCount, onPageChange, label, itemLab
   return (
     <nav aria-label={label} className="mt-4 flex items-center justify-between gap-3">
       <button type="button" disabled={current <= 1} onClick={() => onPageChange(current - 1)} className={softButtonClass}>
-        Previous
+        {t('pager.previous')}
       </button>
       <p className="text-sm font-semibold text-wb-ink">
-        Page {current} of {totalPages} · {totalCount} {itemLabel}
+        {t('pager.pageOf', { page: current, total: totalPages, count: totalCount, items: itemLabel ?? t('pager.items') })}
       </p>
       <button
         type="button"
@@ -35,7 +37,7 @@ export function Pager({ page, pageSize, totalCount, onPageChange, label, itemLab
         onClick={() => onPageChange(current + 1)}
         className={softButtonClass}
       >
-        Next
+        {t('pager.next')}
       </button>
     </nav>
   )

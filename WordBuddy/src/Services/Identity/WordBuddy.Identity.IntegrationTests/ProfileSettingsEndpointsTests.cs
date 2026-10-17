@@ -300,4 +300,69 @@ public sealed class ProfileSettingsEndpointsTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         return (await response.Content.ReadFromJsonAsync<SupportLinkDto>(Json))!;
     }
+
+    [Theory]
+    [InlineData("Adult")]
+    [InlineData("Child")]
+    public async Task LanguageEndpoint_Put_SavesAndMeAndLoginReturnIt(string ageGroup)
+    {
+        Account account = await RegisterAsync(ageGroup, "Lang" + ageGroup);
+
+        HttpResponseMessage response = await account.Client.PutAsJsonAsync("/api/auth/profile/language", new { language = "VI" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<UserDto>(Json))!.PreferredLanguage.Should().Be("vi");
+        UserDto me = (await account.Client.GetFromJsonAsync<UserDto>("/api/auth/me", Json))!;
+        me.PreferredLanguage.Should().Be("vi");
+
+        HttpResponseMessage login = await _factory.CreateClient().PostAsJsonAsync(
+            "/api/auth/login", new { email = account.Email, password = Password });
+        login.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadAuthAsync(login)).User.PreferredLanguage.Should().Be("vi");
+    }
+
+    [Fact]
+    public async Task LanguageEndpoint_Put_NullClearsTheLanguage()
+    {
+        Account account = await RegisterAsync("Adult", "LangClear");
+        await account.Client.PutAsJsonAsync("/api/auth/profile/language", new { language = "vi" });
+
+        HttpResponseMessage response = await account.Client.PutAsJsonAsync("/api/auth/profile/language", new { language = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<UserDto>(Json))!.PreferredLanguage.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("english")]
+    [InlineData("en_US")]
+    [InlineData("abcdefghijkl")]
+    public async Task LanguageEndpoint_Put_MalformedCodeReturnsBadRequest(string language)
+    {
+        Account account = await RegisterAsync("Adult", "LangBad");
+
+        HttpResponseMessage response = await account.Client.PutAsJsonAsync("/api/auth/profile/language", new { language });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task LanguageEndpoint_Put_AnonymousReturnsUnauthorized()
+    {
+        HttpResponseMessage response = await _factory.CreateClient().PutAsJsonAsync("/api/auth/profile/language", new { language = "vi" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task RegisterEndpoint_Post_StoresPreferredLanguage()
+    {
+        string email = $"langreg-{Guid.NewGuid():N}@example.com";
+
+        HttpResponseMessage response = await _factory.CreateClient().PostAsJsonAsync(
+            "/api/auth/register", new { email, password = Password, displayName = "Lang Reg", ageGroup = "Adult", preferredLanguage = "vi" }, Json);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ReadAuthAsync(response)).User.PreferredLanguage.Should().Be("vi");
+    }
 }

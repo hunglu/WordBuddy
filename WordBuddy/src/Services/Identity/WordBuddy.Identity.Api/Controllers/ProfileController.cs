@@ -8,6 +8,7 @@ using WordBuddy.Identity.Application.DTOs;
 using WordBuddy.Identity.Application.Features.Profile.Commands.ChangePassword;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateDateOfBirth;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateDisplayName;
+using WordBuddy.Identity.Application.Features.Profile.Commands.UpdatePreferredLanguage;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileAliasAvatar;
 using WordBuddy.Identity.Application.Features.Profile.Commands.UpdateProfileTimeZone;
 using WordBuddy.Identity.Application.Features.Profile.Queries.GetCurrentUser;
@@ -25,6 +26,7 @@ public sealed class ProfileController : ControllerBase
     private readonly IQueryHandler<GetCurrentUserQuery, UserDto> _getCurrentUser;
     private readonly ICommandHandler<UpdateProfileAliasAvatarCommand, UserDto> _updateProfile;
     private readonly ICommandHandler<UpdateProfileTimeZoneCommand, UserDto> _updateTimeZone;
+    private readonly ICommandHandler<UpdatePreferredLanguageCommand, UserDto> _updateLanguage;
     private readonly ICommandHandler<UpdateDateOfBirthCommand, AuthTokenDto> _updateDateOfBirth;
     private readonly ICommandHandler<UpdateDisplayNameCommand, UserDto> _updateDisplayName;
     private readonly ICommandHandler<ChangePasswordCommand, AuthTokenDto> _changePassword;
@@ -33,6 +35,7 @@ public sealed class ProfileController : ControllerBase
         IQueryHandler<GetCurrentUserQuery, UserDto> getCurrentUser,
         ICommandHandler<UpdateProfileAliasAvatarCommand, UserDto> updateProfile,
         ICommandHandler<UpdateProfileTimeZoneCommand, UserDto> updateTimeZone,
+        ICommandHandler<UpdatePreferredLanguageCommand, UserDto> updateLanguage,
         ICommandHandler<UpdateDateOfBirthCommand, AuthTokenDto> updateDateOfBirth,
         ICommandHandler<UpdateDisplayNameCommand, UserDto> updateDisplayName,
         ICommandHandler<ChangePasswordCommand, AuthTokenDto> changePassword)
@@ -40,6 +43,7 @@ public sealed class ProfileController : ControllerBase
         _getCurrentUser = getCurrentUser;
         _updateProfile = updateProfile;
         _updateTimeZone = updateTimeZone;
+        _updateLanguage = updateLanguage;
         _updateDateOfBirth = updateDateOfBirth;
         _updateDisplayName = updateDisplayName;
         _changePassword = changePassword;
@@ -68,6 +72,15 @@ public sealed class ProfileController : ControllerBase
     {
         Result<UserDto> result = await _updateTimeZone.HandleAsync(
             new UpdateProfileTimeZoneCommand(User.GetUserId(), request.TimeZoneId), ct);
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
+    }
+
+    /// <summary>Sets or clears the preferred UI language of the caller.</summary>
+    [HttpPut("profile/language")]
+    public async Task<IActionResult> UpdateLanguage([FromBody] UpdateLanguageRequest request, CancellationToken ct)
+    {
+        Result<UserDto> result = await _updateLanguage.HandleAsync(
+            new UpdatePreferredLanguageCommand(User.GetUserId(), request.Language), ct);
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult(this);
     }
 

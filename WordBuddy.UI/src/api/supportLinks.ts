@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { DEFAULT_LANGUAGE } from '../i18n/config'
+import i18n from '../i18n'
 import type {
   AdminSupportLink,
   AdminUnlinkRequest,
@@ -156,8 +158,19 @@ export function problemCode(error: unknown): string | null {
   return typeof title === 'string' ? title : null
 }
 
-/** Returns a short, user-facing message for an API error. */
+/**
+ * Returns a short, user-facing message for an API error:
+ * translated text for the problem code (`errors:codes`), else the server text when the UI is in
+ * English, else the (already translated) `fallback` supplied by the caller.
+ */
 export function problemMessage(error: unknown, fallback: string): string {
+  const code: string | null = problemCode(error)
+  if (code !== null) {
+    const translated: unknown = i18n.getResource(i18n.language, 'errors', `codes.${code}`)
+    if (typeof translated === 'string' && translated.length > 0) {
+      return translated
+    }
+  }
   const detail = problemOf(error)?.detail
-  return typeof detail === 'string' && detail.length > 0 ? detail : fallback
+  return i18n.language === DEFAULT_LANGUAGE && typeof detail === 'string' && detail.length > 0 ? detail : fallback
 }

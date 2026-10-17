@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { problemMessage } from '../../api/supportLinks'
 import { useAddGroupMembers, useGroupMembers, useRemoveGroupMember } from '../../hooks/useGroups'
 import { usePagination } from '../../hooks/usePagination'
@@ -7,12 +8,13 @@ import { useSupportLinks } from '../../hooks/useSupportLinks'
 import type { AddMemberResult, LearnerGroupDetail } from '../../types'
 import { Pager } from '../Pager'
 import { avatarEmoji, cardClass, dangerButtonClass, primaryButtonClass } from '../support/supportUi'
-import { addOutcomeLabel, inlineErrorClass, memberStatusLabel } from './groupUi'
+import { inlineErrorClass } from './groupUi'
 
 type GroupMembersTabProps = Readonly<{ group: LearnerGroupDetail }>
 
 /** Members of a group: list with pending badge and remove, plus adding learners the owner actively supports. */
 export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
+  const { t } = useTranslation('groups')
   const links = useSupportLinks()
   const pagination = usePagination()
   const members = useGroupMembers(group.id, pagination.params)
@@ -47,12 +49,12 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className={cardClass} aria-label="Members">
-        <h2 className="text-xl font-bold text-wb-ink">Members</h2>
-        {members.isLoading && <p className="mt-2 text-wb-ink-muted">Loading the members…</p>}
-        {members.isError && <p className={`mt-2 ${inlineErrorClass}`}>Couldn't load the members right now.</p>}
+      <section className={cardClass} aria-label={t('members.heading')}>
+        <h2 className="text-xl font-bold text-wb-ink">{t('members.heading')}</h2>
+        {members.isLoading && <p className="mt-2 text-wb-ink-muted">{t('members.loading')}</p>}
+        {members.isError && <p className={`mt-2 ${inlineErrorClass}`}>{t('members.loadFailed')}</p>}
         {members.data && members.data.totalCount === 0 && (
-          <p className="mt-2 text-wb-ink-muted">No members yet. Add learners you support below.</p>
+          <p className="mt-2 text-wb-ink-muted">{t('members.none')}</p>
         )}
         {members.data && members.data.items.length > 0 && (
           <ul className="mt-3 flex flex-col gap-2">
@@ -65,7 +67,7 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
                   <span className="font-semibold">{member.publicName}</span>
                   {member.status === 'PendingPrimaryApproval' && (
                     <span className="rounded-wb-md bg-wb-primary-soft px-2 py-1 text-xs font-bold text-wb-ink">
-                      {memberStatusLabel[member.status]}
+                      {t(`memberStatus.${member.status}`)}
                     </span>
                   )}
                 </span>
@@ -75,7 +77,7 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
                   onClick={() => removeMember.mutate({ groupId: group.id, learnerId: member.learnerId })}
                   className={dangerButtonClass}
                 >
-                  Remove
+                  {t('members.remove')}
                 </button>
               </li>
             ))}
@@ -87,26 +89,26 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
             pageSize={pagination.pageSize}
             totalCount={members.data.totalCount}
             onPageChange={pagination.setPage}
-            label="Member pages"
-            itemLabel="members"
+            label={t('members.pages')}
+            itemLabel={t('members.items')}
           />
         )}
         {removeMember.isError && (
-          <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(removeMember.error, 'Could not remove the member.')}</p>
+          <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(removeMember.error, t('members.removeFailed'))}</p>
         )}
       </section>
 
-      <section className={cardClass} aria-label="Add members">
-        <h2 className="text-xl font-bold text-wb-ink">Add members</h2>
+      <section className={cardClass} aria-label={t('members.addHeading')}>
+        <h2 className="text-xl font-bold text-wb-ink">{t('members.addHeading')}</h2>
         <p className="text-sm text-wb-ink-muted">
-          You can add learners you actively support. A child needs the approval of the Primary supporter, unless that is you.
+          {t('members.addHint')}
         </p>
 
-        {links.isLoading && <p className="mt-2 text-wb-ink-muted">Loading the people you support…</p>}
-        {links.isError && <p className={`mt-2 ${inlineErrorClass}`}>Couldn't load the people you support right now.</p>}
+        {links.isLoading && <p className="mt-2 text-wb-ink-muted">{t('members.candidatesLoading')}</p>}
+        {links.isError && <p className={`mt-2 ${inlineErrorClass}`}>{t('members.candidatesFailed')}</p>}
 
         {links.data && candidates.length === 0 && (
-          <p className="mt-2 text-wb-ink-muted">Everyone you support is already in this group.</p>
+          <p className="mt-2 text-wb-ink-muted">{t('members.everyoneIn')}</p>
         )}
 
         {candidates.length > 0 && (
@@ -134,21 +136,21 @@ export function GroupMembersTab({ group }: GroupMembersTabProps): ReactElement {
               onClick={submit}
               className={`${primaryButtonClass} mt-3`}
             >
-              Add selected
+              {t('members.addSelected')}
             </button>
           </>
         )}
 
         {addMembers.isError && (
-          <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(addMembers.error, 'Could not add the members.')}</p>
+          <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(addMembers.error, t('members.addFailed'))}</p>
         )}
         {results.length > 0 && (
-          <ul className="mt-3 text-sm text-wb-ink-muted" aria-label="Result of the last add">
+          <ul className="mt-3 text-sm text-wb-ink-muted" aria-label={t('members.lastAdd')}>
             {results.map((result) => {
-              const name = links.data?.asSupporter.find((link) => link.learnerId === result.learnerId)?.learnerName ?? 'Learner'
+              const name = links.data?.asSupporter.find((link) => link.learnerId === result.learnerId)?.learnerName ?? t('dashboard.unknownLearner')
               return (
                 <li key={result.learnerId}>
-                  {name}: {addOutcomeLabel[result.outcome]}
+                  {name}: {t(`addOutcome.${result.outcome}`)}
                   {result.errorCode ? ` (${result.errorCode})` : ''}
                 </li>
               )

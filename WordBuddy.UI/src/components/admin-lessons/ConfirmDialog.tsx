@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, type KeyboardEvent, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type ConfirmDialogProps = Readonly<{
   /** Whether the dialog is shown. */
@@ -29,6 +30,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): ReactElement {
+  const { t } = useTranslation('common')
   const panelRef = useRef<HTMLDivElement>(null)
 
   // Give focus back to the element that opened the dialog.
@@ -109,7 +111,7 @@ export function ConfirmDialog({
                 disabled={isPending}
                 className="rounded-wb-md bg-wb-primary-soft px-4 py-2 text-sm font-semibold text-wb-ink hover:bg-wb-primary-soft-hover disabled:opacity-60"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, type KeyboardEvent, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { PersonalVocabularyWord } from '../../types'
 
 type DeleteWordConfirmDialogProps = Readonly<{
@@ -14,13 +15,6 @@ type DeleteWordConfirmDialogProps = Readonly<{
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-/** Text shown for an author delete that needs confirmation (`Shared` or `PendingReview` words). */
-function confirmMessage(word: PersonalVocabularyWord): string {
-  return word.shareStatus === 'PendingReview'
-    ? 'Your share request will be cancelled and the word deleted.'
-    : 'This word will be handed over to WordBuddy and stay in the Community Word Pool. It will no longer be yours.'
-}
-
 /** Whether deleting this word needs an explicit confirmation (author of a shared or pending word). */
 export function needsDeleteConfirmation(word: PersonalVocabularyWord): boolean {
   return word.isAuthor && (word.shareStatus === 'Shared' || word.shareStatus === 'PendingReview')
@@ -34,6 +28,7 @@ export function DeleteWordConfirmDialog({
   onConfirm,
   onCancel,
 }: DeleteWordConfirmDialogProps): ReactElement {
+  const { t } = useTranslation(['vocabulary', 'common'])
   const panelRef = useRef<HTMLDivElement>(null)
   const isOpen = word !== null
 
@@ -98,10 +93,10 @@ export function DeleteWordConfirmDialog({
             onClick={(event) => event.stopPropagation()}
           >
             <h2 id="delete-word-title" className="text-xl font-bold text-wb-ink">
-              Delete "{word.word}"?
+              {t('vocabulary:deleteDialog.title', { word: word.word })}
             </h2>
             <p id="delete-word-message" className="mt-3 text-wb-ink-muted">
-              {confirmMessage(word)}
+              {word.shareStatus === 'PendingReview' ? t('vocabulary:deleteDialog.pending') : t('vocabulary:deleteDialog.shared')}
             </p>
             {errorMessage && (
               <p role="alert" className="mt-3 text-sm font-semibold text-wb-danger">
@@ -116,7 +111,7 @@ export function DeleteWordConfirmDialog({
                 disabled={isPending}
                 className="rounded-wb-md bg-wb-primary-soft px-4 py-2 text-sm font-semibold text-wb-ink hover:bg-wb-primary-soft-hover disabled:opacity-60"
               >
-                Cancel
+                {t('common:cancel')}
               </button>
               <button
                 type="button"
@@ -124,7 +119,7 @@ export function DeleteWordConfirmDialog({
                 disabled={isPending}
                 className="rounded-wb-md bg-wb-danger-soft px-4 py-2 text-sm font-semibold text-wb-danger-soft-ink hover:bg-wb-danger-soft-hover disabled:opacity-60"
               >
-                {isPending ? 'Deleting…' : 'Delete'}
+                {isPending ? t('common:deleting') : t('common:delete')}
               </button>
             </div>
           </motion.div>

@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { problemMessage } from '../../api/supportLinks'
 import { useAttachLessonSense, useLessonSenseSearch } from '../../hooks/useAdminLessons'
 import { shareStatusClasses } from '../../theme/variants'
@@ -15,6 +16,7 @@ type AddWordPickerProps = Readonly<{
 
 /** Search box + result list to add system and shared-pool words to a lesson. */
 export function AddWordPicker({ lessonId, attachedSenseIds }: AddWordPickerProps): ReactElement {
+  const { t } = useTranslation(['admin', 'vocabulary'])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const results = useLessonSenseSearch(debouncedSearch, true)
@@ -29,26 +31,26 @@ export function AddWordPicker({ lessonId, attachedSenseIds }: AddWordPickerProps
   return (
     <div>
       <label htmlFor="add-word-search" className="block text-sm font-semibold text-wb-ink">
-        Add a word
+        {t('admin:picker.add')}
       </label>
       <input
         id="add-word-search"
         type="search"
         value={search}
         maxLength={100}
-        placeholder="Search system and shared words…"
+        placeholder={t('admin:picker.placeholder')}
         onChange={(e) => setSearch(e.target.value)}
         className={`${inputClass} mt-1`}
       />
 
-      {results.isLoading && <p className="mt-3 text-sm text-wb-ink-muted">Searching…</p>}
-      {results.isError && <p className="mt-3 text-sm text-wb-danger">Couldn't search words right now.</p>}
+      {results.isLoading && <p className="mt-3 text-sm text-wb-ink-muted">{t('admin:picker.searching')}</p>}
+      {results.isError && <p className="mt-3 text-sm text-wb-danger">{t('admin:picker.searchFailed')}</p>}
       {attach.isError && (
         <p role="alert" className="mt-3 text-sm font-semibold text-wb-danger">
-          {problemMessage(attach.error, 'Could not add that word.')}
+          {problemMessage(attach.error, t('admin:picker.addFailed'))}
         </p>
       )}
-      {results.data && results.data.length === 0 && <p className="mt-3 text-sm text-wb-ink-muted">No matching words.</p>}
+      {results.data && results.data.length === 0 && <p className="mt-3 text-sm text-wb-ink-muted">{t('admin:picker.none')}</p>}
 
       <ul className="mt-3 flex max-h-80 flex-col gap-2 overflow-y-auto">
         {results.data?.map((sense) => {
@@ -59,11 +61,11 @@ export function AddWordPicker({ lessonId, attachedSenseIds }: AddWordPickerProps
                 <p className="font-bold text-wb-ink">
                   {sense.word}
                   <span className={`ml-2 rounded-wb-pill border px-2 py-0.5 text-xs font-semibold ${shareStatusClasses[sense.shareStatus]}`}>
-                    {sense.source === 'System' ? 'System' : sense.shareStatus}
+                    {sense.source === 'System' ? t('admin:picker.system') : t(`vocabulary:shareStatus.${sense.shareStatus}`)}
                   </span>
                   {!sense.visibleToChildren && (
                     <span className="ml-2 rounded-wb-pill bg-wb-danger-soft px-2 py-0.5 text-xs font-semibold text-wb-danger-soft-ink">
-                      Hidden from children
+                      {t('admin:senses.hidden')}
                     </span>
                   )}
                 </p>
@@ -75,7 +77,7 @@ export function AddWordPicker({ lessonId, attachedSenseIds }: AddWordPickerProps
                 onClick={() => attach.mutate({ lessonId, senseId: sense.senseId })}
                 className={softButtonClass}
               >
-                {attached ? 'Added' : 'Add'}
+                {attached ? t('admin:picker.added') : t('admin:picker.addButton')}
               </button>
             </li>
           )

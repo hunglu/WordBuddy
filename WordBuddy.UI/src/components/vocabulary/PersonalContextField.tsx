@@ -1,4 +1,5 @@
 import type { ReactElement, TextareaHTMLAttributes } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export const PERSONAL_CONTEXT_MAX_LENGTH = 500
 
@@ -13,10 +14,11 @@ type PersonalContextFieldProps = Readonly<
 
 /** Optional private note: "Where did you meet this word?". Max 500 characters. */
 export function PersonalContextField({ id, value, error, ...rest }: PersonalContextFieldProps): ReactElement {
+  const { t } = useTranslation('vocabulary')
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-semibold text-wb-ink">
-        Where did you meet this word? (optional)
+        {t('note.context')}
       </label>
       <textarea
         id={id}
@@ -27,7 +29,7 @@ export function PersonalContextField({ id, value, error, ...rest }: PersonalCont
         {...rest}
       />
       <div id={`${id}-hint`} className="mt-1 flex justify-between text-xs text-wb-ink-muted">
-        <span>Only you can see this note.</span>
+        <span>{t('note.onlyYou')}</span>
         <span>
           {value.length}/{PERSONAL_CONTEXT_MAX_LENGTH}
         </span>

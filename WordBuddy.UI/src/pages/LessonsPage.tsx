@@ -2,24 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { getLessons } from '../api/lessons'
 import { levelClasses } from '../theme/variants'
 import type { Level, LessonType } from '../types'
 
-const TYPE_TABS: { value: LessonType | undefined; label: string }[] = [
-  { value: undefined, label: 'All' },
-  { value: 'Vocabulary', label: 'Vocabulary' },
-  { value: 'Grammar', label: 'Grammar' },
-  { value: 'DailyPhrase', label: 'Daily Phrases' },
-]
+const TYPE_TABS: LessonType[] = ['Vocabulary', 'Grammar', 'DailyPhrase']
 
-const LEVEL_PILLS: { value: Level | undefined; label: string }[] = [
-  { value: undefined, label: 'All levels' },
-  { value: 'Beginner', label: 'Beginner' },
-  { value: 'Intermediate', label: 'Intermediate' },
-  { value: 'Advanced', label: 'Advanced' },
-]
+const LEVEL_PILLS: Level[] = ['Beginner', 'Intermediate', 'Advanced']
 
 const TYPE_COLORS: Record<LessonType, string> = {
   Vocabulary: 'bg-wb-vocab-bg text-wb-vocab-ink border-wb-vocab-border',
@@ -36,6 +27,7 @@ const TYPE_ICONS: Record<LessonType, string> = {
 const MotionLink = motion.create(Link)
 
 export function LessonsPage(): ReactElement {
+  const { t } = useTranslation('lessons')
   const [type, setType] = useState<LessonType | undefined>(undefined)
   const [level, setLevel] = useState<Level | undefined>(undefined)
 
@@ -46,52 +38,52 @@ export function LessonsPage(): ReactElement {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Lessons</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{t('title')}</h1>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {TYPE_TABS.map((tab) => (
+        {[undefined, ...TYPE_TABS].map((tab) => (
           <button
-            key={tab.label}
+            key={tab ?? 'all'}
             type="button"
-            onClick={() => setType(tab.value)}
+            onClick={() => setType(tab)}
             className={`rounded-wb-pill px-5 py-2 text-base font-bold ${
-              type === tab.value
+              type === tab
                 ? 'bg-wb-primary text-wb-on-primary shadow-wb-card'
                 : 'bg-wb-surface-card text-wb-ink hover:bg-wb-hover-tint'
             }`}
           >
-            {tab.label}
+            {tab === undefined ? t('all') : t(`type.${tab}`)}
           </button>
         ))}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {LEVEL_PILLS.map((pill) => (
+        {[undefined, ...LEVEL_PILLS].map((pill) => (
           <button
-            key={pill.label}
+            key={pill ?? 'all'}
             type="button"
-            onClick={() => setLevel(pill.value)}
+            onClick={() => setLevel(pill)}
             className={`rounded-wb-pill border px-4 py-1.5 text-sm font-semibold ${
-              level === pill.value
+              level === pill
                 ? 'border-wb-primary bg-wb-primary text-wb-on-primary'
                 : 'border-wb-border-subtle bg-wb-surface-card text-wb-ink-muted hover:bg-wb-surface-page'
             }`}
           >
-            {pill.label}
+            {pill === undefined ? t('allLevels') : t(`level.${pill}`)}
           </button>
         ))}
       </div>
 
-      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading lessons…</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">{t('loading')}</p>}
 
       {isError && (
         <p className="mt-8 text-lg text-wb-danger">
-          Couldn't load lessons right now. Please try again in a moment.
+          {t('loadFailed')}
         </p>
       )}
 
       {data && data.length === 0 && (
-        <p className="mt-8 text-lg text-wb-ink-muted">No lessons match these filters yet.</p>
+        <p className="mt-8 text-lg text-wb-ink-muted">{t('noMatch')}</p>
       )}
 
       {data && data.length > 0 && (
@@ -114,7 +106,7 @@ export function LessonsPage(): ReactElement {
                 <p className="mt-2 text-xl font-bold">{lesson.title}</p>
                 <p className="mt-1 text-sm opacity-80">{lesson.description}</p>
                 <span className={`mt-3 inline-block rounded-wb-pill px-3 py-1 text-xs font-semibold ${levelClasses[lesson.level]}`}>
-                  {lesson.level}
+                  {t(`level.${lesson.level}`)}
                 </span>
               </MotionLink>
             </motion.div>

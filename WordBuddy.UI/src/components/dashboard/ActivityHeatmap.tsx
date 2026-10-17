@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { DayActivity } from '../../types'
 import { cardClass } from '../support/supportUi'
 import styles from './ActivityHeatmap.module.css'
@@ -16,14 +17,15 @@ function levelOf(reviews: number, max: number): number {
 
 /** Reviews per local day, one cell per day (Monday-first columns are not needed: a day strip is enough). */
 export function ActivityHeatmap({ days }: ActivityHeatmapProps): ReactElement {
+  const { t } = useTranslation('dashboard')
   const max = days.reduce((highest, day) => Math.max(highest, day.reviews), 0)
   // Pad so the first day lands on its weekday row (grid rows run Monday to Sunday).
   const first = days.length > 0 ? new Date(`${days[0].date}T00:00:00`) : null
   const padding = first === null ? 0 : (first.getDay() + 6) % 7
 
   return (
-    <section className={cardClass} aria-label="Activity">
-      <h2 className="text-lg font-bold text-wb-ink">Activity</h2>
+    <section className={cardClass} aria-label={t('activity.title')}>
+      <h2 className="text-lg font-bold text-wb-ink">{t('activity.title')}</h2>
       <div className="mt-3 overflow-x-auto">
         <div className={styles.grid}>
           {Array.from({ length: padding }, (_, index) => (
@@ -33,12 +35,12 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps): ReactElement {
             <span
               key={day.date}
               className={`${styles.cell} ${LEVEL_CLASSES[levelOf(day.reviews, max)]}`}
-              title={`${day.date}: ${day.reviews} reviews`}
+              title={t('activity.cell', { date: day.date, count: day.reviews })}
             />
           ))}
         </div>
       </div>
-      <p className="mt-2 text-sm text-wb-ink-muted">Darker means more reviews that day.</p>
+      <p className="mt-2 text-sm text-wb-ink-muted">{t('activity.legend')}</p>
     </section>
   )
 }

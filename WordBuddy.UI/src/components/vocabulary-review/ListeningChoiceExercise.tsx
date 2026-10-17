@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ExerciseOption, VocabularyExercise } from '../../types'
 import { ChoiceOptions } from './ChoiceOptions'
 import type { ExerciseAnswer } from './sessionQueue'
@@ -18,6 +19,7 @@ function play(url: string | null): void {
 
 /** Plays the word audio; the learner picks the word they heard. Hint = show the definition. */
 export function ListeningChoiceExercise({ exercise, onAnswer }: ListeningChoiceExerciseProps): ReactElement {
+  const { t } = useTranslation('review')
   const elapsed = useResponseTimer()
   const [hintUsed, setHintUsed] = useState(false)
   const [answered, setAnswered] = useState(false)
@@ -30,13 +32,13 @@ export function ListeningChoiceExercise({ exercise, onAnswer }: ListeningChoiceE
 
   return (
     <div data-testid="exercise-listening-choice">
-      <p className="text-wb-ink-muted">Listen and pick the word you hear.</p>
+      <p className="text-wb-ink-muted">{t('listening.question')}</p>
       <button
         type="button"
         onClick={() => play(prompt.audioUrl)}
         className="mt-4 rounded-wb-pill bg-wb-primary px-6 py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover"
       >
-        🔊 Play
+        {t('listening.play')}
       </button>
       <div>
         {hintUsed ? (
@@ -48,7 +50,7 @@ export function ListeningChoiceExercise({ exercise, onAnswer }: ListeningChoiceE
             disabled={answered}
             className="mt-3 text-sm font-semibold text-wb-ink-muted hover:underline"
           >
-            Show a hint
+            {t('hint')}
           </button>
         )}
       </div>

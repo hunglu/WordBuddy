@@ -15,5 +15,9 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
             .Must(z => User.IsKnownTimeZone(z!))
             .WithMessage("The time zone id is not known.")
             .When(c => !string.IsNullOrWhiteSpace(c.TimeZoneId));
+        RuleFor(c => c.PreferredLanguage)
+            .Must(l => User.IsValidLanguageCode(l!))
+            .WithMessage("The language code is not valid.")
+            .When(c => !string.IsNullOrWhiteSpace(c.PreferredLanguage));
     }
 }

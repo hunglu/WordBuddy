@@ -7,6 +7,7 @@ import { isSupporterRequiredError } from './api/supportLinks'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ChildSupporterGate } from './components/support/ChildSupporterGate'
 import { CURRENT_USER_KEY } from './hooks/useSupportLinks'
+import { useLanguageSync } from './hooks/useLanguageSync'
 import { AppLayout } from './layouts/AppLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardPage } from './pages/DashboardPage'
@@ -98,9 +99,16 @@ function AnimatedRoutes(): ReactElement {
   )
 }
 
+/** Runs language sync inside the QueryClientProvider; always mounted, logged in or not. */
+function LanguageSync(): null {
+  useLanguageSync()
+  return null
+}
+
 function App(): ReactElement {
   return (
     <QueryClientProvider client={queryClient}>
+      <LanguageSync />
       <MotionConfig reducedMotion="user">
         <BrowserRouter>
           <AnimatedRoutes />

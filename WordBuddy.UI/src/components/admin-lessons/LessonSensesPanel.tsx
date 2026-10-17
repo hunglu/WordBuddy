@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { problemMessage } from '../../api/supportLinks'
 import { useDetachLessonSense, useReorderLessonSenses } from '../../hooks/useAdminLessons'
 import type { AdminLessonSenseDto } from '../../types'
@@ -22,6 +23,7 @@ function movedIds(senses: readonly AdminLessonSenseDto[], index: number, delta: 
 
 /** Word list of a vocabulary lesson: reorder with up/down, remove, and add from the picker. */
 export function LessonSensesPanel({ lessonId, senses }: LessonSensesPanelProps): ReactElement {
+  const { t } = useTranslation('admin')
   const reorder = useReorderLessonSenses()
   const detach = useDetachLessonSense()
   const busy: boolean = reorder.isPending || detach.isPending
@@ -30,11 +32,11 @@ export function LessonSensesPanel({ lessonId, senses }: LessonSensesPanelProps):
   return (
     <section className="mt-8 grid gap-6 lg:grid-cols-2">
       <div>
-        <h2 className="text-2xl font-bold text-wb-ink">Words in this lesson ({senses.length})</h2>
-        {senses.length === 0 && <p className="mt-3 text-wb-ink-muted">No words yet. Add some from the list on the right.</p>}
+        <h2 className="text-2xl font-bold text-wb-ink">{t('senses.heading', { count: senses.length })}</h2>
+        {senses.length === 0 && <p className="mt-3 text-wb-ink-muted">{t('senses.none')}</p>}
         {(reorder.isError || detach.isError) && (
           <p role="alert" className="mt-3 text-sm font-semibold text-wb-danger">
-            {problemMessage(reorder.error ?? detach.error, 'Could not change the word list.')}
+            {problemMessage(reorder.error ?? detach.error, t('senses.changeFailed'))}
           </p>
         )}
 
@@ -56,7 +58,7 @@ export function LessonSensesPanel({ lessonId, senses }: LessonSensesPanelProps):
                     {sense.word}
                     {!sense.visibleToChildren && (
                       <span className="ml-2 rounded-wb-pill bg-wb-danger-soft px-2 py-0.5 text-xs font-semibold text-wb-danger-soft-ink">
-                        Hidden from children
+                        {t('senses.hidden')}
                       </span>
                     )}
                   </p>
@@ -65,7 +67,7 @@ export function LessonSensesPanel({ lessonId, senses }: LessonSensesPanelProps):
                 <div className="flex gap-1">
                   <button
                     type="button"
-                    aria-label={`Move ${sense.word} up`}
+                    aria-label={t('senses.moveUp', { word: sense.word })}
                     disabled={busy || index === 0}
                     onClick={() => reorder.mutate({ lessonId, senseIds: movedIds(senses, index, -1) })}
                     className={softButtonClass}
@@ -74,7 +76,7 @@ export function LessonSensesPanel({ lessonId, senses }: LessonSensesPanelProps):
                   </button>
                   <button
                     type="button"
-                    aria-label={`Move ${sense.word} down`}
+                    aria-label={t('senses.moveDown', { word: sense.word })}
                     disabled={busy || index === senses.length - 1}
                     onClick={() => reorder.mutate({ lessonId, senseIds: movedIds(senses, index, 1) })}
                     className={softButtonClass}
@@ -83,12 +85,12 @@ export function LessonSensesPanel({ lessonId, senses }: LessonSensesPanelProps):
                   </button>
                   <button
                     type="button"
-                    aria-label={`Remove ${sense.word}`}
+                    aria-label={t('senses.removeWord', { word: sense.word })}
                     disabled={busy}
                     onClick={() => detach.mutate({ lessonId, senseId: sense.senseId })}
                     className={dangerButtonClass}
                   >
-                    Remove
+                    {t('senses.remove')}
                   </button>
                 </div>
               </motion.li>

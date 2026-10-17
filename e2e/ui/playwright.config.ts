@@ -20,6 +20,8 @@ export default defineConfig({
   ],
   use: {
     baseURL,
+    // Pin the browser language so existing English scenarios do not follow the host machine (WB-59).
+    locale: 'en-US',
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

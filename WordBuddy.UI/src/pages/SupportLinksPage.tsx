@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { problemMessage } from '../api/supportLinks'
 import { GroupRequests } from '../components/groups/GroupRequests'
@@ -22,6 +23,7 @@ import { hasGuardianClaim } from '../utils/jwt'
  * children they are Primary for. Children: create an invitation and accept a code; links are read-only.
  */
 export function SupportLinksPage(): ReactElement {
+  const { t } = useTranslation('support')
   const user = useAuthStore((state) => state.user)
   const isChild = user?.ageGroup === 'Child'
   const isGuardian = useAuthStore((state) => hasGuardianClaim(state.token))
@@ -33,31 +35,31 @@ export function SupportLinksPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Supporters</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{t('title')}</h1>
       <p className="mt-2 text-wb-ink-muted">
         {isChild
-          ? 'Ask a grown-up to support you. Share your code with them.'
-          : 'A supporter can see progress, assign words and set the daily new-word cap.'}
+          ? t('introChild')
+          : t('introAdult')}
       </p>
 
       <div className="mt-6">
         <InvitePanel isChild={isChild} />
       </div>
 
-      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading your links…</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">{t('loading')}</p>}
       {isError && (
-        <p className="mt-8 text-lg text-wb-danger">{problemMessage(error, "Couldn't load your links right now.")}</p>
+        <p className="mt-8 text-lg text-wb-danger">{problemMessage(error, t('loadFailed'))}</p>
       )}
 
       {!isChild && pending.data && pending.data.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-2xl font-bold text-wb-ink">Waiting for your approval</h2>
-          <p className="text-sm text-wb-ink-muted">You are the Primary supporter. Approve or reject extra supporters.</p>
+          <h2 className="text-2xl font-bold text-wb-ink">{t('pending.heading')}</h2>
+          <p className="text-sm text-wb-ink-muted">{t('pending.hint')}</p>
           <div className="mt-3 flex flex-col gap-3">
             {pending.data.map((link) => (
               <div key={link.id} className={cardClass}>
                 <p className="text-lg font-bold text-wb-ink">
-                  {link.supporterName} wants to support {link.learnerName}
+                  {t('pending.wants', { supporter: link.supporterName, learner: link.learnerName })}
                 </p>
                 <div className="mt-3 flex gap-2">
                   <button
@@ -66,7 +68,7 @@ export function SupportLinksPage(): ReactElement {
                     onClick={() => respondPending.mutate({ linkId: link.id, approve: true })}
                     className={successButtonClass}
                   >
-                    Approve
+                    {t('pending.approve')}
                   </button>
                   <button
                     type="button"
@@ -74,19 +76,19 @@ export function SupportLinksPage(): ReactElement {
                     onClick={() => respondPending.mutate({ linkId: link.id, approve: false })}
                     className={dangerButtonClass}
                   >
-                    Reject
+                    {t('pending.reject')}
                   </button>
                 </div>
               </div>
             ))}
           </div>
           {respondPending.isError && (
-            <p className="mt-2 text-sm text-wb-danger">{problemMessage(respondPending.error, 'That did not work.')}</p>
+            <p className="mt-2 text-sm text-wb-danger">{problemMessage(respondPending.error, t('pending.failed'))}</p>
           )}
         </section>
       )}
       {!isChild && pending.isError && (
-        <p className="mt-4 text-sm text-wb-danger">Couldn't load pending approvals right now.</p>
+        <p className="mt-4 text-sm text-wb-danger">{t('pending.loadFailed')}</p>
       )}
 
       {!isChild && <GroupRequests />}
@@ -94,9 +96,9 @@ export function SupportLinksPage(): ReactElement {
       {data && (
         <>
           <section className="mt-8">
-            <h2 className="text-2xl font-bold text-wb-ink">My supporters</h2>
+            <h2 className="text-2xl font-bold text-wb-ink">{t('lists.mySupporters')}</h2>
             {data.asLearner.length === 0 ? (
-              <p className="mt-2 text-wb-ink-muted">No supporters yet.</p>
+              <p className="mt-2 text-wb-ink-muted">{t('lists.noSupporters')}</p>
             ) : (
               <div className="mt-3 flex flex-col gap-3">
                 {data.asLearner.map((link) => (
@@ -108,9 +110,9 @@ export function SupportLinksPage(): ReactElement {
 
           {!isChild && (
             <section className="mt-8">
-              <h2 className="text-2xl font-bold text-wb-ink">People I support</h2>
+              <h2 className="text-2xl font-bold text-wb-ink">{t('lists.peopleISupport')}</h2>
               {data.asSupporter.length === 0 ? (
-                <p className="mt-2 text-wb-ink-muted">You do not support anyone yet.</p>
+                <p className="mt-2 text-wb-ink-muted">{t('lists.nobody')}</p>
               ) : (
                 <div className="mt-3 flex flex-col gap-3">
                   {data.asSupporter.map((link) => (
@@ -118,12 +120,12 @@ export function SupportLinksPage(): ReactElement {
                       <SupportLinkCard link={link} show="learner" canAct />
                       {link.status === 'Active' && link.learnerDateOfBirth && (
                         <p className="mt-2 text-sm text-wb-ink-muted">
-                          Date of birth: {formatPlainDate(link.learnerDateOfBirth)} (read-only)
+                          {t('lists.dob', { date: formatPlainDate(link.learnerDateOfBirth) })}
                         </p>
                       )}
                       {link.status === 'Active' && (
                         <Link to={`/dashboard/learners/${link.learnerId}`} className={`${primaryButtonClass} mt-2 inline-block`}>
-                          View dashboard
+                          {t('lists.viewDashboard')}
                         </Link>
                       )}
                       {link.status === 'Active' && isGuardian && (
@@ -141,8 +143,8 @@ export function SupportLinksPage(): ReactElement {
 
           {!isChild && data.managedForChildren.length > 0 && (
             <section className="mt-8">
-              <h2 className="text-2xl font-bold text-wb-ink">Other supporters of my children</h2>
-              <p className="text-sm text-wb-ink-muted">As Primary, you act for the child on these links.</p>
+              <h2 className="text-2xl font-bold text-wb-ink">{t('lists.others')}</h2>
+              <p className="text-sm text-wb-ink-muted">{t('lists.othersHint')}</p>
               <div className="mt-3 flex flex-col gap-3">
                 {data.managedForChildren.map((link) => (
                   <SupportLinkCard key={link.id} link={link} show="both" canAct />
@@ -153,13 +155,17 @@ export function SupportLinksPage(): ReactElement {
 
           {data.openInvitations.length > 0 && (
             <section className="mt-8">
-              <h2 className="text-2xl font-bold text-wb-ink">Open invitations</h2>
+              <h2 className="text-2xl font-bold text-wb-ink">{t('lists.openInvitations')}</h2>
               <div className="mt-3 flex flex-col gap-3">
                 {data.openInvitations.map((invitation) => (
                   <div key={invitation.id} className={`${cardClass} flex items-center justify-between gap-3`}>
                     <p className="text-wb-ink">
-                      {invitation.creatorSide === 'Learner' ? 'Looking for a supporter' : 'Offer to support'}
-                      {invitation.relationship ? ` (${invitation.relationship})` : ''} · until {formatDate(invitation.expiresAtUtc)}
+                      {t('lists.until', {
+                        label: `${invitation.creatorSide === 'Learner' ? t('lists.lookingFor') : t('lists.offer')}${
+                          invitation.relationship ? ` (${t(`relationship.${invitation.relationship}`)})` : ''
+                        }`,
+                        date: formatDate(invitation.expiresAtUtc),
+                      })}
                     </p>
                     <button
                       type="button"
@@ -167,7 +173,7 @@ export function SupportLinksPage(): ReactElement {
                       onClick={() => cancelInvitation.mutate(invitation.id)}
                       className={softButtonClass}
                     >
-                      Cancel
+                      {t('cancel', { ns: 'common' })}
                     </button>
                   </div>
                 ))}

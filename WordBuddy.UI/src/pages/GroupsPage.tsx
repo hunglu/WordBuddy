@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { problemMessage } from '../api/supportLinks'
@@ -11,18 +13,23 @@ import { avatarEmoji, cardClass, inputClass, primaryButtonClass, softButtonClass
 import { useCreateGroup, useJoinedGroups, useLeaveGroup, useOwnedGroups } from '../hooks/useGroups'
 import { usePagination } from '../hooks/usePagination'
 import { useAuthStore } from '../store/authStore'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
-const createGroupSchema = z.object({
-  name: z.string().trim().min(3, 'Use at least 3 characters').max(60, 'Use at most 60 characters'),
-})
+function makeCreateGroupSchema(t: TFunction<'groups'>) {
+  return z.object({
+    name: z.string().trim().min(3, t('create.nameMin')).max(60, t('create.nameMax')),
+  })
+}
 
-type CreateGroupFormValues = z.infer<typeof createGroupSchema>
+type CreateGroupFormValues = z.infer<ReturnType<typeof makeCreateGroupSchema>>
 
 /**
  * `/groups` — a supporter's groups with a create form. Every learner also sees the groups they joined
  * (group name and owner only; never other members). A child cannot create groups or leave one.
  */
 export function GroupsPage(): ReactElement {
+  const { t } = useTranslation('groups')
+  const createGroupSchema = useMemo(() => makeCreateGroupSchema(t), [t])
   const navigate = useNavigate()
   const isChild = useAuthStore((state) => state.user?.ageGroup === 'Child')
   const ownedPaging = usePagination()
@@ -41,9 +48,11 @@ export function GroupsPage(): ReactElement {
   const {
     register,
     handleSubmit,
+    trigger,
     reset,
     formState: { errors },
   } = useForm<CreateGroupFormValues>({ resolver: zodResolver(createGroupSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   function onCreate(values: CreateGroupFormValues): void {
     createGroup.mutate(values.name, {
@@ -56,47 +65,47 @@ export function GroupsPage(): ReactElement {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      <h1 className="text-3xl font-extrabold text-wb-ink">Groups</h1>
+      <h1 className="text-3xl font-extrabold text-wb-ink">{t('title')}</h1>
       <p className="mt-2 text-wb-ink-muted">
         {isChild
-          ? 'Groups your supporter added you to.'
-          : 'Put learners you support into a group, give them words together, and see how the group is doing.'}
+          ? t('introChild')
+          : t('introAdult')}
       </p>
 
-      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">Loading your groups…</p>}
+      {isLoading && <p className="mt-8 text-lg text-wb-ink-muted">{t('loading')}</p>}
       {isError && (
-        <p className={`mt-8 text-lg ${inlineErrorClass}`}>{problemMessage(error, "Couldn't load your groups right now.")}</p>
+        <p className={`mt-8 text-lg ${inlineErrorClass}`}>{problemMessage(error, t('loadFailed'))}</p>
       )}
 
       {!isChild && (
-        <form onSubmit={handleSubmit(onCreate)} className={`${cardClass} mt-6 flex flex-col gap-3`} aria-label="Create a group">
+        <form onSubmit={handleSubmit(onCreate)} className={`${cardClass} mt-6 flex flex-col gap-3`} aria-label={t('create.ariaLabel')}>
           <label htmlFor="group-name" className="text-lg font-bold text-wb-ink">
-            New group
+            {t('create.label')}
           </label>
           <input id="group-name" type="text" autoComplete="off" className={inputClass} {...register('name')} />
           {errors.name && <p className={inlineErrorClass}>{errors.name.message}</p>}
           {createGroup.isError && (
-            <p className={inlineErrorClass}>{problemMessage(createGroup.error, 'Could not create the group.')}</p>
+            <p className={inlineErrorClass}>{problemMessage(createGroup.error, t('create.failed'))}</p>
           )}
           <button type="submit" disabled={createGroup.isPending} className={`${primaryButtonClass} self-start`}>
-            Create group
+            {t('create.submit')}
           </button>
         </form>
       )}
 
       {owned.data && !isChild && (
-        <section className="mt-8" aria-label="My groups">
-          <h2 className="text-2xl font-bold text-wb-ink">My groups</h2>
+        <section className="mt-8" aria-label={t('mine.heading')}>
+          <h2 className="text-2xl font-bold text-wb-ink">{t('mine.heading')}</h2>
           {owned.data.totalCount === 0 ? (
-            <p className="mt-2 text-wb-ink-muted">You have no groups yet.</p>
+            <p className="mt-2 text-wb-ink-muted">{t('mine.none')}</p>
           ) : (
             <div className="mt-3 flex flex-col gap-3">
               {owned.data.items.map((group) => (
                 <Link key={group.id} to={`/groups/${group.id}`} className={`${cardClass} block hover:bg-wb-hover-tint`}>
                   <p className="text-xl font-bold text-wb-ink">{group.name}</p>
                   <p className="text-sm text-wb-ink-muted">
-                    {group.activeMemberCount} active
-                    {group.pendingMemberCount > 0 ? ` · ${group.pendingMemberCount} waiting for approval` : ''}
+                    {t('mine.active', { count: group.activeMemberCount })}
+                    {group.pendingMemberCount > 0 ? t('mine.waiting', { count: group.pendingMemberCount }) : ''}
                   </p>
                 </Link>
               ))}
@@ -107,17 +116,17 @@ export function GroupsPage(): ReactElement {
             pageSize={ownedPaging.pageSize}
             totalCount={owned.data.totalCount}
             onPageChange={ownedPaging.setPage}
-            label="My groups pages"
-            itemLabel="groups"
+            label={t('mine.pages')}
+            itemLabel={t('mine.items')}
           />
         </section>
       )}
 
       {joined.data && (
-        <section className="mt-8" aria-label="Groups I joined">
-          <h2 className="text-2xl font-bold text-wb-ink">Groups I joined</h2>
+        <section className="mt-8" aria-label={t('joined.heading')}>
+          <h2 className="text-2xl font-bold text-wb-ink">{t('joined.heading')}</h2>
           {joined.data.totalCount === 0 ? (
-            <p className="mt-2 text-wb-ink-muted">You are not in a group.</p>
+            <p className="mt-2 text-wb-ink-muted">{t('joined.none')}</p>
           ) : (
             <div className="mt-3 flex flex-col gap-3">
               {joined.data.items.map((group) => (
@@ -136,7 +145,7 @@ export function GroupsPage(): ReactElement {
                       onClick={() => leaveGroup.mutate(group.id)}
                       className={softButtonClass}
                     >
-                      Leave
+                      {t('joined.leave')}
                     </button>
                   )}
                 </div>
@@ -148,11 +157,11 @@ export function GroupsPage(): ReactElement {
             pageSize={joinedPaging.pageSize}
             totalCount={joined.data.totalCount}
             onPageChange={joinedPaging.setPage}
-            label="Joined groups pages"
-            itemLabel="groups"
+            label={t('joined.pages')}
+            itemLabel={t('joined.items')}
           />
           {leaveGroup.isError && (
-            <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(leaveGroup.error, 'Could not leave the group.')}</p>
+            <p className={`mt-2 ${inlineErrorClass}`}>{problemMessage(leaveGroup.error, t('joined.leaveFailed'))}</p>
           )}
         </section>
       )}

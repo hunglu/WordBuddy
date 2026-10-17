@@ -1,11 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { problemMessage } from '../../api/supportLinks'
 import { useUpdateLexeme } from '../../hooks/useAdminLexemes'
 import type { AdminLexemeDetail, CefrLevel, PartOfSpeech, UpdateLexemeValues } from '../../types'
 import { inputClass, primaryButtonClass } from '../support/supportUi'
+import { useRetranslateFormErrors } from '../../hooks/useRetranslateFormErrors'
 
 const PARTS_OF_SPEECH = [
   'Noun',
@@ -37,38 +40,41 @@ function toLines(text: string): string[] {
     .filter((line) => line.length > 0)
 }
 
-const lexemeSchema = z.object({
-  // '' is the honest "nothing chosen" state of the select; the transform rejects it, so the
-  // submitted value is always a real PartOfSpeech.
-  partOfSpeech: z.union([z.enum(PARTS_OF_SPEECH), z.literal('')]).transform((value, ctx) => {
-    if (value === '') {
-      ctx.addIssue({ code: 'custom', message: 'Choose a part of speech' })
-      return z.NEVER
-    }
-    return value
-  }),
-  ipaUk: z.string().trim().max(IPA_MAX, `IPA can have up to ${IPA_MAX} characters`),
-  ipaUs: z.string().trim().max(IPA_MAX, `IPA can have up to ${IPA_MAX} characters`),
-  syllables: z.string().trim().max(SYLLABLES_MAX, `Syllables can have up to ${SYLLABLES_MAX} characters`),
-  wordFormsText: z
-    .string()
-    .refine((text) => toLines(text).length <= WORD_FORMS_MAX, `Use at most ${WORD_FORMS_MAX} word forms`)
-    .refine(
-      (text) => toLines(text).every((line) => line.length <= WORD_FORM_MAX_LENGTH),
-      `Each word form can have up to ${WORD_FORM_MAX_LENGTH} characters`,
-    ),
-  cefrLevel: z.union([z.enum(CEFR_LEVELS), z.literal('')]),
-  frequencyRank: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value === '' || (/^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= RANK_MAX),
-      `Rank must be a whole number from 1 to ${RANK_MAX}`,
-    ),
-})
+function makeLexemeSchema(t: TFunction<'admin'>) {
+  return z.object({
+    // '' is the honest "nothing chosen" state of the select; the transform rejects it, so the
+    // submitted value is always a real PartOfSpeech.
+    partOfSpeech: z.union([z.enum(PARTS_OF_SPEECH), z.literal('')]).transform((value, ctx) => {
+      if (value === '') {
+        ctx.addIssue({ code: 'custom', message: t('lexemeForm.validation.choosePos') })
+        return z.NEVER
+      }
+      return value
+    }),
+    ipaUk: z.string().trim().max(IPA_MAX, t('lexemeForm.validation.ipaMax', { max: IPA_MAX })),
+    ipaUs: z.string().trim().max(IPA_MAX, t('lexemeForm.validation.ipaMax', { max: IPA_MAX })),
+    syllables: z.string().trim().max(SYLLABLES_MAX, t('lexemeForm.validation.syllablesMax', { max: SYLLABLES_MAX })),
+    wordFormsText: z
+      .string()
+      .refine((text) => toLines(text).length <= WORD_FORMS_MAX, t('lexemeForm.validation.formsMax', { max: WORD_FORMS_MAX }))
+      .refine(
+        (text) => toLines(text).every((line) => line.length <= WORD_FORM_MAX_LENGTH),
+        t('lexemeForm.validation.formMaxLength', { max: WORD_FORM_MAX_LENGTH }),
+      ),
+    cefrLevel: z.union([z.enum(CEFR_LEVELS), z.literal('')]),
+    frequencyRank: z
+      .string()
+      .trim()
+      .refine(
+        (value) => value === '' || (/^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= RANK_MAX),
+        t('lexemeForm.validation.rankRange', { max: RANK_MAX }),
+      ),
+  })
+}
 
-type LexemeFormInput = z.input<typeof lexemeSchema>
-type LexemeFormValues = z.output<typeof lexemeSchema>
+type LexemeSchema = ReturnType<typeof makeLexemeSchema>
+type LexemeFormInput = z.input<LexemeSchema>
+type LexemeFormValues = z.output<LexemeSchema>
 
 /** Form values for a loaded lexeme. */
 function toFormValues(lexeme: AdminLexemeDetail): LexemeFormInput {
@@ -101,16 +107,20 @@ type LexemeFormProps = Readonly<{ lexeme: AdminLexemeDetail }>
 
 /** Edit form for the dictionary fields of one lexeme. The word itself cannot change. */
 export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
+  const { t } = useTranslation('admin')
+  const lexemeSchema = useMemo(() => makeLexemeSchema(t), [t])
   const update = useUpdateLexeme()
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors, isDirty },
   } = useForm<LexemeFormInput, unknown, LexemeFormValues>({
     resolver: zodResolver(lexemeSchema),
     // Fills the form when the lexeme loads and resets it to the saved values after every save.
     values: toFormValues(lexeme),
   })
+  useRetranslateFormErrors(errors, trigger)
 
   const onSubmit = (values: LexemeFormValues): void => {
     update.mutate({ id: lexeme.id, values: toRequest(values) })
@@ -120,13 +130,13 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
     <form onSubmit={handleSubmit(onSubmit)} className="mt-6 grid gap-4 rounded-wb-card bg-wb-surface-card p-5 shadow-wb-card md:grid-cols-2">
       <div>
         <label htmlFor="lexeme-pos" className="mb-1 block text-sm font-semibold text-wb-ink">
-          Part of speech
+          {t('lexemeForm.pos')}
         </label>
         <select id="lexeme-pos" className={inputClass} {...register('partOfSpeech')}>
-          {lexeme.partOfSpeech === null && <option value="">Choose…</option>}
+          {lexeme.partOfSpeech === null && <option value="">{t('lexemeForm.choose')}</option>}
           {PARTS_OF_SPEECH.map((p) => (
             <option key={p} value={p}>
-              {p}
+              {t(`pos.${p}`)}
             </option>
           ))}
         </select>
@@ -135,10 +145,10 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
 
       <div>
         <label htmlFor="lexeme-cefr" className="mb-1 block text-sm font-semibold text-wb-ink">
-          CEFR level
+          {t('lexemeForm.cefr')}
         </label>
         <select id="lexeme-cefr" className={inputClass} {...register('cefrLevel')}>
-          <option value="">Not set</option>
+          <option value="">{t('lexemeForm.notSet')}</option>
           {CEFR_LEVELS.map((l) => (
             <option key={l} value={l}>
               {l}
@@ -149,7 +159,7 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
 
       <div>
         <label htmlFor="lexeme-ipa-uk" className="mb-1 block text-sm font-semibold text-wb-ink">
-          IPA (UK)
+          {t('lexemeForm.ipaUk')}
         </label>
         <input id="lexeme-ipa-uk" type="text" className={inputClass} {...register('ipaUk')} />
         {errors.ipaUk && <p className="mt-1 text-sm text-wb-danger">{errors.ipaUk.message}</p>}
@@ -157,7 +167,7 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
 
       <div>
         <label htmlFor="lexeme-ipa-us" className="mb-1 block text-sm font-semibold text-wb-ink">
-          IPA (US)
+          {t('lexemeForm.ipaUs')}
         </label>
         <input id="lexeme-ipa-us" type="text" className={inputClass} {...register('ipaUs')} />
         {errors.ipaUs && <p className="mt-1 text-sm text-wb-danger">{errors.ipaUs.message}</p>}
@@ -165,7 +175,7 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
 
       <div>
         <label htmlFor="lexeme-syllables" className="mb-1 block text-sm font-semibold text-wb-ink">
-          Syllables
+          {t('lexemeForm.syllables')}
         </label>
         <input id="lexeme-syllables" type="text" className={inputClass} {...register('syllables')} />
         {errors.syllables && <p className="mt-1 text-sm text-wb-danger">{errors.syllables.message}</p>}
@@ -173,7 +183,7 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
 
       <div>
         <label htmlFor="lexeme-rank" className="mb-1 block text-sm font-semibold text-wb-ink">
-          Frequency rank
+          {t('lexemeForm.rank')}
         </label>
         <input id="lexeme-rank" type="text" inputMode="numeric" className={inputClass} {...register('frequencyRank')} />
         {errors.frequencyRank && <p className="mt-1 text-sm text-wb-danger">{errors.frequencyRank.message}</p>}
@@ -181,21 +191,21 @@ export function LexemeForm({ lexeme }: LexemeFormProps): ReactElement {
 
       <div className="md:col-span-2">
         <label htmlFor="lexeme-forms" className="mb-1 block text-sm font-semibold text-wb-ink">
-          Word forms
+          {t('lexemeForm.forms')}
         </label>
         <textarea id="lexeme-forms" rows={4} className={inputClass} {...register('wordFormsText')} />
-        <p className="mt-1 text-xs text-wb-ink-muted">One form per line, for example the plural or the past tense.</p>
+        <p className="mt-1 text-xs text-wb-ink-muted">{t('lexemeForm.formsHint')}</p>
         {errors.wordFormsText && <p className="mt-1 text-sm text-wb-danger">{errors.wordFormsText.message}</p>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 md:col-span-2">
         <button type="submit" disabled={update.isPending || !isDirty} className={primaryButtonClass}>
-          {update.isPending ? 'Saving…' : 'Save changes'}
+          {update.isPending ? t('lexemeForm.saving') : t('lexemeForm.save')}
         </button>
-        {update.isSuccess && !isDirty && <span className="text-sm font-semibold text-wb-success">Saved</span>}
+        {update.isSuccess && !isDirty && <span className="text-sm font-semibold text-wb-success">{t('lexemeForm.saved')}</span>}
         {update.isError && (
           <span role="alert" className="text-sm font-semibold text-wb-danger">
-            {problemMessage(update.error, 'Could not save the lexeme.')}
+            {problemMessage(update.error, t('lexemeForm.saveFailed'))}
           </span>
         )}
       </div>

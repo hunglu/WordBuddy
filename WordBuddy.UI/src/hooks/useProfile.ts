@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { changePassword, updateDateOfBirth, updateDisplayName } from '../api/auth'
+import { changePassword, updateDateOfBirth, updateDisplayName, updatePreferredLanguage } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 import { CURRENT_USER_KEY, SUPPORT_LINKS_KEY } from './useSupportLinks'
 
@@ -26,6 +26,21 @@ export function useUpdateDisplayName() {
     onSuccess: (user) => {
       queryClient.setQueryData(CURRENT_USER_KEY, user)
       void queryClient.invalidateQueries({ queryKey: CURRENT_USER_KEY })
+    },
+  })
+}
+
+/** Saves the preferred UI language; the reply replaces the cached and the persisted user. */
+export function useUpdatePreferredLanguage() {
+  const queryClient = useQueryClient()
+  const updateUser = useAuthStore((state) => state.updateUser)
+  return useMutation({
+    mutationFn: updatePreferredLanguage,
+    // One save at a time, so quick switches cannot finish out of order.
+    scope: { id: 'preferred-language' },
+    onSuccess: (user) => {
+      queryClient.setQueryData(CURRENT_USER_KEY, user)
+      updateUser(user)
     },
   })
 }

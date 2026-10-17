@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { problemMessage } from '../../api/supportLinks'
 import {
   useCancelUnlink,
@@ -14,7 +15,6 @@ import {
   dangerButtonClass,
   formatDate,
   softButtonClass,
-  statusLabel,
   successButtonClass,
 } from './supportUi'
 
@@ -28,6 +28,7 @@ type SupportLinkCardProps = Readonly<{
 
 /** One support link with its unlink actions (request, confirm/decline, cancel, escalate). */
 export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): ReactElement {
+  const { t } = useTranslation('support')
   const requestUnlink = useRequestUnlink()
   const respondUnlink = useRespondUnlink()
   const cancelUnlink = useCancelUnlink()
@@ -45,34 +46,34 @@ export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): R
       ? `${avatarEmoji(link.supporterAvatarId)} ${link.supporterName}`
       : show === 'learner'
         ? `${avatarEmoji(link.learnerAvatarId)} ${link.learnerName}`
-        : `${link.supporterName} supports ${link.learnerName}`
+        : t('card.both', { supporter: link.supporterName, learner: link.learnerName })
 
   return (
     <div className={cardClass}>
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-xl font-bold text-wb-ink">{title}</p>
         {link.isPrimary && (
-          <span className="rounded-wb-md bg-wb-primary-soft px-2 py-1 text-xs font-bold text-wb-ink">Primary</span>
+          <span className="rounded-wb-md bg-wb-primary-soft px-2 py-1 text-xs font-bold text-wb-ink">{t('card.primary')}</span>
         )}
         {link.relationship && (
           <span className="rounded-wb-md bg-wb-hover-tint px-2 py-1 text-xs font-semibold text-wb-ink-muted">
-            {link.relationship}
+            {t(`relationship.${link.relationship}`)}
           </span>
         )}
-        <span className="text-sm text-wb-ink-muted">{statusLabel[link.status]}</span>
+        <span className="text-sm text-wb-ink-muted">{t(`status.${link.status}`)}</span>
       </div>
 
       {link.isPrimary && (
-        <p className="mt-2 text-sm text-wb-ink-muted">The Primary link cannot be unlinked. An admin can hand Primary over.</p>
+        <p className="mt-2 text-sm text-wb-ink-muted">{t('card.primaryNote')}</p>
       )}
 
       {request && (
         <p className="mt-2 text-sm text-wb-ink-muted">
           {request.status === 'OverrideRequested'
-            ? 'Unlink request sent to an admin.'
+            ? t('card.sentToAdmin')
             : request.requestedByMe
-              ? `You asked to unlink on ${formatDate(request.requestedAtUtc)}.`
-              : `The other side asked to unlink on ${formatDate(request.requestedAtUtc)}.`}
+              ? t('card.askedByMe', { date: formatDate(request.requestedAtUtc) })
+              : t('card.askedByOther', { date: formatDate(request.requestedAtUtc) })}
         </p>
       )}
 
@@ -85,7 +86,7 @@ export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): R
               onClick={() => requestUnlink.mutate(link.id)}
               className={dangerButtonClass}
             >
-              Unlink
+              {t('card.unlink')}
             </button>
           )}
 
@@ -97,7 +98,7 @@ export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): R
                 onClick={() => respondUnlink.mutate({ linkId: link.id, confirm: true })}
                 className={successButtonClass}
               >
-                Confirm unlink
+                {t('card.confirmUnlink')}
               </button>
               <button
                 type="button"
@@ -105,7 +106,7 @@ export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): R
                 onClick={() => respondUnlink.mutate({ linkId: link.id, confirm: false })}
                 className={dangerButtonClass}
               >
-                Decline
+                {t('card.decline')}
               </button>
             </>
           )}
@@ -113,7 +114,7 @@ export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): R
           {request?.status === 'Pending' && request.requestedByMe && (
             <>
               <button type="button" disabled={busy} onClick={() => cancelUnlink.mutate(link.id)} className={softButtonClass}>
-                Cancel request
+                {t('card.cancelRequest')}
               </button>
               <button
                 type="button"
@@ -121,14 +122,14 @@ export function SupportLinkCard({ link, show, canAct }: SupportLinkCardProps): R
                 onClick={() => escalateUnlink.mutate(link.id)}
                 className={softButtonClass}
               >
-                {escalationOpen ? 'Ask admin' : `Ask admin from ${formatDate(request.escalationAvailableAtUtc)}`}
+                {escalationOpen ? t('card.askAdmin') : t('card.askAdminFrom', { date: formatDate(request.escalationAvailableAtUtc) })}
               </button>
             </>
           )}
         </div>
       )}
 
-      {error && <p className="mt-2 text-sm text-wb-danger">{problemMessage(error, 'That did not work. Please try again.')}</p>}
+      {error && <p className="mt-2 text-sm text-wb-danger">{problemMessage(error, t('card.failed'))}</p>}
     </div>
   )
 }

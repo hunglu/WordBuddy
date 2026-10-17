@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useSupportLinks } from '../../hooks/useSupportLinks'
 import type { SupportLink, User } from '../../types'
@@ -8,6 +9,7 @@ type MySupportersCardProps = Readonly<{ user: User }>
 
 /** Active supporters of the caller, Primary (guardian) first. A child always sees the card; an adult only with links. */
 export function MySupportersCard({ user }: MySupportersCardProps): ReactElement | null {
+  const { t } = useTranslation(['profile', 'support'])
   const links = useSupportLinks()
   const isChild = user.ageGroup === 'Child'
 
@@ -18,8 +20,8 @@ export function MySupportersCard({ user }: MySupportersCardProps): ReactElement 
   if (links.isError) {
     return (
       <section className={`mt-6 max-w-xl ${cardClass}`}>
-        <h2 className="text-xl font-bold text-wb-ink">My supporters</h2>
-        <p className="mt-2 text-sm text-wb-danger">Couldn't load your supporters right now.</p>
+        <h2 className="text-xl font-bold text-wb-ink">{t('profile:supporters.heading')}</h2>
+        <p className="mt-2 text-sm text-wb-danger">{t('profile:supporters.loadFailed')}</p>
       </section>
     )
   }
@@ -35,10 +37,10 @@ export function MySupportersCard({ user }: MySupportersCardProps): ReactElement 
   return (
     <section className={`mt-6 max-w-xl ${cardClass}`} aria-labelledby="supporters-heading">
       <h2 id="supporters-heading" className="text-xl font-bold text-wb-ink">
-        My supporters
+        {t('profile:supporters.heading')}
       </h2>
       {active.length === 0 ? (
-        <p className="mt-2 text-sm text-wb-ink-muted">No supporters yet.</p>
+        <p className="mt-2 text-sm text-wb-ink-muted">{t('profile:supporters.none')}</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {active.map((link) => (
@@ -47,15 +49,15 @@ export function MySupportersCard({ user }: MySupportersCardProps): ReactElement 
                 {avatarEmoji(link.supporterAvatarId)} {link.supporterName}
               </span>
               {link.isPrimary && (
-                <span className="rounded-wb-md bg-wb-primary-soft px-2 py-1 text-xs font-bold text-wb-ink">Guardian</span>
+                <span className="rounded-wb-md bg-wb-primary-soft px-2 py-1 text-xs font-bold text-wb-ink">{t('profile:supporters.guardian')}</span>
               )}
-              {link.relationship && <span className="text-sm text-wb-ink-muted">{link.relationship}</span>}
+              {link.relationship && <span className="text-sm text-wb-ink-muted">{t(`support:relationship.${link.relationship}`)}</span>}
             </li>
           ))}
         </ul>
       )}
       <Link to="/support-links" className="mt-3 inline-block text-sm font-semibold text-wb-primary">
-        Manage supporters
+        {t('profile:supporters.manage')}
       </Link>
     </section>
   )

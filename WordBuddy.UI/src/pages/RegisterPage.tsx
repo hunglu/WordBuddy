@@ -1,47 +1,56 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import axios from 'axios'
 import { motion } from 'framer-motion'
-import type { ReactElement } from 'react'
+import { useMemo, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { registerUser } from '../api/auth'
+import { problemMessage } from '../api/supportLinks'
 import { useAuthStore } from '../store/authStore'
 import { browserTimeZone } from '../utils/timeZone'
 import type { AgeGroup } from '../types'
+import { useRetranslateFormErrors } from '../hooks/useRetranslateFormErrors'
 
-const registerSchema = z
-  .object({
-    displayName: z.string().min(1, 'Display name is required').max(100),
-    email: z.string().email('Enter a valid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string(),
-    ageGroup: z.enum(['Child', 'Adult'], { message: 'Choose one' }),
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  })
+function makeRegisterSchema(t: TFunction<'auth'>) {
+  return z
+    .object({
+      displayName: z.string().min(1, t('validation.displayNameRequired')).max(100),
+      email: z.string().email(t('validation.emailInvalid')),
+      password: z.string().min(8, t('validation.passwordMin')),
+      confirmPassword: z.string(),
+      ageGroup: z.enum(['Child', 'Adult'], { message: t('validation.chooseOne') }),
+    })
+    .refine((values) => values.password === values.confirmPassword, {
+      message: t('validation.passwordMismatch'),
+      path: ['confirmPassword'],
+    })
+}
 
-type RegisterFormValues = z.infer<typeof registerSchema>
+type RegisterFormValues = z.infer<ReturnType<typeof makeRegisterSchema>>
 
-const AGE_GROUPS: { value: AgeGroup; label: string; emoji: string }[] = [
-  { value: 'Child', label: 'Child', emoji: '🧒' },
-  { value: 'Adult', label: 'Adult', emoji: '🧑' },
+const AGE_GROUPS: { value: AgeGroup; labelKey: 'register.child' | 'register.adult'; emoji: string }[] = [
+  { value: 'Child', labelKey: 'register.child', emoji: '🧒' },
+  { value: 'Adult', labelKey: 'register.adult', emoji: '🧑' },
 ]
 
 export function RegisterPage(): ReactElement {
+  const { t, i18n } = useTranslation('auth')
   const navigate = useNavigate()
+  const registerSchema = useMemo(() => makeRegisterSchema(t), [t])
   const login = useAuthStore((state) => state.login)
 
   const {
     register,
     handleSubmit,
+    trigger,
     setValue,
     watch,
     formState: { errors },
   } = useForm<RegisterFormValues>({ resolver: zodResolver(registerSchema) })
+  useRetranslateFormErrors(errors, trigger)
 
   const ageGroup = watch('ageGroup')
 
@@ -53,12 +62,7 @@ export function RegisterPage(): ReactElement {
     },
   })
 
-  const errorMessage = axios.isAxiosError(mutation.error)
-    ? ((mutation.error.response?.data as { detail?: string } | undefined)?.detail ??
-      'Could not create your account.')
-    : mutation.isError
-      ? 'Something went wrong. Please try again.'
-      : null
+  const errorMessage: string | null = mutation.isError ? problemMessage(mutation.error, t('register.failed')) : null
 
   return (
     <motion.div
@@ -66,7 +70,7 @@ export function RegisterPage(): ReactElement {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <h2 className="mb-4 text-center text-lg font-semibold text-wb-ink">Join WordBuddy!</h2>
+      <h2 className="mb-4 text-center text-lg font-semibold text-wb-ink">{t('register.join')}</h2>
 
       <form
         onSubmit={handleSubmit((values) =>
@@ -76,13 +80,14 @@ export function RegisterPage(): ReactElement {
             displayName: values.displayName,
             ageGroup: values.ageGroup,
             timeZoneId: browserTimeZone(),
+            preferredLanguage: i18n.language,
           }),
         )}
         className="flex flex-col gap-4"
       >
         <div>
           <label htmlFor="displayName" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Name
+            {t('register.name')}
           </label>
           <input
             id="displayName"
@@ -96,7 +101,7 @@ export function RegisterPage(): ReactElement {
 
         <div>
           <label htmlFor="email" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Email
+            {t('register.email')}
           </label>
           <input
             id="email"
@@ -110,7 +115,7 @@ export function RegisterPage(): ReactElement {
 
         <div>
           <label htmlFor="password" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Password
+            {t('register.password')}
           </label>
           <input
             id="password"
@@ -126,7 +131,7 @@ export function RegisterPage(): ReactElement {
 
         <div>
           <label htmlFor="confirmPassword" className="mb-1 block text-sm font-semibold text-wb-ink">
-            Confirm password
+            {t('register.confirmPassword')}
           </label>
           <input
             id="confirmPassword"
@@ -141,7 +146,7 @@ export function RegisterPage(): ReactElement {
         </div>
 
         <div>
-          <span className="mb-1 block text-sm font-semibold text-wb-ink">I am a…</span>
+          <span className="mb-1 block text-sm font-semibold text-wb-ink">{t('register.iAm')}</span>
           <div className="grid grid-cols-2 gap-3">
             {AGE_GROUPS.map((option) => (
               <button
@@ -155,7 +160,7 @@ export function RegisterPage(): ReactElement {
                 }`}
               >
                 <span className="text-3xl">{option.emoji}</span>
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
@@ -171,14 +176,14 @@ export function RegisterPage(): ReactElement {
           disabled={mutation.isPending}
           className="rounded-wb-md bg-wb-primary py-3 text-lg font-bold text-wb-on-primary shadow-wb-card hover:bg-wb-primary-hover disabled:opacity-60"
         >
-          {mutation.isPending ? 'Creating account…' : 'Create account'}
+          {mutation.isPending ? t('register.submitting') : t('register.submit')}
         </button>
       </form>
 
       <p className="mt-4 text-center text-sm text-wb-ink">
-        Already have an account?{' '}
+        {t('register.haveAccount')}{' '}
         <Link to="/login" className="font-semibold text-wb-ink-muted hover:underline">
-          Log in
+          {t('register.logIn')}
         </Link>
       </p>
     </motion.div>
