@@ -44,7 +44,7 @@ Given('the learner has a shared word approved by a moderator', async ({ page, re
   await page.getByRole('button', { name: /add word/i }).click()
 
   await wordCard(page).getByRole('button', { name: 'Share', exact: true }).click()
-  await expect(wordCard(page).getByText('PendingReview')).toBeVisible()
+  await expect(wordCard(page).getByText('Pending review')).toBeVisible()
 
   await approveAsAdmin(request, sharedWord)
   await page.reload()

@@ -3,7 +3,7 @@ feature: User profile
 services: Identity, Progress, UI
 audience: Both
 state: shipped
-last-updated-by: WB-20_create-user-profile-settings
+last-updated-by: WB-59_multilingual-ui-english-and-vietnamese
 ---
 
 # User profile
@@ -20,6 +20,7 @@ flowchart LR
 ```
 
 - Page sections: alias and avatar, account info (email, age group, display name), date of birth, time zone, change password, My supporters.
+- Preferred UI language (`en`/`vi`, optional) is saved on the profile and restored at login. See `WB-59_multilingual-ui-english-and-vietnamese.md`.
 - Date of birth stays in Identity. The token carries only the age band (`age_band` claim). No date in logs or events.
 - Saving the date of birth or the password returns a new token, so the band refreshes without a new login.
 - Progress grades future reviews with the band multiplier. Without a band it uses the WB-22 `AgeGroup` multiplier. Past `ReviewLog` rows are unchanged.
@@ -54,6 +55,7 @@ Multipliers are config: `Vocabulary:Grading:AgeBandMultiplier` in Progress.
 | PUT | `/api/auth/profile/date-of-birth` (body `{ dateOfBirth }`, null clears; returns token) | Identity | `[Authorize]`, own account |
 | PUT | `/api/auth/profile/display-name` | Identity | `[Authorize]`, own account |
 | POST | `/api/auth/profile/password` (returns token) | Identity | `[Authorize]`, `password-change` rate limit |
+| PUT | `/api/auth/profile/language` (body `{ language }`, null clears; returns `UserDto`) | Identity | `[Authorize]`, own account |
 | GET | `/api/auth/support-links` (`asSupporter` Active entries add `learnerDateOfBirth`) | Identity | `[Authorize]` |
 
 ## UI
@@ -66,8 +68,9 @@ Multipliers are config: `Vocabulary:Grading:AgeBandMultiplier` in Progress.
 
 ## Pending changes
 
-- `WB-59_multilingual-ui-english-and-vietnamese` — preferred UI language (`en`/`vi`) saved to the profile (#59)
+None.
 
 ## Change history
 
 - `WB-20_create-user-profile-settings` (#20, PR #46) — date of birth, display name, password change, My supporters, `age_band` claim and band grading in Progress
+- `WB-59_multilingual-ui-english-and-vietnamese` (#59, PR #60) — `PreferredLanguage` on the profile, `PUT /api/auth/profile/language`
