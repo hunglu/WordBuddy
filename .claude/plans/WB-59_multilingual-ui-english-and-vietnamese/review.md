@@ -1,27 +1,82 @@
 # Review: Multilingual UI (English and Vietnamese)
 
-PR: #60 · Round 3 · Reviewed commit: 374c5dd · 2026-10-17T17:37:07+07:00
+PR: #60 · Round 4 · Reviewed commit: b1c9b99 · 2026-10-17T17:55:55+07:00
 
 ## Verdict
+
+Approve — the round 3 blocker is fixed; no open blockers or majors.
+
+Checks run at `b1c9b99`:
+
+- `npm run build` passes (key parity and typed keys hold).
+- `vite preview` + headless Chromium, all `/api` calls mocked. No page or console errors in any case.
+
+| Case | Browser | Expected | Result |
+|---|---|---|---|
+| Restored session, profile language `null` | `vi-VN` | `lang="vi"`, no PUT | ✔ |
+| Real login, profile `vi` | `en-US` | UI switches to `vi`, no PUT | ✔ |
+| Real login, profile `null` | `vi-VN` | one `PUT /auth/profile/language` `{"language":"vi"}` | ✔ |
+
+## Round 3 findings — status
+
+| # | Round 3 finding | Status | Evidence |
+|---|---|---|---|
+| 1 | `useLanguageSync()` outside `QueryClientProvider` | Resolved | `App.tsx:103-106,111` — `LanguageSync` calls the hook and renders as the first child of `<QueryClientProvider>` |
+
+## Provider and mount check
+
+```
+StrictMode → App → QueryClientProvider ─┬─ LanguageSync   (useLanguageSync → useQueryClient, useMutation, zustand, i18n)
+                                        └─ MotionConfig → BrowserRouter → AnimatedRoutes (useLocation)
+```
+
+- `LanguageSync` is always mounted: `App` renders it with no condition, and `App` never unmounts. So the `handledUserId` ref starts at the persisted id, as the round 3 ref table assumes.
+- `useLanguageSync` and `useUpdatePreferredLanguage` use no Router hook, so a place outside `BrowserRouter` is correct.
+- `App` itself now calls no hook. `AnimatedRoutes` calls `useLocation()` inside `BrowserRouter`. `queryClient` and `onApiError` are module-level, not hooks.
+
+## Findings
+
+| # | Severity | File:line | Finding | Suggested fix |
+|---|---|---|---|---|
+| — | — | — | No new findings. | — |
+
+## Sanity pass (whole PR)
+
+- PR: 7 commits, 149 files. Branch contains `origin/main`; GitHub says `MERGEABLE`.
+- The fix round changes only `App.tsx` (7 lines) and the plan folder.
+- Round 1–3 checks still hold: backend endpoint + validation, migration + `docs/database-diagram/identity.md`, typed `vi` keys, child vs adult parity, form re-translation, `useLanguageSync` ref logic.
+- Open nits from round 1 that were accepted: none left open; all were resolved in fix round 1.
+- Build warns that one chunk is over 500 kB. Not new to this fix; lazy-loading locales is already a scope suggestion on the issue.
+
+## Plan conformance
+
+- All `tasks.md` items are reflected in the diff. E2E tasks moved to `/test`, as the plan says.
+- Fix round stays inside the round 3 finding. No out-of-scope change.
+
+## Previous rounds
+
+**Round 3** · PR: #60 · Reviewed commit: 374c5dd · 2026-10-17T17:37:07+07:00
+
+### Verdict
 
 Changes requested — one blocker: `App` calls `useLanguageSync()` outside `QueryClientProvider`, so the app throws on every load and shows a blank screen.
 
 Checks run: `npm run build` passes at `374c5dd` (the type check cannot catch a missing provider). The bug came in with fix round 1 (`6dd36ce`); round 2 missed it.
 
-## Round 2 findings — status
+### Round 2 findings — status
 
 | # | Round 2 finding | Status | Evidence |
 |---|---|---|---|
 | 1 | Restored session auto-saves | Resolved | `useLanguageSync.ts:18,28` — the ref starts at the persisted id, so the first run returns before any apply or save |
 | 2 | Unsupported code overwritten | Resolved | `useLanguageSync.ts:32` — saves only when `preferredLanguage == null` |
 
-## Findings
+### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
 | 1 | blocker | `WordBuddy.UI/src/App.tsx:103` with `WordBuddy.UI/src/hooks/useLanguageSync.ts:16` | `App` calls `useLanguageSync()` **before** it renders `<QueryClientProvider>`. The hook calls `useUpdatePreferredLanguage()` → `useQueryClient()` + `useMutation()`. With no provider above, TanStack Query 5.102 throws `No QueryClient set, use QueryClientProvider to set one` (`QueryClientProvider.js:9`). Scenario: any visitor opens any page → `App` throws during render → no error boundary → blank screen, for children and adults, logged in or not. Since `6dd36ce`. | Call the hook from a component **inside** the provider that is **always mounted**, e.g. a `LanguageSync` component that returns `null`, rendered inside `<QueryClientProvider>`, or call it at the top of `AnimatedRoutes`. Do not put it in `AppLayout`/`ProtectedRoute`: they mount after login, so the ref would start at the new id and treat a real login as a restored session. |
 
-## Ref logic (`handledUserId`) — verified
+### Ref logic (`handledUserId`) — verified
 
 Assumes the hook runs in an always-mounted component (as now, and after the fix above).
 
@@ -36,17 +91,15 @@ Assumes the hook runs in an always-mounted component (as now, and after the fix 
 | Save success | `onSuccess` → `updateUser` → same id → effect does not rerun | No loop ✔ |
 | Password / date-of-birth change | `login(auth)` with same id → skipped | No PUT ✔ |
 
-## Sanity pass (whole PR)
+### Sanity pass (whole PR)
 
 - The fix round touches only `useLanguageSync.ts` and the plan folder.
 - Round 1 and round 2 checks still hold: backend, migration + diagram, typed keys, child vs adult, form re-translation.
 
-## Plan conformance
+### Plan conformance
 
 - All `tasks.md` items are reflected in the diff. E2E tasks moved to `/test`, as the plan says.
 - Fix round stays inside the round 2 findings. No out-of-scope change.
-
-## Previous rounds
 
 **Round 2** · PR: #60 · Reviewed commit: 6dd36ce · 2026-10-17T17:25:22+07:00
 
