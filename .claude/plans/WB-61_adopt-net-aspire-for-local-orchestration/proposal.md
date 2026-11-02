@@ -1,14 +1,14 @@
 ---
 title: WB-61_Adopt .NET Aspire for local orchestration
-status: in-progress
+status: implemented
 type: new
 issue: 61
 pr: none
 affects: docs/features/WB-61_adopt-net-aspire-for-local-orchestration.md
 supersedes: none
-version: 3.0
+version: 4.0
 created: 2026-11-02T16:06:13+07:00
-updated: 2026-11-02T16:22:32+07:00
+updated: 2026-11-02T22:39:57+07:00
 ---
 
 ## Problem

@@ -19,7 +19,7 @@ Do not edit anything under `src/Services/`, `src/Shared/`, `WordBuddy.UI/`, `doc
 - [x] Add `WaitFor` (DB, RabbitMQ) and `.WithHttpHealthCheck("/health/ready")` on every API — all 5 APIs show "Healthy" in the dashboard. — Program.cs (verified: all 5 /health/ready = 200)
 - [x] Add `AddViteApp("ui", "../../../WordBuddy.UI")` on port 3000, waiting for identity/content/quiz/progress — `http://localhost:3000` serves the app, and login works through the existing proxy. — Program.cs (verified: :3000 = 200, login via proxy = 200)
 - [x] Manual check: run `aspire run` on a fresh volume — all databases are migrated and seeded on first start (no `dotnet ef` step), and the seeded child and adult logins both work. — verified with dotnet run on fresh volumes; adult login OK; no seeded child account exists
-- [ ] Manual check: open the dashboard — traces and console logs appear for all 5 APIs. Record whether traces map to the resource or show as a separate `WordBuddy.<Service>` entry (Open question 2). — NOT DONE: needs a browser on the dashboard; not verified
+- [ ] Manual check: open the dashboard — traces and console logs appear for all 5 APIs. Record whether traces map to the resource or show as a separate `WordBuddy.<Service>` entry (Open question 2). — DEFERRED to /test by Sam (2026-11-02): needs a browser on the dashboard
 
 ## Frontend
 
@@ -47,4 +47,4 @@ Do not edit anything under `src/Services/`, `src/Shared/`, `WordBuddy.UI/`, `doc
 
 ## Release (on merge)
 
-- [ ] Set ADR 0007 `Status: accepted` when the PR merges (tester's `/test` merge step) — `docs/adr/0007` shows `accepted` on `main`.
+- [ ] Set ADR 0007 `Status: accepted` when the PR merges (tester's `/test` merge step) — `docs/adr/0007` shows `accepted` on `main`. — DEFERRED by design: merge-time task for /test (Sam, 2026-11-02)
