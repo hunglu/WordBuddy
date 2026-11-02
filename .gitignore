@@ -43,3 +43,5 @@ e2e/ui/.features-gen/
 .claude/logs/
 docs/local*
 !docs/*.example
+## Aspire AppHost local media folder
+WordBuddy/aspire/.data/

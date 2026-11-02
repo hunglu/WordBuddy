@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WordBuddy.AppHost/WordBuddy.AppHost.csproj" />
+  <Project Path="WordBuddy.AppHost.Tests/WordBuddy.AppHost.Tests.csproj" />
+</Solution>

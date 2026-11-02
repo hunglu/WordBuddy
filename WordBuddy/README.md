@@ -63,6 +63,80 @@ change one, repack it before the next `dotnet restore` in a consuming service:
 dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 ```
 
+## Aspire (local dev)
+
+One command starts SQL Server, RabbitMQ, the 5 APIs and the Vite UI, with one dashboard for
+traces and console logs (ADR [0007](../docs/adr/0007-aspire-local-orchestration.md)). It is a
+local dev loop only. Compose and `k8s/` are unchanged.
+
+```
+aspire run → AppHost (WordBuddy/aspire) → SQL Server + RabbitMQ (containers)
+                                        → identity 5080, content 5081, quiz 5082,
+                                          progress 5083, notification 5084 (processes)
+                                        → ui 3000 (Vite)
+```
+
+**Do not run it together with `make up`.** Both bind 5080-5084, 5672 and 15672. Stop Aspire first
+(Ctrl+C); RabbitMQ then frees its ports. The SQL Server container may keep running, but it uses a
+dynamic host port, so it does not block `make up`.
+
+### Prerequisites
+
+1. Docker Desktop running.
+2. Aspire CLI installed (see <https://aspire.dev>).
+3. `dotnet dev-certs https --trust`
+4. Shared packages packed into the local feed (each service restores from it):
+   `make pack-shared` (or `dotnet pack` per project, see "Getting started").
+5. `npm install` once in `../WordBuddy.UI`.
+6. Set the parameters once (placeholders below, use your own values):
+
+```bash
+cd aspire/WordBuddy.AppHost
+dotnet user-secrets set "Parameters:sql-password" "<strong-sql-sa-password>"
+dotnet user-secrets set "Parameters:jwt-secret" "<at-least-32-characters>"
+dotnet user-secrets set "Parameters:rabbitmq-password" "<rabbitmq-password>"
+# optional, with defaults
+dotnet user-secrets set "Parameters:jwt-issuer" "WordBuddy"
+dotnet user-secrets set "Parameters:jwt-expiry-minutes" "60"
+dotnet user-secrets set "Parameters:rabbitmq-user" "wordbuddy"
+# optional: unset = Autofill AI off
+dotnet user-secrets set "Parameters:claude-api-key" "<claude-api-key>"
+```
+
+Missing secrets are also prompted for in the dashboard.
+
+### Run
+
+```bash
+cd aspire
+aspire run            # or: dotnet run --project WordBuddy.AppHost
+```
+
+| What | Where |
+|---|---|
+| App | <http://localhost:3000> |
+| Aspire dashboard | URL printed by `aspire run` |
+| RabbitMQ management | <http://localhost:15672> |
+| SQL Server | dynamic host port (see the `sql` resource in the dashboard) |
+| Uploaded media | `aspire/.data/media` (gitignored) |
+
+### Good to know
+
+- **Migrations:** each service migrates and seeds its own database on startup in `Development`
+  (the same as under compose). No `dotnet ef` step. Fallback if you need it: take the connection
+  string from the dashboard and run `dotnet ef database update` for that service.
+- **Telemetry:** traces and console logs only. Metrics and structured OTLP logs are not exported
+  by `WordBuddy.Shared.Infrastructure`. Trace-to-resource mapping: not verified in a browser
+  during WB-61. Traces use the service name `WordBuddy.<Service>` and may show as a separate
+  dashboard entry instead of under the `identity` resource.
+- **Volumes:** SQL Server and RabbitMQ use their own Aspire volumes, separate from compose. If you
+  change `sql-password` after the volume exists, SQL Server rejects the new password. Delete the
+  `wordbuddy.apphost-*-sql-data` Docker volume (`docker volume ls`) and start again.
+- **Tests:** `dotnet test aspire/WordBuddy.Aspire.slnx --filter "Category!=Integration"` runs the
+  model and guard tests without Docker. `Category=Integration` starts the real stack on the fixed ports 5080-5084, 3000, 5672 and 15672,
+  so stop compose (`make down`) and `aspire run` first.
+- The AppHost has no project reference to any service, and no service references the AppHost.
+
 ## Running in Docker / local Kubernetes
 
 ```bash
