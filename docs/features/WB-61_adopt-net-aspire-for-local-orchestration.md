@@ -46,6 +46,7 @@ None.
 
 ## Pending changes
 
+- WB-63_fix-aspire-dashboard-traces-and-accept-adr-0007 — traces reach the dashboard on every dev machine; ADR 0007 accepted (#63)
 
 ## Change history
 

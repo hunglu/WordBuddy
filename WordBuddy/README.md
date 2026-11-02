@@ -126,9 +126,11 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
   (the same as under compose). No `dotnet ef` step. Fallback if you need it: take the connection
   string from the dashboard and run `dotnet ef database update` for that service.
 - **Telemetry:** traces and console logs only. Metrics and structured OTLP logs are not exported
-  by `WordBuddy.Shared.Infrastructure`. Trace-to-resource mapping: not verified in a browser
-  during WB-61. Traces use the service name `WordBuddy.<Service>` and may show as a separate
-  dashboard entry instead of under the `identity` resource.
+  by `WordBuddy.Shared.Infrastructure`. The AppHost sets `OpenTelemetry__OtlpEndpoint` from the
+  endpoint Aspire injects, so traces reach the dashboard even when your local
+  `appsettings.Development.json` sets `OpenTelemetry:OtlpEndpoint`. Traces are listed as
+  `WordBuddy.Identity` ... `WordBuddy.Notification`; console logs and health stay under the
+  `identity` ... `notification` resources.
 - **Volumes:** SQL Server and RabbitMQ use their own Aspire volumes, separate from compose. If you
   change `sql-password` after the volume exists, SQL Server rejects the new password. Delete the
   `wordbuddy.apphost-*-sql-data` Docker volume (`docker volume ls`) and start again.

@@ -1,7 +1,8 @@
 # 0007 — .NET Aspire AppHost for local orchestration only
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-11-02 (WB-61)
+- Accepted: 2026-11-03 (WB-63)
 
 ## Context
 
@@ -29,7 +30,7 @@ aspire run → WordBuddy.AppHost → SQL Server, RabbitMQ (containers)
 | Location | `WordBuddy/aspire/WordBuddy.AppHost/`, with its own `.slnx`. It is outside `src/Services/` and outside every service solution |
 | Service wiring | Non-generic `AddProject(name, "<path>.csproj")`. The AppHost has no `ProjectReference` to any service |
 | ServiceDefaults | None. `WordBuddy.Shared.Infrastructure` keeps Serilog, OTel, health and rate limiting |
-| Telemetry | The services keep reading `OTEL_EXPORTER_OTLP_ENDPOINT`. Aspire injects it, so service code does not change |
+| Telemetry | Aspire injects `OTEL_EXPORTER_OTLP_ENDPOINT`. The AppHost also sets `OpenTelemetry__OtlpEndpoint` from it, because the shared helper reads `OpenTelemetry:OtlpEndpoint` first and a local `appsettings.Development.json` key would otherwise beat the injected endpoint. Service code does not change |
 | Configuration | Through environment variables that match the existing keys (`ConnectionStrings__DefaultConnection`, `Jwt__*`, `Messaging__RabbitMq__*`) |
 | Secrets | Aspire parameters with `secret: true`, stored in AppHost user-secrets. Never `.env`, never in git |
 | Dependency direction | AppHost → services (by path) only. No service knows that the AppHost exists |
@@ -40,6 +41,9 @@ aspire run → WordBuddy.AppHost → SQL Server, RabbitMQ (containers)
 - Faster inner loop. Services run as processes, so there is no image rebuild or BuildKit secret per run.
 - One dashboard shows traces and console logs for all services. Metrics and structured OTLP logs
   need a change in `WordBuddy.Shared.Infrastructure` (separate proposal).
+- Traces appear in the dashboard as `WordBuddy.<Service>` (the shared helper sets the service name),
+  not under the Aspire resource (`identity`, ...). Mapping them needs a change in
+  `WordBuddy.Shared.Infrastructure` (separate proposal).
 - Each service can still move to its own repo: drop its `AddProject` line, and the service is unchanged.
 - Two local run paths, Aspire and compose. Configuration keys must stay aligned between them.
 - Developers need the Aspire CLI and a container runtime (Docker Desktop is already required).
