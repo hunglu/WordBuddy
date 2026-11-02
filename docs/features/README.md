@@ -25,7 +25,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | List paging | `WB-55_apply-paging-to-table-list.md` | shipped |
 | Moderator role | `WB-56_moderator-role-to-assist-admin.md` | shipped |
 | Multilingual UI (en/vi) | `WB-59_multilingual-ui-english-and-vietnamese.md` | shipped |
-| Local orchestration (Aspire) | `WB-61_adopt-net-aspire-for-local-orchestration.md` | proposed |
+| Local orchestration (Aspire) | `WB-61_adopt-net-aspire-for-local-orchestration.md` | shipped |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.

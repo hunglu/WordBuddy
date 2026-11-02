@@ -2,7 +2,7 @@
 feature: Local orchestration (.NET Aspire)
 services: Identity | Content | Quiz | Progress | Notification | UI
 audience: Both
-state: proposed
+state: shipped
 last-updated-by: WB-61_adopt-net-aspire-for-local-orchestration
 ---
 
@@ -11,8 +11,6 @@ last-updated-by: WB-61_adopt-net-aspire-for-local-orchestration
 Developers start the whole local stack with one command and watch it in one dashboard.
 
 ## What it does
-
-_Proposed — not on main yet._
 
 `aspire run` (from `WordBuddy/aspire/`) starts SQL Server, RabbitMQ, the 5 APIs and the Vite UI,
 with one dashboard for **traces and console logs**. The AppHost is orchestration-only, so ADR 0001
@@ -30,6 +28,7 @@ with one dashboard for **traces and console logs**. The AppHost is orchestration
 - **Child vs adult:** no difference. This is developer tooling with no learner-facing behaviour.
 - **Telemetry:** the dashboard shows traces and console logs only. Metrics and structured (OTLP)
   logs are not exported, because `WordBuddy.Shared.Infrastructure` exports traces only.
+- **Known gap:** a local `appsettings.Development.json` sets `OpenTelemetry:OtlpEndpoint` to `localhost:4317`, which overrides the OTLP endpoint Aspire injects. Traces then miss the dashboard until the AppHost sets `OpenTelemetry__OtlpEndpoint`. Traces show as `WordBuddy.<Service>`, not under the `identity` resource.
 - **Migrations:** each service migrates (and seeds) its own database at startup in `Development`. No
   `dotnet ef` step.
 - **Secrets:** Aspire parameters in AppHost user-secrets. Never `.env`, never in git.
@@ -47,6 +46,7 @@ None.
 
 ## Pending changes
 
-- `WB-61_adopt-net-aspire-for-local-orchestration` — `aspire run` replaces `make up` for the local dev loop (#61)
 
 ## Change history
+
+- `WB-61_adopt-net-aspire-for-local-orchestration` — AppHost added; `aspire run` starts the local stack (#61)
