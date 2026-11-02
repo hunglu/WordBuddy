@@ -1,12 +1,57 @@
 # Review: Adopt .NET Aspire for local orchestration
 
-PR: #62 · Round 1 · Reviewed commit: 1a51a4c · 2026-11-02T22:41:50+07:00
+PR: #62 · Round 2 · Reviewed commit: 2100d28 · 2026-11-02T22:58:28+07:00
 
 ## Verdict
 
-Changes requested — one major: the persistent RabbitMQ container keeps ports 5672/15672 after `aspire run` stops, so `make up` then fails.
+Approve — all 5 round-1 findings are fixed in 2100d28, with no regressions.
+
+## Round-1 findings
+
+| # | Severity | Status | Evidence |
+|---|---|---|---|
+| 1 | major | Fixed | `Program.cs:53-55`: `rabbitmq` drops `ContainerLifetime.Persistent` → session lifetime frees 5672/15672 on stop. Data volume kept. `sql` stays persistent; its host port is dynamic, so it does not block `make up`. README:79-81 explains this. |
+| 2 | nit | Fixed | `AppHostModelTests.cs:76`: `ASPNETCORE_ENVIRONMENT` now comes from `env`, not appended. Removing it from `AddApi` would now fail the test. |
+| 3 | nit | Fixed | README:135-137: integration test needs `make down` and no `aspire run`. |
+| 4 | nit | Fixed | `ArchitectureGuardTests.cs:32-36`: checks only `ProjectReference/@Include`. Service csprojs are SDK-style (no MSBuild xmlns), so `Descendants("ProjectReference")` matches. |
+| 5 | nit | Fixed | `Program.cs:17-22`: `async Task Main` + `await RunAsync()`. |
 
 ## Findings
+
+None. No new blockers, majors or nits in the fix diff.
+
+Checks run:
+
+| Check | Result |
+|---|---|
+| `dotnet test aspire/WordBuddy.Aspire.slnx --filter "Category!=Integration"` | 11 / 11 passed |
+| `AppHostRunTests` lifetime override (line 46) | Still valid; only `sql` carries the annotation now |
+| Fix diff touches `src/`, `WordBuddy.UI/`, compose, `Makefile`, `k8s/` | No |
+| Secrets / PII | None added |
+
+Not run: `Category=Integration` (needs the full stack) → `/test`.
+
+## Plan conformance
+
+```
+tasks.md: 29 / 31 done (unchanged)
+  open: dashboard trace check  → deferred to /test (Sam)
+  open: ADR 0007 accepted      → merge-time task (Sam)
+```
+
+Fix diff stays inside the round-1 findings. No out-of-scope change. No EF migrations.
+
+## Previous rounds
+
+### Round 1
+
+PR: #62 · Round 1 · Reviewed commit: 1a51a4c · 2026-11-02T22:41:50+07:00
+
+#### Verdict
+
+Changes requested — one major: the persistent RabbitMQ container keeps ports 5672/15672 after `aspire run` stops, so `make up` then fails.
+
+#### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 |---|---|---|---|---|
@@ -18,7 +63,7 @@ Changes requested — one major: the persistent RabbitMQ container keeps ports 5
 
 No blockers. No secrets in code or config: parameters are `secret: true` and live in user-secrets; test values are clearly `test-only-*`. No PII in logs.
 
-## Plan conformance
+#### Plan conformance
 
 ```
 tasks.md: 29 / 31 done
