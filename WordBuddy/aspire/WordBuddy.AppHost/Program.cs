@@ -14,11 +14,11 @@ public static class Program
 
     /// <summary>Entry point: builds the model and runs it.</summary>
     /// <param name="args">Command-line arguments passed to the distributed application builder.</param>
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(args);
         ConfigureModel(builder);
-        builder.Build().Run();
+        await builder.Build().RunAsync();
     }
 
     /// <summary>Adds every WordBuddy resource to the given builder.</summary>
@@ -38,7 +38,8 @@ public static class Program
             ? null
             : builder.AddParameter("claude-api-key", secret: true);
 
-        // Infrastructure containers. SQL host port stays dynamic; RabbitMQ AMQP is pinned (no Port option in the services).
+        // Infrastructure containers. SQL host port stays dynamic (persistent is safe); RabbitMQ AMQP is pinned
+        // (no Port option in the services), so it uses the session lifetime and frees 5672/15672 on stop.
         IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword)
             .WithDataVolume()
             .WithLifetime(ContainerLifetime.Persistent);
@@ -51,8 +52,7 @@ public static class Program
 
         IResourceBuilder<RabbitMQServerResource> rabbitmq = builder.AddRabbitMQ("rabbitmq", rabbitUser, rabbitPassword, port: 5672)
             .WithManagementPlugin(port: 15672)
-            .WithDataVolume()
-            .WithLifetime(ContainerLifetime.Persistent);
+            .WithDataVolume();
 
         // APIs: launch profiles are ignored; ports are pinned to the compose / Vite proxy / e2e ports.
         IResourceBuilder<ProjectResource> identity = AddApi(builder, "identity", "Identity", 5080)

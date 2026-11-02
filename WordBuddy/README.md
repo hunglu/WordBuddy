@@ -76,7 +76,9 @@ aspire run → AppHost (WordBuddy/aspire) → SQL Server + RabbitMQ (containers)
                                         → ui 3000 (Vite)
 ```
 
-**Do not run it together with `make up`.** Both bind 5080-5084, 5672 and 15672.
+**Do not run it together with `make up`.** Both bind 5080-5084, 5672 and 15672. Stop Aspire first
+(Ctrl+C); RabbitMQ then frees its ports. The SQL Server container may keep running, but it uses a
+dynamic host port, so it does not block `make up`.
 
 ### Prerequisites
 
@@ -131,7 +133,8 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
   change `sql-password` after the volume exists, SQL Server rejects the new password. Delete the
   `wordbuddy.apphost-*-sql-data` Docker volume (`docker volume ls`) and start again.
 - **Tests:** `dotnet test aspire/WordBuddy.Aspire.slnx --filter "Category!=Integration"` runs the
-  model and guard tests without Docker. `Category=Integration` starts the real stack.
+  model and guard tests without Docker. `Category=Integration` starts the real stack on the fixed ports 5080-5084, 3000, 5672 and 15672,
+  so stop compose (`make down`) and `aspire run` first.
 - The AppHost has no project reference to any service, and no service references the AppHost.
 
 ## Running in Docker / local Kubernetes

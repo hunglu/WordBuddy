@@ -73,7 +73,7 @@ public class AppHostModelTests
         [
             .. env
                 .Where(k => k.Contains("__") && !k.StartsWith("services__", StringComparison.Ordinal) && !k.StartsWith("LOGGING__", StringComparison.Ordinal))
-                .Append("ASPNETCORE_ENVIRONMENT")
+                .Concat(env.Where(k => k == "ASPNETCORE_ENVIRONMENT"))
                 .Distinct(),
         ];
         wordBuddyKeys.Should().BeEquivalentTo(expectedKeys);

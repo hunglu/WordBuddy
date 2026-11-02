@@ -29,9 +29,11 @@ public class ArchitectureGuardTests
                 .Where(p => !p.Contains(obj) && !p.Contains(bin))
                 .Where(p =>
                 {
-                    string text = File.ReadAllText(p);
-                    return text.Contains("aspire", StringComparison.OrdinalIgnoreCase)
-                        || text.Contains("ServiceDefaults", StringComparison.OrdinalIgnoreCase);
+                    // Only ProjectReference paths count; Aspire client packages are allowed by ADR 0007.
+                    return XDocument.Load(p).Descendants("ProjectReference")
+                        .Select(r => (string?)r.Attribute("Include") ?? string.Empty)
+                        .Any(path => path.Contains("aspire", StringComparison.OrdinalIgnoreCase)
+                            || path.Contains("ServiceDefaults", StringComparison.OrdinalIgnoreCase));
                 }),
         ];
 
