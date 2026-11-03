@@ -1,14 +1,14 @@
 ---
 title: WB-63_Fix Aspire dashboard traces and accept ADR 0007
-status: reviewed
+status: done
 type: change
 issue: 63
 pr: 64
 affects: docs/features/WB-61_adopt-net-aspire-for-local-orchestration.md
 supersedes: WB-61_adopt-net-aspire-for-local-orchestration
-version: 4.0
+version: 5.0
 created: 2026-11-02T23:48:56+07:00
-updated: 2026-11-03T11:05:48+07:00
+updated: 2026-11-03T12:30:00+07:00
 ---
 
 ## Problem
