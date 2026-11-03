@@ -14,14 +14,14 @@ public class AppHostModelTests
     // Keys mirror docker-compose.yml (plan env table). Values are never asserted.
     public static TheoryData<string, string[]> ExpectedKeys => new()
     {
-        { "identity", ["ASPNETCORE_ENVIRONMENT", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Jwt__ExpiryMinutes",
+        { "identity", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Jwt__ExpiryMinutes",
             "Messaging__RabbitMq__Host", "Messaging__RabbitMq__Username", "Messaging__RabbitMq__Password", "SupportLinks__UnlinkOverrideWaitDays"] },
-        { "content", ["ASPNETCORE_ENVIRONMENT", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "FileStorage__BasePath",
+        { "content", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "FileStorage__BasePath",
             "Messaging__RabbitMq__Host", "Messaging__RabbitMq__Username", "Messaging__RabbitMq__Password"] },
-        { "quiz", ["ASPNETCORE_ENVIRONMENT", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer"] },
-        { "progress", ["ASPNETCORE_ENVIRONMENT", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Services__Content__BaseUrl",
+        { "quiz", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer"] },
+        { "progress", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Services__Content__BaseUrl",
             "Messaging__RabbitMq__Host", "Messaging__RabbitMq__Username", "Messaging__RabbitMq__Password"] },
-        { "notification", ["ASPNETCORE_ENVIRONMENT", "Jwt__Secret", "Jwt__Issuer"] },
+        { "notification", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "Jwt__Secret", "Jwt__Issuer"] },
     };
 
     [Fact]
@@ -77,6 +77,75 @@ public class AppHostModelTests
                 .Distinct(),
         ];
         wordBuddyKeys.Should().BeEquivalentTo(expectedKeys);
+    }
+
+    public static TheoryData<string> ApiNames => [.. Apis];
+
+    [Theory]
+    [MemberData(nameof(ApiNames))]
+    public async Task AppHost_Build_GrpcDashboard_OtlpEndpointMatchesInjectedEndpoint(string api)
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+        IResource resource = builder.Resources.Single(r => r.Name == api);
+
+        Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(resource);
+
+        env.Should().ContainKey("OTEL_EXPORTER_OTLP_ENDPOINT");
+        env["OpenTelemetry__OtlpEndpoint"].Should().Be(env["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+    }
+
+    [Fact]
+    public async Task AppHost_Build_HttpProtobufStringEndpoint_OtlpEndpointHasTracesPath()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+        IResource resource = builder.Resources.Single(r => r.Name == "identity");
+
+        // The testing builder cannot select HTTP (see AppHostFixture.GrpcOtlpArg), so switch the injected values.
+        Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(resource, e =>
+        {
+            if (e.ContainsKey("OTEL_EXPORTER_OTLP_ENDPOINT"))
+            {
+                e["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:18890/";
+                e["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf";
+            }
+        });
+
+        env["OpenTelemetry__OtlpEndpoint"].Should().Be("http://localhost:18890/v1/traces");
+    }
+
+    [Fact]
+    public async Task AppHost_Build_HttpProtobufProviderEndpoint_OtlpEndpointHasTracesPath()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+        IResource resource = builder.Resources.Single(r => r.Name == "identity");
+
+        // Aspire 13.6.4 injects an internal HostUrl provider (not a string); keep it and only switch the protocol.
+        Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(resource, e =>
+        {
+            if (e.ContainsKey("OTEL_EXPORTER_OTLP_ENDPOINT"))
+            {
+                e["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf";
+            }
+        });
+
+        IValueProvider provider = env["OpenTelemetry__OtlpEndpoint"].Should().BeAssignableTo<IValueProvider>().Subject;
+        (await provider.GetValueAsync(CancellationToken.None)).Should().Be("http://localhost:18889/v1/traces");
+    }
+
+    [Fact]
+    public async Task AppHost_Build_NoInjectedOtlpEndpoint_NoOtlpEndpointKey()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+
+        foreach (string api in Apis)
+        {
+            IResource resource = builder.Resources.Single(r => r.Name == api);
+
+            // Simulates a run without dashboard OTLP: drop what Aspire injected before the AppHost callback runs.
+            Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(resource, e => e.Remove("OTEL_EXPORTER_OTLP_ENDPOINT"));
+
+            env.Should().NotContainKey("OpenTelemetry__OtlpEndpoint", "{0} must not get a broken endpoint without a dashboard", api);
+        }
     }
 
     [Fact]

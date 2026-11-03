@@ -103,7 +103,61 @@ public static class Program
         return builder.AddProject(name, csproj, launchProfileName: null)
             .WithHttpEndpoint(port: port, name: "http")
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
-            .WithHttpHealthCheck("/health/ready");
+            .WithHttpHealthCheck("/health/ready")
+            .WithDashboardOtlpEndpoint();
+    }
+
+    /// <summary>
+    /// Copies the OTLP endpoint that Aspire injects (<c>OTEL_EXPORTER_OTLP_ENDPOINT</c>) into
+    /// <c>OpenTelemetry__OtlpEndpoint</c>. The shared OTel helper reads <c>OpenTelemetry:OtlpEndpoint</c>
+    /// first, so a local <c>appsettings.Development.json</c> value would otherwise override the injected
+    /// endpoint and traces would miss the dashboard. An environment variable beats that file.
+    /// For <c>http/protobuf</c> the exporter uses an endpoint set in code as is, so <c>/v1/traces</c> is appended.
+    /// Does nothing when Aspire injects no endpoint (dashboard off).
+    /// </summary>
+    private static IResourceBuilder<ProjectResource> WithDashboardOtlpEndpoint(
+        this IResourceBuilder<ProjectResource> project)
+        => project.WithEnvironment(context =>
+        {
+            if (!context.EnvironmentVariables.TryGetValue("OTEL_EXPORTER_OTLP_ENDPOINT", out object? endpoint))
+            {
+                return;
+            }
+
+            context.EnvironmentVariables.TryGetValue("OTEL_EXPORTER_OTLP_PROTOCOL", out object? protocol);
+            bool isHttp = string.Equals(protocol?.ToString(), "http/protobuf", StringComparison.OrdinalIgnoreCase);
+            context.EnvironmentVariables["OpenTelemetry__OtlpEndpoint"] = isHttp ? WithTracesPath(endpoint) : endpoint;
+        });
+
+    private static object WithTracesPath(object endpoint)
+        => endpoint switch
+        {
+            string text => text.TrimEnd('/') + "/v1/traces",
+            // Aspire injects its own internal URL provider (not a string) in 13.x: wrap it, resolve at launch.
+            IValueProvider and IManifestExpressionProvider => new TracesUrl(endpoint),
+            _ => endpoint.ToString()!.TrimEnd('/') + "/v1/traces",
+        };
+
+    /// <summary>Wraps an injected endpoint value provider and appends <c>/v1/traces</c> when resolved.</summary>
+    private sealed class TracesUrl(object inner) : IValueProvider, IManifestExpressionProvider
+    {
+        private const string Path = "/v1/traces";
+
+        public string ValueExpression => ((IManifestExpressionProvider)inner).ValueExpression + Path;
+
+        public async ValueTask<string?> GetValueAsync(CancellationToken cancellationToken = default)
+        {
+            string? value = await ((IValueProvider)inner).GetValueAsync(cancellationToken);
+            return value?.TrimEnd('/') + Path;
+        }
+
+        public async ValueTask<string?> GetValueAsync(ValueProviderContext context, CancellationToken cancellationToken = default)
+        {
+            string? value = await ((IValueProvider)inner).GetValueAsync(context, cancellationToken);
+            return value?.TrimEnd('/') + Path;
+        }
+
+        public override string ToString() => ValueExpression;
     }
 
     private static IResourceBuilder<ProjectResource> WithJwt(
