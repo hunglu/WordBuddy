@@ -12,6 +12,9 @@ public static class Program
     /// <summary>Relative path from the AppHost folder to the services root.</summary>
     private const string ServicesRoot = "../../src/Services";
 
+    /// <summary>Fixed SQL Server host port; compose owns 1433.</summary>
+    public const int SqlPort = 14330;
+
     /// <summary>Entry point: builds the model and runs it.</summary>
     /// <param name="args">Command-line arguments passed to the distributed application builder.</param>
     public static async Task Main(string[] args)
@@ -38,9 +41,10 @@ public static class Program
             ? null
             : builder.AddParameter("claude-api-key", secret: true);
 
-        // Infrastructure containers. SQL host port stays dynamic (persistent is safe); RabbitMQ AMQP is pinned
-        // (no Port option in the services), so it uses the session lifetime and frees 5672/15672 on stop.
-        IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword)
+        // Infrastructure containers. SQL host port is pinned to 14330 (not compose's 1433, so the persistent
+        // container never blocks `make up`); RabbitMQ AMQP is pinned (no Port option in the services), so it
+        // uses the session lifetime and frees 5672/15672 on stop.
+        IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword, port: SqlPort)
             .WithDataVolume()
             .WithLifetime(ContainerLifetime.Persistent);
 

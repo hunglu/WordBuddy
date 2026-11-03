@@ -77,8 +77,8 @@ aspire run → AppHost (WordBuddy/aspire) → SQL Server + RabbitMQ (containers)
 ```
 
 **Do not run it together with `make up`.** Both bind 5080-5084, 5672 and 15672. Stop Aspire first
-(Ctrl+C); RabbitMQ then frees its ports. The SQL Server container may keep running, but it uses a
-dynamic host port, so it does not block `make up`.
+(Ctrl+C); RabbitMQ then frees its ports. The SQL Server container may keep running, but it uses
+host port 14330 (compose uses 1433), so it does not block `make up`.
 
 ### Prerequisites
 
@@ -103,7 +103,10 @@ dotnet user-secrets set "Parameters:rabbitmq-user" "wordbuddy"
 dotnet user-secrets set "Parameters:claude-api-key" "<claude-api-key>"
 ```
 
-Missing secrets are also prompted for in the dashboard.
+`Properties/launchSettings.json` starts the AppHost in `Development`, so it reads these
+user-secrets. If the dashboard asks for a secret, the AppHost did not start in `Development`; do
+not save a new value there, because it would no longer match the existing volumes.
+Non-secret defaults live in `appsettings.json`.
 
 ### Run
 
@@ -115,9 +118,10 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
 | What | Where |
 |---|---|
 | App | <http://localhost:3000> |
-| Aspire dashboard | URL printed by `aspire run` |
+| Aspire dashboard | <http://localhost:15180> (login URL with token printed by `aspire run`) |
 | RabbitMQ management | <http://localhost:15672> |
-| SQL Server | dynamic host port (see the `sql` resource in the dashboard) |
+| RabbitMQ AMQP | `localhost:5672` |
+| SQL Server | `localhost,14330` (user `sa`, password = `Parameters:sql-password`) |
 | Uploaded media | `aspire/.data/media` (gitignored) |
 
 ### Good to know
@@ -131,11 +135,13 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
   `appsettings.Development.json` sets `OpenTelemetry:OtlpEndpoint`. Traces are listed as
   `WordBuddy.Identity` ... `WordBuddy.Notification`; console logs and health stay under the
   `identity` ... `notification` resources.
-- **Volumes:** SQL Server and RabbitMQ use their own Aspire volumes, separate from compose. If you
-  change `sql-password` after the volume exists, SQL Server rejects the new password. Delete the
-  `wordbuddy.apphost-*-sql-data` Docker volume (`docker volume ls`) and start again.
+- **Volumes:** SQL Server and RabbitMQ use their own Aspire volumes, separate from compose. Both
+  read their password only on the first start with an empty volume. If you change `sql-password`
+  or `rabbitmq-password` later, the logins fail and the APIs never start. Stop Aspire, then delete
+  the `sql` container and the `wordbuddy.apphost-*-sql-data` / `-rabbitmq-data` volumes
+  (`docker ps -a`, `docker volume ls`) and start again.
 - **Tests:** `dotnet test aspire/WordBuddy.Aspire.slnx --filter "Category!=Integration"` runs the
-  model and guard tests without Docker. `Category=Integration` starts the real stack on the fixed ports 5080-5084, 3000, 5672 and 15672,
+  model and guard tests without Docker. `Category=Integration` starts the real stack on the fixed ports 5080-5084, 3000, 5672, 15672 and 14330,
   so stop compose (`make down`) and `aspire run` first.
 - The AppHost has no project reference to any service, and no service references the AppHost.
 

@@ -59,6 +59,26 @@ public class AppHostModelTests
         }
     }
 
+    [Fact]
+    public async Task AppHost_Build_InfrastructurePortsArePinned()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+
+        (string Resource, string Endpoint, int Port)[] expected =
+        [
+            ("sql", "tcp", 14330),
+            ("rabbitmq", "tcp", 5672),
+            ("rabbitmq", "management", 15672),
+        ];
+
+        foreach ((string name, string endpointName, int port) in expected)
+        {
+            IResource resource = builder.Resources.Single(r => r.Name == name);
+            EndpointAnnotation endpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == endpointName);
+            endpoint.Port.Should().Be(port, "{0}/{1} must keep a fixed host port", name, endpointName);
+        }
+    }
+
     [Theory]
     [MemberData(nameof(ExpectedKeys))]
     public async Task AppHost_Build_ApiEnvironmentMatchesComposeKeys(string api, string[] expectedKeys)
