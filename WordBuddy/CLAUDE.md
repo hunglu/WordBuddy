@@ -111,6 +111,16 @@ dotnet test  src/Services/<Service>/WordBuddy.<Service>.slnx
 dotnet run --project src/Services/<Service>/WordBuddy.<Service>.Api
 ```
 
+Local dev loop (ADR `../docs/adr/0007`): `aspire run` from `aspire/` starts SQL Server, RabbitMQ,
+the 5 APIs (5080-5084) and the UI (3000), with one dashboard. Setup and secrets: `README.md` →
+"Aspire (local dev)". Never run it together with `make up` (same ports). The AppHost stays
+orchestration-only: path-based `AddProject`, no `ProjectReference` to a service, no
+`ServiceDefaults`.
+
+```bash
+dotnet test aspire/WordBuddy.Aspire.slnx   # AppHost model + run tests
+```
+
 ## Docker / local Kubernetes (kind)
 
 `docker-compose.yml` is the fast inner loop; `k8s/` on kind is the real deployment shape (cloud
