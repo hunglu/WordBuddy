@@ -46,7 +46,7 @@ None.
 
 ## Pending changes
 
-None.
+- WB-66_fix-aspire-secrets-prompt-and-pin-dev-ports — load user-secrets without a prompt and pin all dev ports (#66)
 
 ## Change history
 

@@ -137,10 +137,14 @@ public class AppHostRunTests
     /// <summary>
     /// The real run keeps containers and data volumes (persistent). A persistent SQL volume keeps the SA
     /// password of the first run, so the test's throwaway password is rejected and nothing becomes healthy.
-    /// Tests therefore use session containers with no volume.
+    /// Tests therefore use session containers with no volume. The SQL host port is dynamic here, because the
+    /// persistent <c>sql</c> container of a normal <c>aspire run</c> keeps running and holds 14330.
     /// </summary>
     private static void UseThrowawayContainers(IDistributedApplicationTestingBuilder builder)
     {
+        IResource sql = builder.Resources.Single(r => r.Name == "sql");
+        sql.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "tcp").Port = null;
+
         foreach (IResource resource in builder.Resources.Where(r => r is ContainerResource))
         {
             foreach (ContainerLifetimeAnnotation annotation in resource.Annotations.OfType<ContainerLifetimeAnnotation>().ToList())

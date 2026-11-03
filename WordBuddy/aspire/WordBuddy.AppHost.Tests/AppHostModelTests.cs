@@ -79,6 +79,26 @@ public class AppHostModelTests
         }
     }
 
+    [Fact]
+    public async Task AppHost_Build_NonSecretParameters_ResolveDefaults()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+
+        Dictionary<string, string> expected = new()
+        {
+            ["jwt-issuer"] = "WordBuddy",
+            ["jwt-expiry-minutes"] = "60",
+            ["rabbitmq-user"] = "wordbuddy",
+        };
+
+        foreach ((string name, string value) in expected)
+        {
+            ParameterResource parameter = builder.Resources.OfType<ParameterResource>().Single(r => r.Name == name);
+            parameter.Secret.Should().BeFalse("{0} is not a secret", name);
+            (await parameter.GetValueAsync(CancellationToken.None)).Should().Be(value, "{0} must default from appsettings.json", name);
+        }
+    }
+
     [Theory]
     [MemberData(nameof(ExpectedKeys))]
     public async Task AppHost_Build_ApiEnvironmentMatchesComposeKeys(string api, string[] expectedKeys)

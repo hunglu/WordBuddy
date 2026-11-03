@@ -95,7 +95,7 @@ cd aspire/WordBuddy.AppHost
 dotnet user-secrets set "Parameters:sql-password" "<strong-sql-sa-password>"
 dotnet user-secrets set "Parameters:jwt-secret" "<at-least-32-characters>"
 dotnet user-secrets set "Parameters:rabbitmq-password" "<rabbitmq-password>"
-# optional, with defaults
+# optional, only to override the defaults from appsettings.json
 dotnet user-secrets set "Parameters:jwt-issuer" "WordBuddy"
 dotnet user-secrets set "Parameters:jwt-expiry-minutes" "60"
 dotnet user-secrets set "Parameters:rabbitmq-user" "wordbuddy"
@@ -106,7 +106,8 @@ dotnet user-secrets set "Parameters:claude-api-key" "<claude-api-key>"
 `Properties/launchSettings.json` starts the AppHost in `Development`, so it reads these
 user-secrets. If the dashboard asks for a secret, the AppHost did not start in `Development`; do
 not save a new value there, because it would no longer match the existing volumes.
-Non-secret defaults live in `appsettings.json`.
+Non-secret defaults (`jwt-issuer`, `jwt-expiry-minutes`, `rabbitmq-user`) live in
+`appsettings.json`; set them in user-secrets only to override them.
 
 ### Run
 
@@ -119,6 +120,8 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
 |---|---|
 | App | <http://localhost:3000> |
 | Aspire dashboard | <http://localhost:15180> (login URL with token printed by `aspire run`) |
+| Dashboard OTLP (traces in) | `localhost:19180` |
+| Dashboard resource service | `localhost:20180` |
 | RabbitMQ management | <http://localhost:15672> |
 | RabbitMQ AMQP | `localhost:5672` |
 | SQL Server | `localhost,14330` (user `sa`, password = `Parameters:sql-password`) |
@@ -141,8 +144,9 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
   the `sql` container and the `wordbuddy.apphost-*-sql-data` / `-rabbitmq-data` volumes
   (`docker ps -a`, `docker volume ls`) and start again.
 - **Tests:** `dotnet test aspire/WordBuddy.Aspire.slnx --filter "Category!=Integration"` runs the
-  model and guard tests without Docker. `Category=Integration` starts the real stack on the fixed ports 5080-5084, 3000, 5672, 15672 and 14330,
-  so stop compose (`make down`) and `aspire run` first.
+  model and guard tests without Docker. `Category=Integration` starts the real stack on the fixed ports 5080-5084, 3000, 5672 and 15672,
+  so stop compose (`make down`) and `aspire run` first. The test SQL Server uses a dynamic host port,
+  so the persistent `sql` container of a normal run (port 14330) may keep running.
 - The AppHost has no project reference to any service, and no service references the AppHost.
 
 ## Running in Docker / local Kubernetes

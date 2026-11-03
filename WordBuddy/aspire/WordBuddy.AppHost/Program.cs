@@ -28,13 +28,14 @@ public static class Program
     /// <param name="builder">The distributed application builder.</param>
     public static void ConfigureModel(IDistributedApplicationBuilder builder)
     {
-        // Parameters (secrets live in AppHost user-secrets as Parameters:<name>; never in git).
+        // Parameters: secrets live in AppHost user-secrets as Parameters:<name> (never in git);
+        // non-secret defaults live in appsettings.json under Parameters.
         IResourceBuilder<ParameterResource> sqlPassword = builder.AddParameter("sql-password", secret: true);
         IResourceBuilder<ParameterResource> jwtSecret = builder.AddParameter("jwt-secret", secret: true);
         IResourceBuilder<ParameterResource> rabbitPassword = builder.AddParameter("rabbitmq-password", secret: true);
-        IResourceBuilder<ParameterResource> jwtIssuer = AddParameterWithDefault(builder, "jwt-issuer", "WordBuddy");
-        IResourceBuilder<ParameterResource> jwtExpiry = AddParameterWithDefault(builder, "jwt-expiry-minutes", "60");
-        IResourceBuilder<ParameterResource> rabbitUser = AddParameterWithDefault(builder, "rabbitmq-user", "wordbuddy");
+        IResourceBuilder<ParameterResource> jwtIssuer = builder.AddParameter("jwt-issuer");
+        IResourceBuilder<ParameterResource> jwtExpiry = builder.AddParameter("jwt-expiry-minutes");
+        IResourceBuilder<ParameterResource> rabbitUser = builder.AddParameter("rabbitmq-user");
 
         // Optional: unset = Autofill AI off (same as today).
         IResourceBuilder<ParameterResource>? claudeApiKey = string.IsNullOrWhiteSpace(builder.Configuration["Parameters:claude-api-key"])
@@ -180,12 +181,4 @@ public static class Program
             .WithEnvironment("Messaging__RabbitMq__Username", user)
             .WithEnvironment("Messaging__RabbitMq__Password", password)
             .WaitFor(rabbitmq);
-
-    /// <summary>Non-secret parameter: uses the configured value when set, else the default.</summary>
-    private static IResourceBuilder<ParameterResource> AddParameterWithDefault(
-        IDistributedApplicationBuilder builder, string name, string defaultValue)
-    {
-        string? configured = builder.Configuration[$"Parameters:{name}"];
-        return builder.AddParameter(name, string.IsNullOrWhiteSpace(configured) ? defaultValue : configured);
-    }
 }
