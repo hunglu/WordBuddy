@@ -59,6 +59,46 @@ public class AppHostModelTests
         }
     }
 
+    [Fact]
+    public async Task AppHost_Build_InfrastructurePortsArePinned()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+
+        (string Resource, string Endpoint, int Port)[] expected =
+        [
+            ("sql", "tcp", 14330),
+            ("rabbitmq", "tcp", 5672),
+            ("rabbitmq", "management", 15672),
+        ];
+
+        foreach ((string name, string endpointName, int port) in expected)
+        {
+            IResource resource = builder.Resources.Single(r => r.Name == name);
+            EndpointAnnotation endpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == endpointName);
+            endpoint.Port.Should().Be(port, "{0}/{1} must keep a fixed host port", name, endpointName);
+        }
+    }
+
+    [Fact]
+    public async Task AppHost_Build_NonSecretParameters_ResolveDefaults()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+
+        Dictionary<string, string> expected = new()
+        {
+            ["jwt-issuer"] = "WordBuddy",
+            ["jwt-expiry-minutes"] = "60",
+            ["rabbitmq-user"] = "wordbuddy",
+        };
+
+        foreach ((string name, string value) in expected)
+        {
+            ParameterResource parameter = builder.Resources.OfType<ParameterResource>().Single(r => r.Name == name);
+            parameter.Secret.Should().BeFalse("{0} is not a secret", name);
+            (await parameter.GetValueAsync(CancellationToken.None)).Should().Be(value, "{0} must default from appsettings.json", name);
+        }
+    }
+
     [Theory]
     [MemberData(nameof(ExpectedKeys))]
     public async Task AppHost_Build_ApiEnvironmentMatchesComposeKeys(string api, string[] expectedKeys)
