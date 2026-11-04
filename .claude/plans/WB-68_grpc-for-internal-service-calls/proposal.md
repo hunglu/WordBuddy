@@ -1,14 +1,14 @@
 ---
 title: WB-68_gRPC for internal service calls
-status: needs-fixes
+status: reviewed
 type: new
 issue: 68
 pr: 69              # set by /code when it opens the pull request
 affects: docs/features/WB-68_grpc-for-internal-service-calls.md
 supersedes: none
-version: 1.6
+version: 1.7
 created: 2026-11-03T22:53:59+07:00
-updated: 2026-11-04T12:00:00+07:00
+updated: 2026-11-04T09:45:47+07:00
 ---
 
 ## Problem
