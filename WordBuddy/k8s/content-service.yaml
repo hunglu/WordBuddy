@@ -7,5 +7,11 @@ spec:
   selector:
     app: content-api
   ports:
-    - port: 8080
+    - name: http
+      port: 8080
       targetPort: 8080
+    # Internal gRPC (HTTP/2, cleartext) for Progress. No Ingress rule points here.
+    - name: grpc
+      port: 8081
+      targetPort: 8081
+      appProtocol: kubernetes.io/h2c

@@ -20,6 +20,8 @@ namespace WordBuddy.Progress.IntegrationTests;
 /// Content's <c>ContentApiFactory</c> for the full explanation of why (Progress.Api's
 /// <c>Program.Main</c> has the identical minimal-hosting shape and reads <c>builder.Configuration</c>
 /// synchronously before that hook would ever run).
+///
+/// Content is called over REST here (<c>Services:Content:Transport=Rest</c>, WB-68), through the stub handler.
 /// </summary>
 public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
@@ -36,6 +38,10 @@ public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncL
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);
         Environment.SetEnvironmentVariable("Messaging__Transport", "InMemory");
+
+        // WB-68: gRPC is the default transport. This factory pins REST so the existing suite keeps proving
+        // that the REST alternative works; ProgressGrpcApiFactory covers the default.
+        Environment.SetEnvironmentVariable("Services__Content__Transport", "Rest");
 
         // Tests drive the challenge life cycle and score projection by hand; the background clock stays off.
         Environment.SetEnvironmentVariable("Challenges__SchedulerEnabled", "false");

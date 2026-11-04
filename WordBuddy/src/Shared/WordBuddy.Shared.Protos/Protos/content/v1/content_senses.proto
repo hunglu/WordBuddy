@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package wordbuddy.content.v1;
+
+option csharp_namespace = "WordBuddy.Shared.Protos.Content.V1";
+
+// Internal, synchronous queries that other services make against Content.
+service ContentSenses {
+  // Returns the senses visible to the calling user. The user id and age group
+  // come from the forwarded JWT, never from the message.
+  rpc GetSensesByIds (GetSensesByIdsRequest) returns (GetSensesByIdsReply);
+}
+
+message GetSensesByIdsRequest {
+  // 1 to 100 sense GUIDs.
+  repeated string sense_ids = 1;
+}
+
+message SenseReview {
+  string sense_id = 1;
+  string word = 2;
+  string definition = 3;
+  optional string example = 4;
+  optional string audio_url = 5;
+  optional string image_url = 6;
+  optional string personal_context = 7;
+}
+
+message GetSensesByIdsReply {
+  repeated SenseReview senses = 1;
+}

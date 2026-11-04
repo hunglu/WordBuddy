@@ -34,7 +34,8 @@ public class ContentSenseClientTests
         Mock<IDistributedCache> cache = new();
         cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
         using HttpClient http = new(new ThrowingHandler(exception)) { BaseAddress = new Uri("http://content.test/") };
-        ContentSenseClient client = new(http, cache.Object, new FixedTimeProvider(Now), NullLogger<ContentSenseClient>.Instance);
+        ContentSenseClient client = new(
+            http, new SessionSenseCache(cache.Object, new FixedTimeProvider(Now)), NullLogger<ContentSenseClient>.Instance);
 
         Result<IReadOnlyList<ContentSenseDto>> result = await client.GetSessionSensesAsync(
             Guid.NewGuid(), [Guid.NewGuid()], Now.AddHours(1));

@@ -30,9 +30,15 @@ public sealed class Program
             .AddWordBuddyRateLimiting()
             .AddWordBuddyOpenTelemetry(ServiceName, builder.Configuration);
 
-        builder.Services.AddWordBuddyHealthChecks()
+        IHealthChecksBuilder healthChecks = builder.Services.AddWordBuddyHealthChecks()
             .AddDbContextCheck<ProgressDbContext>(tags: [HealthCheckExtensions.ReadyTag])
             .AddCheck<ContentHealthCheck>("content", failureStatus: HealthStatus.Degraded, tags: [HealthCheckExtensions.ReadyTag]);
+
+        // The gRPC channel is the default; its own readiness check exists only when it is the one in use.
+        if (ContentOptions.FromConfiguration(builder.Configuration).Transport == ContentTransport.Grpc)
+        {
+            healthChecks.AddCheck<ContentGrpcHealthCheck>("content-grpc", failureStatus: HealthStatus.Degraded, tags: [HealthCheckExtensions.ReadyTag]);
+        }
 
         WebApplication app = builder.Build();
 
