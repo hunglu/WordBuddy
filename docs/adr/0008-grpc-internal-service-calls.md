@@ -1,6 +1,6 @@
 # 0008 — gRPC for internal synchronous service calls
 
-- Status: accepted (pending Sam's confirmation in the PR)
+- Status: accepted
 - Date: 2026-11-04 (WB-68)
 
 ## Context
