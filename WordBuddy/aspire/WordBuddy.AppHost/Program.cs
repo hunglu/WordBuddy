@@ -67,6 +67,10 @@ public static class Program
             .WithRabbitMq(rabbitmq, rabbitUser, rabbitPassword)
             .WithEnvironment("SupportLinks__UnlinkOverrideWaitDays", "7");
 
+        // Content serves REST (5081) and gRPC (5091, HTTP/2) from the Kestrel:Endpoints in its appsettings.json
+        // (WB-68). Aspire reads that section, models the two endpoints ("Http", "Grpc"; the gRPC one as http2)
+        // and injects Kestrel__Endpoints__{Http|Grpc}__Url with the allocated target ports, so the proxy owns
+        // 5081 and 5091 and Kestrel binds the target ports. No endpoint is declared here for that reason.
         string mediaPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", ".data", "media"));
         IResourceBuilder<ProjectResource> content = AddApi(builder, "content", "Content", 5081)
             .WithReference(contentDb, "DefaultConnection").WaitFor(contentDb)
@@ -86,6 +90,8 @@ public static class Program
             .WithReference(progressDb, "DefaultConnection").WaitFor(progressDb)
             .WithJwt(jwtSecret, jwtIssuer)
             .WithEnvironment("Services__Content__BaseUrl", content.GetEndpoint("http"))
+            .WithEnvironment("Services__Content__GrpcUrl", content.GetEndpoint("grpc"))
+            .WithEnvironment("Services__Content__Transport", "Grpc")
             .WithRabbitMq(rabbitmq, rabbitUser, rabbitPassword);
 
         // Notification is a scaffold: JWT only, no database connection (same as compose).

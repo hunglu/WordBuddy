@@ -89,7 +89,7 @@ Past `ReviewLogs` rows keep the rating they were recorded with.
 
 ```text
 session → POST exercises {sessionId, senseId}
-        → Content senses (caller's JWT forwarded, cached per session) → ExerciseSelector → VocabularyExercise stored
+        → Content senses (gRPC by default, caller's JWT forwarded, cached per session) → ExerciseSelector → VocabularyExercise stored
         → POST reviews {exerciseId, answer, clientResponseMs}
         → AnswerChecker + ResponseTimeEvaluator → AnswerGrader → FSRS → ReviewLog
 ```
@@ -218,6 +218,15 @@ Latest migration: `AddDashboard` (`VocabularySessionIssues`). Before it: `AddVoc
 `wordbuddy-progress:dev`. In the `k8s/` manifests: Deployment/Service `progress-api`, database
 `WordBuddyProgress`, Ingress path `/api/progress`.
 
+## Readiness checks
+
+`GET /health/ready` runs these checks. A Content failure is `Degraded`, not `Unhealthy`.
+
+| Name | When registered | What it calls |
+| --- | --- | --- |
+| `content` | always | Content `GET /health` (REST) |
+| `content-grpc` | `Transport=Grpc` | Content `grpc.health.v1` `Check` (3 s deadline) |
+
 ## Configuration
 
 Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
@@ -225,7 +234,17 @@ Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyProgress`)
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Progress validates
   tokens Identity issued
-- `Services:Content:BaseUrl` — Content base URL (default `http://localhost:5081`; `Services__Content__BaseUrl` in compose and k8s);
+- `Services:Content:*` — how Progress calls Content (WB-68, ADR 0008). Read once at startup:
+
+  | Key | Default | Meaning |
+  | --- | --- | --- |
+  | `Transport` | `Grpc` | `Grpc` (default) or `Rest`. Any other value stops the host at startup. No automatic fallback |
+  | `GrpcUrl` | `http://localhost:5091` | Content gRPC endpoint (cleartext HTTP/2). Compose and k8s: `http://content-api:8081` |
+  | `BaseUrl` | `http://localhost:5081` | Content REST endpoint, used when `Transport=Rest`, and by the `content` health check. Compose and k8s: `http://content-api:8080` |
+
+  Env form: `Services__Content__Transport`, `Services__Content__GrpcUrl`, `Services__Content__BaseUrl`.
+  Both transports forward the caller's JWT, use the same resilience settings and the same per-session
+  cache, and return the same `Content.Unavailable` failure.
 - `Messaging:*` — bus settings, validated at startup (full key table: `docs/features/messaging.md`):
   `Transport`, `RabbitMq:{Host,VirtualHost,Username,HeartbeatSeconds,RequestedConnectionTimeoutMs}`,
   `Outbox:{QueryDelayMs,DuplicateDetectionWindowSeconds}`, `Retry:IntervalsMs` (defaults in `appsettings.json`).

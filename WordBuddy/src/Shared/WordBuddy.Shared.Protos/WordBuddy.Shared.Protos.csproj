@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>WordBuddy.Shared.Protos</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Protobuf contracts and generated gRPC stubs for synchronous calls between WordBuddy microservices.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS8981</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.71.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\content\v1\content_senses.proto" GrpcServices="Both" ProtoRoot="Protos" />
+    <Content Include="Protos\**\*.proto" Pack="true" PackagePath="protos" />
+  </ItemGroup>
+
+</Project>

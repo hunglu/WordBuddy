@@ -29,6 +29,7 @@ pack-shared:
 	dotnet pack src/Shared/WordBuddy.Shared.Application -o local-nuget-feed
 	dotnet pack src/Shared/WordBuddy.Shared.Infrastructure -o local-nuget-feed
 	dotnet pack src/Shared/WordBuddy.Shared.Contracts -o local-nuget-feed
+	dotnet pack src/Shared/WordBuddy.Shared.Protos -o local-nuget-feed
 
 publish-shared:
 	for f in local-nuget-feed/*.nupkg; do \

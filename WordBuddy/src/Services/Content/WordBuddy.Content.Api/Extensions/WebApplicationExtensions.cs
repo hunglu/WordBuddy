@@ -1,4 +1,5 @@
 using Serilog;
+using WordBuddy.Content.Api.Grpc;
 using WordBuddy.Content.Infrastructure.Seeding;
 using WordBuddy.Shared.Infrastructure.Health;
 
@@ -24,5 +25,7 @@ internal static class WebApplicationExtensions
         app.UseRateLimiter();
         app.MapWordBuddyHealthChecks();
         app.MapControllers();
+        app.MapGrpcService<ContentSensesGrpcService>();
+        app.MapGrpcHealthChecksService();
     }
 }

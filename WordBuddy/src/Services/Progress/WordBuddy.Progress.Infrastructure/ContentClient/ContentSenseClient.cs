@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Progress.Application.DTOs;
 using WordBuddy.Progress.Application.Interfaces;
@@ -11,8 +10,7 @@ namespace WordBuddy.Progress.Infrastructure.ContentClient;
 /// <summary>
 /// Typed HTTP client for <c>GET /api/vocabulary/senses?ids=</c> on Content. Forwards the caller's
 /// bearer token (see <see cref="ForwardBearerTokenHandler"/>). The reply is cached per session in
-/// <see cref="IDistributedCache"/> under <c>progress:session-senses:{sessionId}</c> until the session
-/// expires, so one Content call serves the whole session. Logs ids and counts only.
+/// <see cref="SessionSenseCache"/> until the session expires, so one Content call serves the whole session. Logs ids and counts only.
 /// </summary>
 internal sealed class ContentSenseClient : IContentSenseClient
 {
@@ -22,24 +20,18 @@ internal sealed class ContentSenseClient : IContentSenseClient
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
-    private readonly IDistributedCache _cache;
-    private readonly TimeProvider _timeProvider;
+    private readonly SessionSenseCache _cache;
     private readonly ILogger<ContentSenseClient> _logger;
 
     public ContentSenseClient(
         HttpClient httpClient,
-        IDistributedCache cache,
-        TimeProvider timeProvider,
+        SessionSenseCache cache,
         ILogger<ContentSenseClient> logger)
     {
         _httpClient = httpClient;
         _cache = cache;
-        _timeProvider = timeProvider;
         _logger = logger;
     }
-
-    /// <summary>Cache key for a session's senses: <c>progress:session-senses:{sessionId}</c>.</summary>
-    public static string CacheKey(Guid sessionId) => $"progress:session-senses:{sessionId}";
 
     public async Task<Result<IReadOnlyList<ContentSenseDto>>> GetSessionSensesAsync(
         Guid sessionId,
@@ -47,15 +39,10 @@ internal sealed class ContentSenseClient : IContentSenseClient
         DateTime sessionExpiresAtUtc,
         CancellationToken ct = default)
     {
-        string key = CacheKey(sessionId);
-        byte[]? cached = await _cache.GetAsync(key, ct);
-        if (cached is not null)
+        List<ContentSenseDto>? hit = await _cache.GetAsync(sessionId, ct);
+        if (hit is not null)
         {
-            List<ContentSenseDto>? hit = JsonSerializer.Deserialize<List<ContentSenseDto>>(cached, JsonOptions);
-            if (hit is not null)
-            {
-                return Result.Success<IReadOnlyList<ContentSenseDto>>(hit);
-            }
+            return Result.Success<IReadOnlyList<ContentSenseDto>>(hit);
         }
 
         List<ContentSenseDto> senses = [];
@@ -87,15 +74,7 @@ internal sealed class ContentSenseClient : IContentSenseClient
             return Unavailable();
         }
 
-        DateTimeOffset expiresAt = new(DateTime.SpecifyKind(sessionExpiresAtUtc, DateTimeKind.Utc));
-        if (expiresAt > _timeProvider.GetUtcNow())
-        {
-            await _cache.SetAsync(
-                key,
-                JsonSerializer.SerializeToUtf8Bytes(senses, JsonOptions),
-                new DistributedCacheEntryOptions { AbsoluteExpiration = expiresAt },
-                ct);
-        }
+        await _cache.SetAsync(sessionId, senses, sessionExpiresAtUtc, ct);
 
         _logger.LogInformation(
             "Content senses loaded: SessionId={SessionId}, Requested={Requested}, Returned={Returned}",

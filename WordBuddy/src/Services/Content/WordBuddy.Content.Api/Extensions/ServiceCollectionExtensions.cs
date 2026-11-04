@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using WordBuddy.Content.Api.Authorization;
@@ -16,6 +17,8 @@ internal static class ServiceCollectionExtensions
 
     /// <summary>Policy name: admin, or an adult moderator (<c>moderator = true</c>, not a child).</summary>
     public const string ManageContentPolicy = "ManageContent";
+
+    private const string GrpcLivenessTag = "grpc-live";
 
     /// <summary>
     /// Configures JWT bearer validation using the same signing key/issuer Identity uses to issue
@@ -85,6 +88,19 @@ internal static class ServiceCollectionExtensions
     public static IServiceCollection AddWordBuddyServices(this IServiceCollection services)
     {
         services.AddApplication();
+
+        // Internal gRPC channel (WB-68). Health is liveness only: one always-healthy "self" check is
+        // mapped to the whole server, no dependency check. The publisher starts quickly so callers
+        // do not see "Unknown" for long after startup.
+        // IgnoreUnknownServices: the catch-all "unimplemented" gRPC route would turn a REST 405 into a 404.
+        services.AddGrpc(options => options.IgnoreUnknownServices = true);
+        services.AddGrpcHealthChecks(options => options.Services.Map(string.Empty, registration => registration.Tags.Contains(GrpcLivenessTag)))
+            .AddCheck("self", () => HealthCheckResult.Healthy(), tags: [GrpcLivenessTag]);
+        services.Configure<HealthCheckPublisherOptions>(options =>
+        {
+            options.Delay = TimeSpan.FromSeconds(1);
+            options.Period = TimeSpan.FromSeconds(10);
+        });
 
         services.AddControllers()
             .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));

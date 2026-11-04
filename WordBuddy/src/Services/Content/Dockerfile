@@ -16,6 +16,8 @@ COPY --from=build /app/publish .
 RUN mkdir -p /app/media && chown appuser:appuser /app/media
 VOLUME /app/media
 USER appuser
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080 8081
+ENV Kestrel__Endpoints__Http__Url=http://+:8080 \
+    Kestrel__Endpoints__Grpc__Url=http://+:8081 \
+    Kestrel__Endpoints__Grpc__Protocols=Http2
 ENTRYPOINT ["dotnet", "WordBuddy.Content.Api.dll"]

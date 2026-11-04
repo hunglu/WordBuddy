@@ -110,6 +110,9 @@ services:
       # Messaging__Retry__IntervalsMs__0: 200
     ports:
       - "5081:8080"
+    # gRPC (HTTP/2) for Progress, WB-68. Internal only: exposed to the compose network, not published to the host.
+    expose:
+      - "8081"
     volumes:
       - media-data:/app/media
 
@@ -147,6 +150,9 @@ services:
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER}
       Services__Content__BaseUrl: http://content-api:8080
+      # gRPC is the default transport (WB-68); set Rest to call Content over HTTP/JSON instead.
+      Services__Content__GrpcUrl: http://content-api:8081
+      Services__Content__Transport: Grpc
       Messaging__RabbitMq__Host: rabbitmq
       Messaging__RabbitMq__Username: ${RABBITMQ_USER}
       Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}

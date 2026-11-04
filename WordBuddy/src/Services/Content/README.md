@@ -44,8 +44,31 @@ return 400. A page past the end returns `200` with empty `items` and the real `t
 (`/api/lessons/admin/**`), lexeme admin (`/api/vocabulary/admin/lexemes/**`) and the word moderation routes. The
 `learner-words/republish` backfill stays `AdminOnly`.
 
-There are no internal (service-to-service) endpoints. The vocabulary id remap table and the
-`/internal/vocabulary-remaps` routes were removed (migration `DropVocabularyWordIdRemaps`).
+The vocabulary id remap table and the `/internal/vocabulary-remaps` routes were removed (migration
+`DropVocabularyWordIdRemaps`). The only service-to-service call is Progress reading senses; it has a
+gRPC form (below) and the REST route `GET /api/vocabulary/senses`.
+
+## Ports and gRPC (WB-68, ADR 0008)
+
+Content listens on two ports. Kestrel reads them from `Kestrel:Endpoints` in `appsettings.json`
+(`--urls` and `ASPNETCORE_URLS` have no effect).
+
+| Endpoint | Protocol | Local / Aspire | Container |
+| --- | --- | --- | --- |
+| `Http` | HTTP/1.1, REST | 5081 | 8080 |
+| `Grpc` | HTTP/2, cleartext (h2c) | 5091 | 8081 |
+
+The gRPC port is internal only: compose `expose`, a k8s `ClusterIP` port `grpc`, and no Ingress rule.
+
+| gRPC service | Method | Auth | Same result as |
+| --- | --- | --- | --- |
+| `wordbuddy.content.v1.ContentSenses` | `GetSensesByIds` (1-100 ids) | JWT in `authorization` metadata, `ChildHasSupporter` policy | `GET /api/vocabulary/senses` |
+| `grpc.health.v1.Health` | `Check` | anonymous, liveness only | `GET /health` |
+
+- The `.proto` ships in the NuGet package `WordBuddy.Shared.Protos`.
+- User id and `AgeGroup` come from the JWT, never from the message. A Child sees only child-visible senses.
+- Errors: bad id or id count `InvalidArgument`; Child without supporter `PermissionDenied`; no token `Unauthenticated`.
+- Hidden and unknown ids are omitted, like REST.
 
 ### Personal vocabulary delete rule
 
@@ -99,7 +122,7 @@ Needs RabbitMQ on `localhost:5672` (e.g. the `rabbitmq` service from `docker-com
 
 ```bash
 dotnet user-secrets set "Messaging:RabbitMq:Password" "<password>" --project WordBuddy.Content.Api
-dotnet run --project WordBuddy.Content.Api --urls http://localhost:5081
+dotnet run --project WordBuddy.Content.Api
 ```
 
 Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=content` or
@@ -115,8 +138,9 @@ Latest messaging migration: `AddMessagingOutbox` (`InboxState`, `OutboxMessage`,
 
 `Dockerfile` lives in this folder (build context = this folder only, restores
 `WordBuddy.Shared.*` from GitHub Packages via a BuildKit `--secret`). Image:
-`wordbuddy-content:dev`. In the `k8s/` manifests: Deployment/Service `content-api`, database
-`WordBuddyContent`, Ingress paths `/api/lessons` and `/api/media`. `FileStorage:BasePath` is set
+`wordbuddy-content:dev`. The image serves REST on 8080 and gRPC on 8081. In the `k8s/` manifests:
+Deployment/Service `content-api` (ports `http` 8080 and `grpc` 8081), database
+`WordBuddyContent`, Ingress paths `/api/lessons` and `/api/media` (REST only). `FileStorage:BasePath` is set
 to `/app/media` in Docker/Kubernetes (an `emptyDir` volume in `k8s/content-deployment.yaml` — not
 yet a real PersistentVolume, so uploaded media does not survive a pod restart in this phase).
 

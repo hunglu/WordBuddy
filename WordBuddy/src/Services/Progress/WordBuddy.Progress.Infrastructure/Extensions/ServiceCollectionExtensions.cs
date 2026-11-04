@@ -1,7 +1,9 @@
+using Grpc.Health.V1;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Infrastructure.Challenges;
 using WordBuddy.Progress.Infrastructure.ContentClient;
@@ -9,6 +11,7 @@ using WordBuddy.Progress.Infrastructure.Messaging;
 using WordBuddy.Progress.Infrastructure.Persistence;
 using WordBuddy.Progress.Infrastructure.Repositories;
 using WordBuddy.Shared.Infrastructure.Messaging;
+using WordBuddy.Shared.Protos.Content.V1;
 
 namespace WordBuddy.Progress.Infrastructure.Extensions;
 
@@ -62,30 +65,50 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the Content sense client (caller's bearer token forwarded, standard resilience) and the
-    /// named client used by <see cref="ContentHealthCheck"/>. Base URL: <c>Services:Content:BaseUrl</c>.
+    /// Registers the Content sense client for the transport in <c>Services:Content:Transport</c> (default
+    /// <c>Grpc</c>; <c>Rest</c> is the explicit alternative), plus the named client used by
+    /// <see cref="ContentHealthCheck"/>. Both transports forward the caller's bearer token and use the
+    /// same standard resilience settings. Switching is a config change and a restart, no fallback at runtime.
     /// </summary>
-    private static void AddContentClient(IServiceCollection services, IConfiguration configuration)
+    internal static void AddContentClient(IServiceCollection services, IConfiguration configuration)
     {
-        string baseUrl = configuration[$"{ContentOptions.SectionName}:BaseUrl"] ?? ContentOptions.DefaultBaseUrl;
-        Uri baseAddress = new(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
+        ContentOptions options = ContentOptions.FromConfiguration(configuration);
+        Uri baseAddress = new(options.BaseUrl.EndsWith('/') ? options.BaseUrl : options.BaseUrl + "/");
 
         services.AddHttpContextAccessor();
         services.AddTransient<ForwardBearerTokenHandler>();
+        services.AddTransient<SessionSenseCache>();
 
-        services.AddHttpClient<IContentSenseClient, ContentSenseClient>(client => client.BaseAddress = baseAddress)
-            .AddHttpMessageHandler<ForwardBearerTokenHandler>()
-            .AddStandardResilienceHandler(options =>
-            {
-                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
-                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(12);
-                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
-            });
+        if (options.Transport == ContentTransport.Rest)
+        {
+            services.AddHttpClient<IContentSenseClient, ContentSenseClient>(client => client.BaseAddress = baseAddress)
+                .AddHttpMessageHandler<ForwardBearerTokenHandler>()
+                .AddStandardResilienceHandler(ConfigureResilience);
+        }
+        else
+        {
+            Uri grpcAddress = new(options.GrpcUrl);
+
+            services.AddGrpcClient<ContentSenses.ContentSensesClient>(client => client.Address = grpcAddress)
+                .AddHttpMessageHandler<ForwardBearerTokenHandler>()
+                .AddStandardResilienceHandler(ConfigureResilience);
+            services.AddTransient<IContentSenseClient, ContentSenseGrpcClient>();
+
+            // grpc.health.v1 client for ContentGrpcHealthCheck. No token: the health service is anonymous.
+            services.AddGrpcClient<Health.HealthClient>(client => client.Address = grpcAddress);
+        }
 
         services.AddHttpClient(ContentHealthCheck.HttpClientName, client =>
         {
             client.BaseAddress = baseAddress;
             client.Timeout = TimeSpan.FromSeconds(3);
         });
+    }
+
+    private static void ConfigureResilience(HttpStandardResilienceOptions options)
+    {
+        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(12);
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
     }
 }

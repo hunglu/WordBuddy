@@ -30,6 +30,10 @@ spec:
                   key: Progress_ConnectionStrings__DefaultConnection
             - name: Services__Content__BaseUrl
               value: http://content-api:8080
+            - name: Services__Content__GrpcUrl
+              value: http://content-api:8081
+            - name: Services__Content__Transport
+              value: Grpc
             - name: Jwt__Secret
               valueFrom:
                 secretKeyRef:
