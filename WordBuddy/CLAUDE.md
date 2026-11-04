@@ -17,7 +17,9 @@ any `src/Services/<Service>/` can later become its own repo (ADR `../docs/adr/00
   `nuget.config`, `Dockerfile` (build context = that folder only), and `README.md`.
 - Shared code (`WordBuddy.Shared.Kernel` — `Result<T>`/`Error`/base entity;
   `WordBuddy.Shared.Infrastructure` — Serilog/OTel/health/rate-limit helpers;
-  `WordBuddy.Shared.Contracts` — MassTransit messages) lives in `src/Shared/` and ships as
+  `WordBuddy.Shared.Contracts` — MassTransit messages;
+  `WordBuddy.Shared.Protos` — protobuf contracts and generated gRPC stubs for internal
+  synchronous calls, ADR `../docs/adr/0008`) lives in `src/Shared/` and ships as
   versioned NuGet packages from two feeds:
   - `local-nuget-feed/` (gitignored) for local builds —
     `dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed`
@@ -86,6 +88,9 @@ WordBuddy/
   hardcoded role strings); child restrictions as policies.
 - **Messaging:** MassTransit (in-memory locally, Azure Service Bus later); contracts in
   `WordBuddy.Shared.Contracts`; consumers idempotent.
+- **Internal sync calls:** gRPC is the default (Progress → Content, `Services:Content:Transport` =
+  `Grpc`; `Rest` stays selectable). Contracts in `WordBuddy.Shared.Protos`. Content listens on two
+  Kestrel endpoints from `Kestrel:Endpoints`: REST and gRPC (HTTP/2, cleartext), internal only.
 - **Media:** `MediaAsset` holds type + storage URL + metadata; binaries in blob storage (local
   volume in dev). Audio: `vocab-{vocabularyId}-{locale}.mp3`.
 
@@ -111,6 +116,8 @@ dotnet test  src/Services/<Service>/WordBuddy.<Service>.slnx
 dotnet run --project src/Services/<Service>/WordBuddy.<Service>.Api
 ```
 
+Content serves REST on 5081 and gRPC on 5091 (containers: 8080 / 8081). `--urls` has no effect there.
+
 Local dev loop (ADR `../docs/adr/0007`): `aspire run` from `aspire/` starts SQL Server, RabbitMQ,
 the 5 APIs (5080-5084) and the UI (3000), with one dashboard. Setup and secrets: `README.md` →
 "Aspire (local dev)". Never run it together with `make up` (same ports). The AppHost stays
@@ -129,7 +136,7 @@ target not chosen yet). Rebuild images only after `make publish-shared` if a sha
 | Service | Image | k8s Deployment | Ingress prefix |
 | --- | --- | --- | --- |
 | Identity | `wordbuddy-identity:dev` | `identity-api` | `/api/auth` |
-| Content | `wordbuddy-content:dev` | `content-api` | `/api/lessons`, `/api/media`, `/api/vocabulary` |
+| Content | `wordbuddy-content:dev` | `content-api` (ports `http` 8080, `grpc` 8081, gRPC internal) | `/api/lessons`, `/api/media`, `/api/vocabulary` |
 | Quiz | `wordbuddy-quiz:dev` | `quiz-api` | `/api/quiz` |
 | Progress | `wordbuddy-progress:dev` | `progress-api` | `/api/progress` |
 | Notification | `wordbuddy-notification:dev` | `notification-api` | — |
