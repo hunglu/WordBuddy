@@ -116,10 +116,20 @@ public sealed class LearnerWordConsumerTests
             PublishAsync(new LearnerWordAdded(userId, senseId, userId, T0), Guid.NewGuid())));
 
         (await WaitForAsync(userId, senseId, m => m.IsActive)).Should().NotBeNull();
-        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        // The fault is published only after the last retry (200 + 1000 + 5000 ms), so poll past that budget.
+        bool faulted = false;
+        DateTime deadline = DateTime.UtcNow.AddSeconds(8);
+        while (!faulted && DateTime.UtcNow < deadline)
+        {
+            faulted = Harness.Published.Select<Fault<LearnerWordAdded>>(f => f.Context.Message.Message.UserId == userId).Any();
+            if (!faulted)
+            {
+                await Task.Delay(100);
+            }
+        }
 
         (await CountAsync(userId)).Should().Be(1);
-        bool faulted = await Harness.Published.Any<Fault<LearnerWordAdded>>(f => f.Context.Message.Message.UserId == userId);
         faulted.Should().BeFalse("a concurrent duplicate must resolve, not become a poison message");
     }
 

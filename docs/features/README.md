@@ -27,7 +27,7 @@ named in the proposal's `affects:` field, so these specs always match `main`.
 | Multilingual UI (en/vi) | `WB-59_multilingual-ui-english-and-vietnamese.md` | shipped |
 | Local orchestration (Aspire) | `WB-61_adopt-net-aspire-for-local-orchestration.md` | shipped |
 | Internal service calls (gRPC) | `WB-68_grpc-for-internal-service-calls.md` | shipped |
-| Persistence providers (SQL Server / PostgreSQL) | `WB-71_add-postgresql-as-an-alternative-persistence-provider.md` | proposed |
+| Persistence providers (SQL Server / PostgreSQL) | `WB-71_add-postgresql-as-an-alternative-persistence-provider.md` | shipped |
 
 **Backfill a shipped feature:** ask Claude `backfill docs/features/<name>.md from the code`.
 The task is read-only against code and writes only to this folder.

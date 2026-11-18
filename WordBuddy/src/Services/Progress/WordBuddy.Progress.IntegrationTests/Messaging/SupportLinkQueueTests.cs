@@ -43,6 +43,12 @@ public sealed class SupportLinkQueueTests
         SupportLinkProjection stored = await db.SupportLinkProjections.AsNoTracking().SingleAsync(p => p.LinkId == linkId);
         stored.IsActive.Should().BeFalse("the revoke is the newest event");
 
+        // The revoke alone creates the same row, so also check the activate consume did not fault.
+        harness.Consumed.Select<SupportLinkActivated>(m => m.Context.Message.LinkId == linkId)
+            .All(m => m.Exception is null).Should().BeTrue("the activated consumer must not fault");
+        harness.Consumed.Select<SupportLinkRevoked>(m => m.Context.Message.LinkId == linkId)
+            .All(m => m.Exception is null).Should().BeTrue("the revoked consumer must not fault");
+
         harness.Consumed.Select<SupportLinkActivated>(m => m.Context.Message.LinkId == linkId).First()
             .Context.ReceiveContext.InputAddress!.AbsolutePath.Should().EndWith("/" + SupportLinkQueues.Activated);
         harness.Consumed.Select<SupportLinkRevoked>(m => m.Context.Message.LinkId == linkId).First()

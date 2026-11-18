@@ -92,3 +92,83 @@ Environment observations:
 
 - `docker compose ... --build` fails on this machine (Compose v5.6.1 bake: `additional privileges requested: pass "--allow=fs.read=src\Services\<X>\Dockerfile"`), also for the base file. `make up` / `make up-postgres` are affected. The Postgres stack was started with `up -d --no-build` using images built from this branch; all 5 APIs `/health/ready` = 200.
 - Postgres compose stack left running; `wb-pg` stopped (not removed).
+
+## Round 3 — 2026-11-18
+
+**Verdict: Approved and merged into main.** Reviewed commit `d431d55` (round 2 approve) is an ancestor of HEAD. `origin/main` merged: already up to date.
+
+Test changes in `/test` (round-2 review nits, test code only):
+
+- Nit 1: `LearnerWordConsumerTests` concurrent duplicate test now polls for a `Fault<LearnerWordAdded>` for 8 s (retry budget 6.2 s), then asserts none.
+- Nit 2: `SupportLinkQueueTests` also asserts neither consume has an `Exception`.
+
+### Backend unit/integration
+
+| Suite | SQL Server (LocalDB) | Postgres (compose `postgres:17`) |
+| --- | --- | --- |
+| Identity unit | 253 pass | provider-neutral |
+| Content unit | 481 pass | provider-neutral |
+| Quiz unit | 17 pass | provider-neutral |
+| Progress unit | 472 pass | provider-neutral |
+| Identity integration | 56 pass | 56 pass |
+| Content integration | 231 pass | 215 pass, 16 skipped (SQL Server-only migration replays, by design) |
+| Quiz integration | 6 pass | 6 pass |
+| Progress integration | 102 pass | 102 pass (incl. `SupportLinkQueueTests`, fixed in round 2) |
+| Aspire `dotnet test` (model + `AppHostRunTests`) | 35 pass | n/a |
+
+### E2E API
+
+| Stack | Result |
+| --- | --- |
+| Postgres compose stack | 93 passed, 0 failed, 0 skipped (incl. Postgres path of `LearnerWordMessagingTests`) |
+| SQL Server compose stack | Reused from round 1: 93 / 93 on identical application code (no application code changed since `d60e774`); not rebuilt because `--build` fails on this machine |
+
+First Postgres run: 91 / 93. The 2 autofill tests failed because Content lacked `Autofill__UseFakeClients=true` (known, see `docs/ai/learnings.md`, WB-68). Re-ran with `../e2e/docker-compose.e2e.yml` as override: 93 / 93.
+
+### E2E UI (Postgres stack)
+
+- Smoke (login, navigation, vocabulary review; adult, admin and child scenarios): 14 / 14 pass.
+- Full suite: 61 / 61 pass.
+
+### 2 GB check (`docker stats --no-stream`, Postgres stack after the e2e runs)
+
+| Container | Memory |
+| --- | --- |
+| content-api | 240 MiB |
+| progress-api | 229 MiB |
+| identity-api | 210 MiB |
+| rabbitmq | 159 MiB |
+| postgres | 89 MiB |
+| quiz-api | 69 MiB |
+| notification-api | 42 MiB |
+| ui | 14 MiB |
+| **Total** | **about 1053 MiB** (target < 1.6 GB: pass) |
+
+### Aspire
+
+- `dotnet test aspire/WordBuddy.Aspire.slnx`: 35 / 35, including `AppHostRunTests` (default SQL Server: all APIs healthy, traces reach OTLP).
+- `AppHost` with `Parameters:db-provider=Postgres` (+ throwaway `pg-password`): `pg-*` container started, all 5 APIs `/health/ready` = 200. Stopped afterwards. First attempt hung waiting for the unset `pg-password` secret (dashboard prompt), killed and rerun with the value.
+- Compose stack was down (`down`) before Aspire ran.
+
+### Environment notes
+
+- Recreating `content-api`/`identity-api` with the e2e override also recreated `postgres` (env differed from the original launch). The `postgres-init` step then failed on password auth. Fixed with `ALTER USER` through the local socket, then `up -d --no-build` for the whole stack. No secret printed or stored.
+- Aspire leaves persistent `sql-*`, `pg-*` and `rabbitmq-*` containers by design; not removed.
+
+### Merge guard
+
+| Guard | Result |
+| --- | --- |
+| 1. `review.md` Approve; `d431d55` ancestor of HEAD | Pass |
+| 2. Changed vs "reviewed code + main" | `proposal.md`, `review.md` only (allowlisted); this run adds 2 Progress integration test files, the living spec, the README row, `test-report.md` (allowlisted) |
+| 3. Every suite ran, zero failures | Pass (Content Postgres has 16 by-design skips) |
+
+### Failures
+
+None.
+
+### Verdict
+
+Approved and merged into main.
+
+Open nits, not blocking: ADR 0009 Consequences does not yet say that concurrent duplicates on Postgres are resolved by the consumer retry (ADR is outside the tester allowlist; the living spec states it). `k8s/postgres/configmap.yaml` sync header. `E2E_PROGRESS_DB` path still opens a `SqlConnection`.
