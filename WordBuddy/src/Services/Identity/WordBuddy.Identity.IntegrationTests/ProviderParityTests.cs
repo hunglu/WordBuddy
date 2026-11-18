@@ -138,7 +138,8 @@ public sealed class ProviderParityTests
         // Second open request for the same link violates the filtered unique index.
         db.UnlinkRequests.Add(UnlinkRequest.Create(Guid.NewGuid(), linkId, learner.User.Id, LinkSide.Learner, now));
         Func<Task> second = () => db.SaveChangesAsync();
-        await second.Should().ThrowAsync<DbUpdateException>();
+        (await second.Should().ThrowAsync<DbUpdateException>())
+            .Which.ToString().Should().Contain("IX_UnlinkRequests_LinkId_Open");
 
         // A closed request does not count as open.
         db.ChangeTracker.Clear();

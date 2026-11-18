@@ -8,8 +8,9 @@ using Microsoft.Playwright;
 namespace WordBuddy.E2E.Api.Tests;
 
 /// <summary>
-/// Runs only when the Progress database is reachable: through <c>E2E_PROGRESS_DB</c> (kind/CI),
-/// or else through <c>sqlcmd</c> inside the docker compose <c>sqlserver</c> container.
+/// Runs only when the Progress database is reachable: through <c>E2E_PROGRESS_DB</c> (kind/CI, SQL Server),
+/// or else through <c>sqlcmd</c> (SQL Server stack) or <c>psql</c> (PostgreSQL stack, WB-71) inside the
+/// docker compose database container.
 /// Progress has no public reader for memberships yet, so the test reads the table directly.
 /// </summary>
 public sealed class ProgressDbFactAttribute : FactAttribute
@@ -18,30 +19,50 @@ public sealed class ProgressDbFactAttribute : FactAttribute
     {
         if (!ProgressDb.IsAvailable)
         {
-            Skip = $"Set {ProgressDb.ConnectionVariable} or run the docker compose stack (sqlserver) to run.";
+            Skip = $"Set {ProgressDb.ConnectionVariable} or run the docker compose stack (sqlserver or postgres) to run.";
         }
     }
 }
 
 /// <summary>
-/// Scalar queries against the Progress database.
-/// Compose path: the SA password expands inside the container, never on the host or in logs.
+/// Membership counts from the Progress database. The provider is detected once: SQL Server first, then PostgreSQL.
+/// Compose path: the database password stays inside the container, never on the host or in logs.
 /// </summary>
 internal static class ProgressDb
 {
     public const string ConnectionVariable = "E2E_PROGRESS_DB";
     private const string DatabaseName = "WordBuddyProgress";
 
-    private static readonly Lazy<bool> ComposeAvailable = new(ProbeCompose);
+    private enum Kind
+    {
+        None,
+        ConnectionString,
+        ComposeSqlServer,
+        ComposePostgres,
+    }
+
+    private static readonly Lazy<Kind> Detected = new(Detect);
 
     private static string? ConnectionString => Environment.GetEnvironmentVariable(ConnectionVariable);
 
-    public static bool IsAvailable => !string.IsNullOrWhiteSpace(ConnectionString) || ComposeAvailable.Value;
+    public static bool IsAvailable => Detected.Value != Kind.None;
 
-    /// <summary>Runs a query that returns one integer. Callers must only embed trusted values (Guids, bits).</summary>
-    public static async Task<int> ScalarIntAsync(string sql)
+    /// <summary>Counts the membership rows of a user, optionally filtered by <c>IsActive</c>.</summary>
+    public static async Task<int> CountMembershipsAsync(Guid userId, bool? active = null)
     {
-        if (!string.IsNullOrWhiteSpace(ConnectionString))
+        bool postgres = Detected.Value == Kind.ComposePostgres;
+        string filter = active is null
+            ? string.Empty
+            : postgres ? $" AND \\\"IsActive\\\" = {(active.Value ? "true" : "false")}" : $" AND IsActive = {(active.Value ? 1 : 0)}";
+        string sql = postgres
+            ? $"SELECT COUNT(*) FROM \\\"LearnerWordMemberships\\\" WHERE \\\"UserId\\\" = '{userId}'{filter}"
+            : $"SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = '{userId}'{filter}";
+        return await ScalarIntAsync(sql);
+    }
+
+    private static async Task<int> ScalarIntAsync(string sql)
+    {
+        if (Detected.Value == Kind.ConnectionString)
         {
             await using SqlConnection connection = new(ConnectionString);
             await connection.OpenAsync();
@@ -49,21 +70,38 @@ internal static class ProgressDb
             return (int)(await command.ExecuteScalarAsync())!;
         }
 
-        (int exitCode, string output) = await RunSqlcmdAsync($"SET NOCOUNT ON; {sql}");
+        (int exitCode, string output) = Detected.Value == Kind.ComposePostgres
+            ? await RunPsqlAsync(sql)
+            : await RunSqlcmdAsync($"SET NOCOUNT ON; {sql}");
         if (exitCode != 0)
         {
-            throw new InvalidOperationException($"sqlcmd in the sqlserver container failed ({exitCode}).");
+            throw new InvalidOperationException($"The database query in the compose container failed ({exitCode}).");
         }
 
         return int.Parse(output.Trim());
     }
 
-    private static bool ProbeCompose()
+    private static Kind Detect()
+    {
+        if (!string.IsNullOrWhiteSpace(ConnectionString))
+        {
+            return Kind.ConnectionString;
+        }
+
+        if (Probe(() => RunSqlcmdAsync("SET NOCOUNT ON; SELECT 1"), "1"))
+        {
+            return Kind.ComposeSqlServer;
+        }
+
+        return Probe(() => RunPsqlAsync("SELECT 1"), "1") ? Kind.ComposePostgres : Kind.None;
+    }
+
+    private static bool Probe(Func<Task<(int ExitCode, string Output)>> run, string expected)
     {
         try
         {
-            (int exitCode, string output) = RunSqlcmdAsync("SET NOCOUNT ON; SELECT 1").GetAwaiter().GetResult();
-            return exitCode == 0 && output.Trim() == "1";
+            (int exitCode, string output) = run().GetAwaiter().GetResult();
+            return exitCode == 0 && output.Trim() == expected;
         }
         catch (Exception)
         {
@@ -71,7 +109,21 @@ internal static class ProgressDb
         }
     }
 
-    private static async Task<(int ExitCode, string Output)> RunSqlcmdAsync(string sql)
+    private static Task<(int ExitCode, string Output)> RunSqlcmdAsync(string sql)
+    {
+        string script = "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$SA_PASSWORD\" -C -d "
+            + DatabaseName + " -h -1 -W -Q \"" + sql + "\"";
+        return RunComposeExecAsync(["docker-compose.yml"], "sqlserver", script);
+    }
+
+    private static Task<(int ExitCode, string Output)> RunPsqlAsync(string sql)
+    {
+        // Local socket inside the postgres container: trusted, so no password is needed on the command line.
+        string script = "psql -U postgres -d " + DatabaseName + " -tA -c \"" + sql + "\"";
+        return RunComposeExecAsync(["docker-compose.yml", "docker-compose.postgres.yml"], "postgres", script);
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunComposeExecAsync(string[] files, string service, string script)
     {
         string? composeDir = FindComposeDirectory();
         if (composeDir is null)
@@ -79,8 +131,6 @@ internal static class ProgressDb
             return (-1, string.Empty);
         }
 
-        string script = "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$SA_PASSWORD\" -C -d "
-            + DatabaseName + " -h -1 -W -Q \"" + sql + "\"";
         ProcessStartInfo info = new("docker")
         {
             WorkingDirectory = composeDir,
@@ -88,7 +138,14 @@ internal static class ProgressDb
             RedirectStandardError = true,
             UseShellExecute = false,
         };
-        foreach (string arg in new[] { "compose", "exec", "-T", "sqlserver", "sh", "-c", script })
+        info.ArgumentList.Add("compose");
+        foreach (string file in files)
+        {
+            info.ArgumentList.Add("-f");
+            info.ArgumentList.Add(file);
+        }
+
+        foreach (string arg in new[] { "exec", "-T", service, "sh", "-c", script })
         {
             info.ArgumentList.Add(arg);
         }
@@ -196,10 +253,9 @@ public sealed class LearnerWordMessagingTests
     private static async Task<bool> WaitForMembershipAsync(Guid userId, bool expectActive)
     {
         DateTime deadline = DateTime.UtcNow + Timeout;
-        string sql = $"SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = '{userId}' AND IsActive = {(expectActive ? 1 : 0)}";
         while (DateTime.UtcNow < deadline)
         {
-            if (await ProgressDb.ScalarIntAsync(sql) == 1)
+            if (await ProgressDb.CountMembershipsAsync(userId, expectActive) == 1)
             {
                 return true;
             }
@@ -211,7 +267,7 @@ public sealed class LearnerWordMessagingTests
     }
 
     private static Task<int> CountRowsAsync(Guid userId) =>
-        ProgressDb.ScalarIntAsync($"SELECT COUNT(*) FROM LearnerWordMemberships WHERE UserId = '{userId}'");
+        ProgressDb.CountMembershipsAsync(userId);
 
     private static async Task<Guid> AddWordAsync(IAPIRequestContext content, string token)
     {

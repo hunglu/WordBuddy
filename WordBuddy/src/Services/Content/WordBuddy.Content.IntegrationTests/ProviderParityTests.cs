@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
+using WordBuddy.Content.Infrastructure.Persistence.Configurations;
 using WordBuddy.Content.Infrastructure.Persistence;
 using WordBuddy.Shared.Kernel;
 
@@ -37,7 +38,8 @@ public sealed class ProviderParityTests
         db.Lexemes.Add(Lexeme.Create(Guid.NewGuid(), word).Value);
         Func<Task> second = () => db.SaveChangesAsync();
 
-        await second.Should().ThrowAsync<DbUpdateException>();
+        (await second.Should().ThrowAsync<DbUpdateException>())
+            .Which.ToString().Should().Contain(LexemeConfiguration.LemmaPartOfSpeechIndexName);
     }
 
     [Fact]
@@ -59,7 +61,8 @@ public sealed class ProviderParityTests
         db.Senses.Add(Sense.CreateLearner(Guid.NewGuid(), lexeme.Id, owner, AgeGroup.Adult, word, "My note.", null).Value);
         Func<Task> duplicate = () => db.SaveChangesAsync();
 
-        await duplicate.Should().ThrowAsync<DbUpdateException>();
+        (await duplicate.Should().ThrowAsync<DbUpdateException>())
+            .Which.ToString().Should().Contain(SenseConfiguration.ContentHashOwnerIndexName);
     }
 
     [Fact]
