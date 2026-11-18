@@ -103,10 +103,26 @@ dotnet user-secrets set "Parameters:rabbitmq-user" "wordbuddy"
 dotnet user-secrets set "Parameters:claude-api-key" "<claude-api-key>"
 ```
 
+**PostgreSQL instead of SQL Server (ADR 0009).** `db-provider` defaults to `SqlServer` in
+`appsettings.json`. To run on PostgreSQL, override it and set the Postgres password once:
+
+```bash
+cd aspire/WordBuddy.AppHost
+dotnet user-secrets set "Parameters:db-provider" "Postgres"
+dotnet user-secrets set "Parameters:pg-password" "<strong-postgres-password>"
+# back to SQL Server:
+dotnet user-secrets remove "Parameters:db-provider"
+```
+
+Postgres mode starts `postgres:17-alpine` on host port 54320 (compose keeps 5432) and no SQL Server
+container; `sql-password` is then not needed. `pg-password` is required in this mode: without it the
+AppHost waits for the value and the APIs never start. Like `sql-password`, it is read only on the
+first start with an empty volume.
+
 `Properties/launchSettings.json` starts the AppHost in `Development`, so it reads these
 user-secrets. If the dashboard asks for a secret, the AppHost did not start in `Development`; do
 not save a new value there, because it would no longer match the existing volumes.
-Non-secret defaults (`jwt-issuer`, `jwt-expiry-minutes`, `rabbitmq-user`) live in
+Non-secret defaults (`db-provider`, `jwt-issuer`, `jwt-expiry-minutes`, `rabbitmq-user`) live in
 `appsettings.json`; set them in user-secrets only to override them.
 
 ### Run
@@ -159,7 +175,7 @@ provider for all four services. Mixing works but is not tested.
 | --- | --- | --- |
 | docker compose | `make up` | `make up-postgres` (`docker-compose.postgres.yml`; set `POSTGRES_PASSWORD` and `*_PG_CONNECTION_STRING` in `.env`, see `.env.example`) |
 | kind | `make k8s-apply` | `cp k8s/postgres/secret.yaml.example k8s/postgres/secret.yaml`, then `make k8s-apply DB=postgres` |
-| Aspire | `aspire run` | set `Parameters:db-provider=Postgres` and `Parameters:pg-password` (user-secrets), then `aspire run`. Container `postgres:17-alpine`, host port 54320 |
+| Aspire | `aspire run` | set `Parameters:db-provider=Postgres` and `Parameters:pg-password` (user-secrets; see "Aspire (local dev)" → Prerequisites), then `aspire run`. Container `postgres:17-alpine`, host port 54320 |
 | migrations | `make migrate SERVICE=<x>` / `make k8s-migrate SERVICE=<x>` | add `DB=postgres` (passes `--context Postgres<Service>DbContext`) |
 
 Test suites: `WORDBUDDY_TEST_DB_PROVIDER=Postgres` and `WORDBUDDY_TEST_PG_CONNECTION_STRING`
