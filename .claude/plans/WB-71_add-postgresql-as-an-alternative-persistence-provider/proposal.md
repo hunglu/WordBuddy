@@ -1,14 +1,14 @@
 ---
 title: WB-71_Add PostgreSQL as an alternative persistence provider
-status: implemented
+status: reviewed
 type: new
 issue: 71
-pr: none            # set by /code when it opens the pull request
+pr: 72              # set by /code when it opens the pull request
 affects: docs/features/WB-71_add-postgresql-as-an-alternative-persistence-provider.md
 supersedes: none
-version: 1.3
+version: 1.4
 created: 2026-11-18T08:50:46+07:00
-updated: 2026-11-18T10:20:19+07:00
+updated: 2026-11-18T10:28:24+07:00
 ---
 
 ## Problem
