@@ -8,10 +8,12 @@ using WordBuddy.Identity.Infrastructure.Persistence;
 namespace WordBuddy.Identity.IntegrationTests;
 
 /// <summary>
-/// Boots the real Identity API host against a per-run SQL Server database (migrated and seeded by
-/// the Development startup, dropped on disposal). In-memory MassTransit transport with the test
+/// Boots the real Identity API host against a per-run database (migrated and seeded by
+/// the Development startup, dropped on disposal). Provider: SQL Server (default) or PostgreSQL —
+/// set <c>WORDBUDDY_TEST_DB_PROVIDER=Postgres</c> and <c>WORDBUDDY_TEST_PG_CONNECTION_STRING</c> (server part only,
+/// e.g. <c>Host=localhost;Username=postgres;Password=...</c>; the factory adds the database name). In-memory MassTransit transport with the test
 /// harness. The unlink wait is 0 days so escalation can be tested end to end (the wait itself is
-/// unit tested). Override the database with <c>IDENTITY_TEST_CONNECTION_STRING</c>.
+/// unit tested). Override the SQL Server database with <c>IDENTITY_TEST_CONNECTION_STRING</c>.
 /// Configuration goes through environment variables, as in the Progress and Content factories.
 /// </summary>
 public sealed class IdentityApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -23,12 +25,29 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>, IAsyncL
     public const string AdminEmail = "admin@wordbuddy.com";
     public const string AdminPassword = "Admin@123";
 
-    private static readonly string ConnectionString =
-        Environment.GetEnvironmentVariable("IDENTITY_TEST_CONNECTION_STRING")
-        ?? $"Server=(localdb)\\mssqllocaldb;Database=WordBuddyIdentityTests_{Guid.NewGuid():N};Trusted_Connection=true";
+    /// <summary>True when the run targets PostgreSQL (<c>WORDBUDDY_TEST_DB_PROVIDER=Postgres</c>).</summary>
+    public static readonly bool IsPostgres = string.Equals(
+        Environment.GetEnvironmentVariable("WORDBUDDY_TEST_DB_PROVIDER"), "Postgres", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly string ConnectionString = BuildConnectionString();
+
+    private static string BuildConnectionString()
+    {
+        string databaseName = $"WordBuddyIdentityTests_{Guid.NewGuid():N}";
+        if (IsPostgres)
+        {
+            string server = Environment.GetEnvironmentVariable("WORDBUDDY_TEST_PG_CONNECTION_STRING")
+                ?? throw new InvalidOperationException("Set WORDBUDDY_TEST_PG_CONNECTION_STRING (server part only) when WORDBUDDY_TEST_DB_PROVIDER=Postgres.");
+            return $"{server.TrimEnd(';')};Database={databaseName}";
+        }
+
+        return Environment.GetEnvironmentVariable("IDENTITY_TEST_CONNECTION_STRING")
+            ?? $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=true";
+    }
 
     static IdentityApiFactory()
     {
+        Environment.SetEnvironmentVariable("Database__Provider", IsPostgres ? "Postgres" : "SqlServer");
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);

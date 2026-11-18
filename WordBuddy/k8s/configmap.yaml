@@ -5,6 +5,8 @@ metadata:
   namespace: wordbuddy
 data:
   ASPNETCORE_ENVIRONMENT: "Development"
+  # Persistence provider of the four data services (ADR 0009). The PostgreSQL stack uses k8s/postgres/configmap.yaml.
+  Database__Provider: "SqlServer"
   Jwt__Issuer: "WordBuddy"
   Jwt__ExpiryMinutes: "60"
   FileStorage__BasePath: "/app/media"

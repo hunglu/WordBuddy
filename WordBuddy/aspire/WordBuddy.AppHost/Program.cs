@@ -3,8 +3,9 @@ using Aspire.Hosting.ApplicationModel;
 namespace WordBuddy.AppHost;
 
 /// <summary>
-/// Local dev orchestration for WordBuddy (ADR 0007). Starts SQL Server and RabbitMQ as containers,
-/// the 5 APIs as processes (wired by csproj path, never by project reference) and the Vite UI.
+/// Local dev orchestration for WordBuddy (ADR 0007). Starts SQL Server (default) or PostgreSQL
+/// (<c>Parameters:db-provider=Postgres</c>, ADR 0009) and RabbitMQ as containers, the 5 APIs as processes
+/// (wired by csproj path, never by project reference) and the Vite UI.
 /// Environment keys mirror <c>docker-compose.yml</c> so both run paths stay aligned.
 /// </summary>
 public static class Program
@@ -14,6 +15,15 @@ public static class Program
 
     /// <summary>Fixed SQL Server host port; compose owns 1433.</summary>
     public const int SqlPort = 14330;
+
+    /// <summary>Fixed PostgreSQL host port; compose owns 5432.</summary>
+    public const int PostgresPort = 54320;
+
+    /// <summary>Value of <c>Parameters:db-provider</c> that selects the SQL Server model (default).</summary>
+    public const string SqlServerProvider = "SqlServer";
+
+    /// <summary>Value of <c>Parameters:db-provider</c> that selects the PostgreSQL model.</summary>
+    public const string PostgresProvider = "Postgres";
 
     /// <summary>Entry point: builds the model and runs it.</summary>
     /// <param name="args">Command-line arguments passed to the distributed application builder.</param>
@@ -30,7 +40,9 @@ public static class Program
     {
         // Parameters: secrets live in AppHost user-secrets as Parameters:<name> (never in git);
         // non-secret defaults live in appsettings.json under Parameters.
-        IResourceBuilder<ParameterResource> sqlPassword = builder.AddParameter("sql-password", secret: true);
+        string dbProvider = ReadDbProvider(builder);
+        bool postgres = dbProvider == PostgresProvider;
+
         IResourceBuilder<ParameterResource> jwtSecret = builder.AddParameter("jwt-secret", secret: true);
         IResourceBuilder<ParameterResource> rabbitPassword = builder.AddParameter("rabbitmq-password", secret: true);
         IResourceBuilder<ParameterResource> jwtIssuer = builder.AddParameter("jwt-issuer");
@@ -42,18 +54,41 @@ public static class Program
             ? null
             : builder.AddParameter("claude-api-key", secret: true);
 
-        // Infrastructure containers. SQL host port is pinned to 14330 (not compose's 1433, so the persistent
-        // container never blocks `make up`); RabbitMQ AMQP is pinned (no Port option in the services), so it
-        // uses the session lifetime and frees 5672/15672 on stop.
-        IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword, port: SqlPort)
-            .WithDataVolume()
-            .WithLifetime(ContainerLifetime.Persistent);
+        // Infrastructure containers. The database host port is pinned (SQL Server 14330, PostgreSQL 54320; not
+        // the compose ports 1433 / 5432, so the persistent container never blocks `make up`); RabbitMQ AMQP is
+        // pinned (no Port option in the services), so it uses the session lifetime and frees 5672/15672 on stop.
+        // Exactly one database server runs; the unused provider has no resource and no password parameter.
+        IResourceBuilder<IResourceWithConnectionString> identityDb;
+        IResourceBuilder<IResourceWithConnectionString> contentDb;
+        IResourceBuilder<IResourceWithConnectionString> quizDb;
+        IResourceBuilder<IResourceWithConnectionString> progressDb;
+        if (postgres)
+        {
+            IResourceBuilder<ParameterResource> pgPassword = builder.AddParameter("pg-password", secret: true);
+            IResourceBuilder<PostgresServerResource> pg = builder.AddPostgres("pg", password: pgPassword, port: PostgresPort)
+                .WithImageTag("17-alpine")
+                .WithDataVolume()
+                .WithLifetime(ContainerLifetime.Persistent);
 
-        IResourceBuilder<SqlServerDatabaseResource> identityDb = sql.AddDatabase("identitydb", "WordBuddyIdentity");
-        IResourceBuilder<SqlServerDatabaseResource> contentDb = sql.AddDatabase("contentdb", "WordBuddyContent");
-        IResourceBuilder<SqlServerDatabaseResource> quizDb = sql.AddDatabase("quizdb", "WordBuddyQuiz");
-        IResourceBuilder<SqlServerDatabaseResource> progressDb = sql.AddDatabase("progressdb", "WordBuddyProgress");
-        sql.AddDatabase("notificationdb", "WordBuddyNotification");
+            identityDb = pg.AddDatabase("identitydb", "WordBuddyIdentity");
+            contentDb = pg.AddDatabase("contentdb", "WordBuddyContent");
+            quizDb = pg.AddDatabase("quizdb", "WordBuddyQuiz");
+            progressDb = pg.AddDatabase("progressdb", "WordBuddyProgress");
+            pg.AddDatabase("notificationdb", "WordBuddyNotification");
+        }
+        else
+        {
+            IResourceBuilder<ParameterResource> sqlPassword = builder.AddParameter("sql-password", secret: true);
+            IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword, port: SqlPort)
+                .WithDataVolume()
+                .WithLifetime(ContainerLifetime.Persistent);
+
+            identityDb = sql.AddDatabase("identitydb", "WordBuddyIdentity");
+            contentDb = sql.AddDatabase("contentdb", "WordBuddyContent");
+            quizDb = sql.AddDatabase("quizdb", "WordBuddyQuiz");
+            progressDb = sql.AddDatabase("progressdb", "WordBuddyProgress");
+            sql.AddDatabase("notificationdb", "WordBuddyNotification");
+        }
 
         IResourceBuilder<RabbitMQServerResource> rabbitmq = builder.AddRabbitMQ("rabbitmq", rabbitUser, rabbitPassword, port: 5672)
             .WithManagementPlugin(port: 15672)
@@ -62,6 +97,7 @@ public static class Program
         // APIs: launch profiles are ignored; ports are pinned to the compose / Vite proxy / e2e ports.
         IResourceBuilder<ProjectResource> identity = AddApi(builder, "identity", "Identity", 5080)
             .WithReference(identityDb, "DefaultConnection").WaitFor(identityDb)
+            .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer)
             .WithEnvironment("Jwt__ExpiryMinutes", jwtExpiry)
             .WithRabbitMq(rabbitmq, rabbitUser, rabbitPassword)
@@ -74,6 +110,7 @@ public static class Program
         string mediaPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", ".data", "media"));
         IResourceBuilder<ProjectResource> content = AddApi(builder, "content", "Content", 5081)
             .WithReference(contentDb, "DefaultConnection").WaitFor(contentDb)
+            .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer)
             .WithEnvironment("FileStorage__BasePath", mediaPath)
             .WithRabbitMq(rabbitmq, rabbitUser, rabbitPassword);
@@ -84,10 +121,12 @@ public static class Program
 
         IResourceBuilder<ProjectResource> quiz = AddApi(builder, "quiz", "Quiz", 5082)
             .WithReference(quizDb, "DefaultConnection").WaitFor(quizDb)
+            .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer);
 
         IResourceBuilder<ProjectResource> progress = AddApi(builder, "progress", "Progress", 5083)
             .WithReference(progressDb, "DefaultConnection").WaitFor(progressDb)
+            .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer)
             .WithEnvironment("Services__Content__BaseUrl", content.GetEndpoint("http"))
             .WithEnvironment("Services__Content__GrpcUrl", content.GetEndpoint("grpc"))
@@ -105,6 +144,26 @@ public static class Program
             .WaitFor(content)
             .WaitFor(quiz)
             .WaitFor(progress);
+    }
+
+    /// <summary>
+    /// Reads <c>Parameters:db-provider</c>: unset or <c>SqlServer</c> keeps the SQL Server stack, <c>Postgres</c>
+    /// starts PostgreSQL instead. Any other value fails fast. Read as plain configuration (not a prompting parameter).
+    /// </summary>
+    private static string ReadDbProvider(IDistributedApplicationBuilder builder)
+    {
+        string? raw = builder.Configuration["Parameters:db-provider"];
+        if (string.IsNullOrWhiteSpace(raw) || string.Equals(raw.Trim(), SqlServerProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            return SqlServerProvider;
+        }
+
+        if (string.Equals(raw.Trim(), PostgresProvider, StringComparison.OrdinalIgnoreCase))
+        {
+            return PostgresProvider;
+        }
+
+        throw new InvalidOperationException($"Unknown 'Parameters:db-provider' value '{raw}'. Use '{SqlServerProvider}' or '{PostgresProvider}'.");
     }
 
     private static IResourceBuilder<ProjectResource> AddApi(

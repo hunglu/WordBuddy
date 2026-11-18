@@ -40,10 +40,13 @@ public static class MessagingExtensions
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
     /// <param name="configureConsumers">Optional consumer registrations (consumer side only).</param>
+    /// <param name="lockProvider">Database flavour for the outbox row locks; must match the DbContext provider.
+    /// Default <see cref="OutboxLockProvider.SqlServer"/>.</param>
     public static IServiceCollection AddWordBuddyMessaging<TDbContext>(
         this IServiceCollection services,
         IConfiguration configuration,
-        Action<IBusRegistrationConfigurator>? configureConsumers = null)
+        Action<IBusRegistrationConfigurator>? configureConsumers = null,
+        OutboxLockProvider lockProvider = OutboxLockProvider.SqlServer)
         where TDbContext : DbContext
     {
         services.AddSingleton<IValidateOptions<MessagingOptions>, MessagingOptionsValidator>();
@@ -60,7 +63,7 @@ public static class MessagingExtensions
 
         if (string.Equals(eager.Transport, InMemoryTransport, StringComparison.OrdinalIgnoreCase))
         {
-            services.AddMassTransitTestHarness(bus => ConfigureBus<TDbContext>(bus, eager, configureConsumers));
+            services.AddMassTransitTestHarness(bus => ConfigureBus<TDbContext>(bus, eager, configureConsumers, lockProvider));
             return services;
         }
 
@@ -72,7 +75,7 @@ public static class MessagingExtensions
 
         services.AddMassTransit(bus =>
         {
-            ConfigureBus<TDbContext>(bus, eager, configureConsumers);
+            ConfigureBus<TDbContext>(bus, eager, configureConsumers, lockProvider);
 
             bus.UsingRabbitMq((context, cfg) =>
             {
@@ -102,14 +105,23 @@ public static class MessagingExtensions
     private static void ConfigureBus<TDbContext>(
         IBusRegistrationConfigurator bus,
         MessagingOptions eager,
-        Action<IBusRegistrationConfigurator>? configureConsumers)
+        Action<IBusRegistrationConfigurator>? configureConsumers,
+        OutboxLockProvider lockProvider)
         where TDbContext : DbContext
     {
         bus.SetKebabCaseEndpointNameFormatter();
 
         bus.AddEntityFrameworkOutbox<TDbContext>(outbox =>
         {
-            outbox.UseSqlServer();
+            if (lockProvider == OutboxLockProvider.Postgres)
+            {
+                outbox.UsePostgres();
+            }
+            else
+            {
+                outbox.UseSqlServer();
+            }
+
             outbox.UseBusOutbox();
             outbox.QueryDelay = TimeSpan.FromMilliseconds(eager.Outbox.QueryDelayMs);
             outbox.DuplicateDetectionWindow = TimeSpan.FromSeconds(eager.Outbox.DuplicateDetectionWindowSeconds);

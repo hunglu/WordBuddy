@@ -1,7 +1,9 @@
 # Content — database diagram
 
-Database `WordBuddyContent` · source: `ContentDbContextModelSnapshot.cs` ·
+Database `WordBuddyContent` · source: `SqlServerContentDbContextModelSnapshot.cs` ·
 last migration: `20261010142457_AddLearnerGroups`
+
+> **PostgreSQL:** On PostgreSQL (`Database:Provider=Postgres`, ADR 0009) `Senses.Word` is `citext`, JSON list columns are `text` (default `'[]'`), the unique index `UX_Lexemes_NormalizedLemma_PartOfSpeech` is `NULLS NOT DISTINCT`, filtered indexes use `"Column"` quoting, and every `DateTime` is `timestamp with time zone`. Logical schema, names and indexes are the same. Postgres migrations: `Migrations/Postgres/` (last: `InitialCreate`).
 
 ```mermaid
 erDiagram

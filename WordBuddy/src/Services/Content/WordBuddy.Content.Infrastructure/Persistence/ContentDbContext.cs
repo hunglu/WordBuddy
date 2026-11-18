@@ -11,19 +11,23 @@ namespace WordBuddy.Content.Infrastructure.Persistence;
 
 /// <summary>EF Core context for the Content service's own database (<c>WordBuddyContent</c>).
 /// Every <see cref="LearnerWord"/> insert/delete publishes an event through the EF Core outbox,
-/// in the same transaction as the change.</summary>
-public sealed class ContentDbContext : DbContext
+/// in the same transaction as the change.
+/// One shared model; the provider subclasses (<c>SqlServerContentDbContext</c>, <c>PostgresContentDbContext</c>) own their migrations.</summary>
+public abstract class ContentDbContext : DbContext
 {
     private readonly IServiceProvider? _serviceProvider;
 
-    /// <summary>Design-time / test constructor: no events are published.</summary>
-    public ContentDbContext(DbContextOptions<ContentDbContext> options) : base(options)
+    /// <summary>Design-time / test constructor for the provider subclasses: no events are published.</summary>
+    /// <param name="options">Provider-configured options.</param>
+    protected ContentDbContext(DbContextOptions options) : base(options)
     {
     }
 
     /// <summary>Runtime constructor: <paramref name="serviceProvider"/> (the request scope) resolves
     /// the outbox publish endpoint lazily, because that endpoint itself depends on this context.</summary>
-    public ContentDbContext(DbContextOptions<ContentDbContext> options, IServiceProvider serviceProvider) : base(options)
+    /// <param name="options">Provider-configured options.</param>
+    /// <param name="serviceProvider">The request scope.</param>
+    protected ContentDbContext(DbContextOptions options, IServiceProvider serviceProvider) : base(options)
     {
         _serviceProvider = serviceProvider;
     }

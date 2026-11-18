@@ -9,7 +9,7 @@ quizzes, delivered as text, images, audio pronunciations, and video clips.
 |---|---|
 | Runtime | .NET 10 |
 | Web framework | ASP.NET Core Web API (controllers, class-based `Program.cs`) |
-| Database | SQL Server |
+| Database | SQL Server (default); PostgreSQL 15+ as a config-selected alternative: `Database:Provider` = `SqlServer` \| `Postgres` (WB-71, ADR 0009) |
 | ORM | Entity Framework Core |
 | Auth | JWT (Auth0 planned) |
 | Testing | xUnit, FluentAssertions, Moq |
@@ -148,6 +148,26 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
   so stop compose (`make down`) and `aspire run` first. The test SQL Server uses a dynamic host port,
   so the persistent `sql` container of a normal run (port 14330) may keep running.
 - The AppHost has no project reference to any service, and no service references the AppHost.
+
+## Database provider (SQL Server or PostgreSQL)
+
+Identity, Content, Quiz and Progress read `Database:Provider` (env `Database__Provider`): `SqlServer`
+(default) or `Postgres`. An unknown value stops the host. Every orchestration option below sets the same
+provider for all four services. Mixing works but is not tested.
+
+| Run path | SQL Server (default) | PostgreSQL |
+| --- | --- | --- |
+| docker compose | `make up` | `make up-postgres` (`docker-compose.postgres.yml`; set `POSTGRES_PASSWORD` and `*_PG_CONNECTION_STRING` in `.env`, see `.env.example`) |
+| kind | `make k8s-apply` | `cp k8s/postgres/secret.yaml.example k8s/postgres/secret.yaml`, then `make k8s-apply DB=postgres` |
+| Aspire | `aspire run` | set `Parameters:db-provider=Postgres` and `Parameters:pg-password` (user-secrets), then `aspire run`. Container `postgres:17-alpine`, host port 54320 |
+| migrations | `make migrate SERVICE=<x>` / `make k8s-migrate SERVICE=<x>` | add `DB=postgres` (passes `--context Postgres<Service>DbContext`) |
+
+Test suites: `WORDBUDDY_TEST_DB_PROVIDER=Postgres` and `WORDBUDDY_TEST_PG_CONNECTION_STRING`
+(server part only, e.g. `Host=localhost;Username=postgres;Password=<password>`) switch every
+`*.IntegrationTests` project to PostgreSQL. Each run creates and drops its own database. Without them, tests use SQL Server.
+
+Shared package: the Postgres outbox lock needs `WordBuddy.Shared.Infrastructure` 1.3.0 (`make pack-shared`
+locally; `make publish-shared` for Docker and kind builds).
 
 ## Running in Docker / local Kubernetes
 

@@ -38,6 +38,9 @@ dotnet run --project WordBuddy.Quiz.Api --urls http://localhost:5082
 Copy `WordBuddy.Quiz.Api/appsettings.Development.json.example` to
 `appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyQuiz`)
+- `Database:Provider` — `SqlServer` (default when missing) or `Postgres` (PostgreSQL 15 or newer, ADR 0009).
+  Any other value stops the host. With `Postgres`, `ConnectionStrings:DefaultConnection` is an Npgsql string, e.g.
+  `Host=localhost;Database=WordBuddyQuiz;Username=postgres;Password=<password>`. Env var: `Database__Provider`.
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Quiz validates tokens
   Identity issued
 - `Serilog:*` / `OpenTelemetry:OtlpEndpoint` — see the root `CLAUDE.md`'s Logging & Distributed
@@ -50,6 +53,6 @@ Copy `WordBuddy.Quiz.Api/appsettings.Development.json.example` to
 | `WordBuddy.Quiz.Api` | Controllers, `Program.cs`, composition root |
 | `WordBuddy.Quiz.Application` | Commands/queries, DTOs, validators |
 | `WordBuddy.Quiz.Domain` | `Quiz`/`QuizQuestion` entities, `QuizQuestionType` enum |
-| `WordBuddy.Quiz.Infrastructure` | EF Core `QuizDbContext`, repositories |
+| `WordBuddy.Quiz.Infrastructure` | EF Core `QuizDbContext` (SQL Server and PostgreSQL subclasses), repositories |
 | `WordBuddy.Quiz.UnitTests` | Handler/domain unit tests (Moq) |
 | `WordBuddy.Quiz.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

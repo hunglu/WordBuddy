@@ -92,7 +92,7 @@ flowchart LR
 | Layer | Approach |
 | --- | --- |
 | Backend | 5 independent ASP.NET Core microservices, one database each. No shared project references; shared code ships as versioned NuGet packages. |
-| Inside a service | Clean Architecture + hand-rolled CQRS, `Result<T>` instead of exceptions, FluentValidation, EF Core + SQL Server |
+| Inside a service | Clean Architecture + hand-rolled CQRS, `Result<T>` instead of exceptions, FluentValidation, EF Core + SQL Server (default) or PostgreSQL, selected by `Database:Provider` (ADR 0009) |
 | Cross-cutting | JWT with policy-based auth (child rules as policies), Serilog + OpenTelemetry, Redis caching, health checks, rate limiting, MassTransit messaging |
 | Frontend | React + TypeScript (strict), Vite, TanStack Query, Zustand, Tailwind CSS, Framer Motion |
 | Testing | xUnit unit tests, integration tests against a real SQL Server, Playwright E2E for API and UI (BDD with Gherkin) |

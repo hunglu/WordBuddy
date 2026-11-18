@@ -1,5 +1,4 @@
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -7,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.Dialects;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Infrastructure.Repositories;
@@ -15,11 +15,13 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
 {
     private readonly ContentDbContext _dbContext;
     private readonly ILogger<VocabularyWordRepository> _logger;
+    private readonly IDatabaseDialect _dialect;
 
-    public VocabularyWordRepository(ContentDbContext dbContext, ILogger<VocabularyWordRepository> logger)
+    public VocabularyWordRepository(ContentDbContext dbContext, ILogger<VocabularyWordRepository> logger, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _dialect = dialect;
     }
 
     public async Task<Result<IReadOnlyList<Sense>>> FindByContentHashAsync(string contentHash, CancellationToken ct = default)
@@ -116,7 +118,8 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
     {
         _logger.LogDebug("Querying random LearnerWords: UserId={UserId}, Count={Count}", userId, count);
 
-        // ORDER BY NEWID() is fine at this scale (one learner's own word list).
+        // Random order: NEWID() on SQL Server, gen_random_uuid() on PostgreSQL. Fine at this scale (one
+        // learner's own word list). EF.Functions.Random() is no use here: RAND() is one value per query on SQL Server.
         List<LearnerWord> links = await _dbContext.LearnerWords
             .AsNoTracking()
             .Include(l => l.Sense!).ThenInclude(s => s.Lexeme!).ThenInclude(x => x.UkAudio)
@@ -442,17 +445,14 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         }
     }
 
-    /// <summary>SQL Server 2601 (unique index) / 2627 (unique constraint) duplicate-key errors.</summary>
-    private static bool IsUniqueViolation(DbUpdateException ex) =>
-        ex.InnerException is SqlException { Number: 2601 or 2627 };
+    /// <summary>Duplicate-key error of the active database provider.</summary>
+    private bool IsUniqueViolation(DbUpdateException ex) => _dialect.IsUniqueViolation(ex);
 
-    /// <summary>Name of the Senses → Lexemes foreign key; SQL Server quotes it in a 547 message.</summary>
+    /// <summary>Name of the Senses → Lexemes foreign key; SQL Server quotes it in the message, PostgreSQL reports it as ConstraintName.</summary>
     private const string LexemeForeignKeyName = "FK_Senses_Lexemes_LexemeId";
 
-    /// <summary>SQL Server 547 (constraint conflict) on the Senses → Lexemes foreign key.</summary>
-    private static bool IsLexemeForeignKeyViolation(DbUpdateException ex) =>
-        ex.InnerException is SqlException { Number: 547 } sqlException &&
-        sqlException.Message.Contains(LexemeForeignKeyName, StringComparison.Ordinal);
+    /// <summary>Foreign-key error on the Senses → Lexemes foreign key.</summary>
+    private bool IsLexemeForeignKeyViolation(DbUpdateException ex) => _dialect.IsForeignKeyViolation(ex, LexemeForeignKeyName);
 
     /// <summary>Stops tracking the entities of a failed save so the context can be reused.</summary>
     private void Detach(params object[] entities)
@@ -480,9 +480,9 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         try
         {
             // Guarded in SQL: a lexeme still referenced by any sense is never deleted.
-            int deleted = await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                $"DELETE FROM [Lexemes] WHERE [Id] = {lexemeId} AND NOT EXISTS (SELECT 1 FROM [Senses] WHERE [LexemeId] = {lexemeId})",
-                ct);
+            int deleted = await _dbContext.Lexemes
+                .Where(l => l.Id == lexemeId && !_dbContext.Senses.Any(s => s.LexemeId == lexemeId))
+                .ExecuteDeleteAsync(ct);
 
             return Result.Success(deleted > 0);
         }
@@ -527,9 +527,9 @@ internal sealed class VocabularyWordRepository : IVocabularyWordRepository
         await _dbContext.SaveChangesAsync(ct);
 
         // Guarded: a lexeme still referenced by any other sense is never deleted (D16).
-        int lexemesDeleted = await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"DELETE FROM [Lexemes] WHERE [Id] = {lexemeId} AND NOT EXISTS (SELECT 1 FROM [Senses] WHERE [LexemeId] = {lexemeId})",
-            ct);
+        int lexemesDeleted = await _dbContext.Lexemes
+            .Where(l => l.Id == lexemeId && !_dbContext.Senses.Any(s => s.LexemeId == lexemeId))
+            .ExecuteDeleteAsync(ct);
 
         await transaction.CommitAsync(ct);
 

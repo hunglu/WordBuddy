@@ -1,9 +1,9 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.Dialects;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Infrastructure.Repositories;
@@ -12,11 +12,13 @@ internal sealed class LessonRepository : ILessonRepository
 {
     private readonly ContentDbContext _dbContext;
     private readonly ILogger<LessonRepository> _logger;
+    private readonly IDatabaseDialect _dialect;
 
-    public LessonRepository(ContentDbContext dbContext, ILogger<LessonRepository> logger)
+    public LessonRepository(ContentDbContext dbContext, ILogger<LessonRepository> logger, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _dialect = dialect;
     }
 
     public async Task<Result<IReadOnlyList<Lesson>>> GetPublishedAsync(LessonType? type, Level? level, AgeGroup? targetAgeGroup, CancellationToken ct = default)
@@ -88,7 +90,7 @@ internal sealed class LessonRepository : ILessonRepository
             await _dbContext.SaveChangesAsync(ct);
             return Result.Success();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        catch (DbUpdateException ex) when (_dialect.IsUniqueViolation(ex))
         {
             // Two admins attached the same word to the same lesson at once (PK of LessonSenses).
             _logger.LogWarning("Lesson save hit a unique-key violation on LessonSenses");

@@ -10,10 +10,11 @@ using WordBuddy.Progress.Infrastructure.Persistence;
 namespace WordBuddy.Progress.IntegrationTests;
 
 /// <summary>
-/// Boots the real Progress API host against a dedicated, per-run SQL Server database (migrated on
-/// startup, dropped on disposal) — never mocks EF Core, per repo convention. The connection
-/// string defaults to a local SQL Server instance and can be overridden via the
-/// <c>PROGRESS_TEST_CONNECTION_STRING</c> environment variable for CI.
+/// Boots the real Progress API host against a dedicated, per-run database (migrated on
+/// startup, dropped on disposal) — never mocks EF Core, per repo convention. Default: local SQL Server
+/// (override with <c>PROGRESS_TEST_CONNECTION_STRING</c>). Set <c>WORDBUDDY_TEST_DB_PROVIDER=Postgres</c> and
+/// <c>WORDBUDDY_TEST_PG_CONNECTION_STRING</c> (server part only, e.g. <c>Host=localhost;Username=postgres;Password=...</c>)
+/// to run on PostgreSQL.
 ///
 /// Configuration is injected via process environment variables, not
 /// <c>WebApplicationFactory.ConfigureWebHost</c>'s <c>ConfigureAppConfiguration</c> — see
@@ -28,12 +29,29 @@ public sealed class ProgressApiFactory : WebApplicationFactory<Program>, IAsyncL
     public const string JwtSecret = "integration-test-secret-do-not-use-in-production-32chars";
     public const string JwtIssuer = "WordBuddy";
 
-    private static readonly string ConnectionString =
-        Environment.GetEnvironmentVariable("PROGRESS_TEST_CONNECTION_STRING")
-        ?? $"Server=(localdb)\\mssqllocaldb;Database=WordBuddyProgressTests_{Guid.NewGuid():N};Trusted_Connection=true";
+    /// <summary>True when the run targets PostgreSQL (<c>WORDBUDDY_TEST_DB_PROVIDER=Postgres</c>).</summary>
+    public static readonly bool IsPostgres = string.Equals(
+        Environment.GetEnvironmentVariable("WORDBUDDY_TEST_DB_PROVIDER"), "Postgres", StringComparison.OrdinalIgnoreCase);
+
+    private static readonly string ConnectionString = BuildConnectionString();
+
+    private static string BuildConnectionString()
+    {
+        string databaseName = $"WordBuddyProgressTests_{Guid.NewGuid():N}";
+        if (IsPostgres)
+        {
+            string server = Environment.GetEnvironmentVariable("WORDBUDDY_TEST_PG_CONNECTION_STRING")
+                ?? throw new InvalidOperationException("Set WORDBUDDY_TEST_PG_CONNECTION_STRING (server part only) when WORDBUDDY_TEST_DB_PROVIDER=Postgres.");
+            return $"{server.TrimEnd(';')};Database={databaseName}";
+        }
+
+        return Environment.GetEnvironmentVariable("PROGRESS_TEST_CONNECTION_STRING")
+            ?? $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=true";
+    }
 
     static ProgressApiFactory()
     {
+        Environment.SetEnvironmentVariable("Database__Provider", IsPostgres ? "Postgres" : "SqlServer");
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", ConnectionString);
         Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
         Environment.SetEnvironmentVariable("Jwt__Issuer", JwtIssuer);

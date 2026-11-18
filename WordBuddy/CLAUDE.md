@@ -3,7 +3,8 @@
 
 # WordBuddy backend
 
-ASP.NET Core (.NET version: see `global.json` / `*.csproj`), EF Core, SQL Server, JWT
+ASP.NET Core (.NET version: see `global.json` / `*.csproj`), EF Core with SQL Server (default) or
+PostgreSQL 15+ (`Database:Provider` = `SqlServer` | `Postgres`, ADR `../docs/adr/0009`), JWT
 (self-issued for now, Auth0 planned), xUnit + FluentAssertions + Moq.
 
 ## Independence model
@@ -93,11 +94,19 @@ WordBuddy/
   Kestrel endpoints from `Kestrel:Endpoints`: REST and gRPC (HTTP/2, cleartext), internal only.
 - **Media:** `MediaAsset` holds type + storage URL + metadata; binaries in blob storage (local
   volume in dev). Audio: `vocab-{vocabularyId}-{locale}.mp3`.
+- **Persistence provider:** Identity, Content, Quiz and Progress read `Database:Provider`
+  (`SqlServer` default, `Postgres`; unknown value stops startup). One abstract `<Service>DbContext`
+  holds the model; `SqlServer<Service>DbContext` and `Postgres<Service>DbContext` own the
+  migrations (`Persistence/Migrations/SqlServer/`, `.../Postgres/`). Every schema change needs
+  **two migrations**. Provider-specific code lives only in Infrastructure
+  (`Postgres<Service>ModelOverrides`, `IDatabaseDialect`).
 
 ## Testing
 
 - Unit: domain + handlers, Moq for infrastructure interfaces.
-- Integration: `WebApplicationFactory` + real SQL Server (Docker). Never mock EF Core.
+- Integration: `WebApplicationFactory` + real SQL Server or PostgreSQL
+  (`WORDBUDDY_TEST_DB_PROVIDER=Postgres` + `WORDBUDDY_TEST_PG_CONNECTION_STRING`; default SQL
+  Server). Run suites on both providers. Never mock EF Core.
 - Naming `{ClassUnderTest}_{Method}_{ExpectedOutcome}`; one `[Fact]`/`[Theory]` per scenario;
   cover child and adult paths where they differ.
 - Cross-service API E2E lives in `../e2e/api` (tester agent, `/test`).
@@ -114,6 +123,12 @@ WordBuddy/
 dotnet build src/Services/<Service>/WordBuddy.<Service>.slnx
 dotnet test  src/Services/<Service>/WordBuddy.<Service>.slnx
 dotnet run --project src/Services/<Service>/WordBuddy.<Service>.Api
+
+# migrations: always one per provider
+dotnet ef migrations add <Name> --context SqlServer<Service>DbContext --project ...Infrastructure --startup-project ...Api --output-dir Persistence/Migrations/SqlServer
+dotnet ef migrations add <Name> --context Postgres<Service>DbContext  --project ...Infrastructure --startup-project ...Api --output-dir Persistence/Migrations/Postgres
+make migrate SERVICE=<x> [DB=postgres]      # ask-gated
+make up-postgres                            # docker compose with PostgreSQL instead of SQL Server
 ```
 
 Content serves REST on 5081 and gRPC on 5091 (containers: 8080 / 8081). `--urls` has no effect there.
@@ -147,6 +162,9 @@ make up                              # docker compose (needs .env + GITHUB_TOKEN
 make cluster-up && make k8s-build-load && make k8s-apply
 make k8s-migrate SERVICE=identity    # per service with entities
 ```
+
+`make k8s-apply DB=postgres` swaps the SQL Server manifests for `k8s/postgres/` (copy
+`k8s/postgres/secret.yaml.example` to `secret.yaml` first).
 
 Known gap: the GitHub Packages restore inside `docker build` has not been verified end-to-end
 with a real PAT (`read:packages`; `write:packages` for `make publish-shared`).

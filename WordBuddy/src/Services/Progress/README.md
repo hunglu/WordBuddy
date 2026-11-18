@@ -200,11 +200,13 @@ dotnet user-secrets set "Messaging:RabbitMq:Password" "<password>" --project Wor
 dotnet run --project WordBuddy.Progress.Api --urls http://localhost:5083
 ```
 
-Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=progress` or
-`dotnet ef database update`):
+Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=progress [DB=postgres]` or
+`dotnet ef database update --context <context>`). Two migrations per change, one per provider
+(see the `ef-migration` skill):
 
 ```bash
-dotnet ef migrations add <Name> --project WordBuddy.Progress.Infrastructure --startup-project WordBuddy.Progress.Infrastructure --output-dir Persistence/Migrations
+dotnet ef migrations add <Name> --context SqlServerProgressDbContext --project WordBuddy.Progress.Infrastructure --startup-project WordBuddy.Progress.Api --output-dir Persistence/Migrations/SqlServer
+dotnet ef migrations add <Name> --context PostgresProgressDbContext  --project WordBuddy.Progress.Infrastructure --startup-project WordBuddy.Progress.Api --output-dir Persistence/Migrations/Postgres
 ```
 
 Latest migration: `AddDashboard` (`VocabularySessionIssues`). Before it: `AddVocabularySrs`
@@ -232,6 +234,9 @@ Latest migration: `AddDashboard` (`VocabularySessionIssues`). Before it: `AddVoc
 Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 `appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyProgress`)
+- `Database:Provider` — `SqlServer` (default when missing) or `Postgres` (PostgreSQL 15 or newer, ADR 0009).
+  Any other value stops the host. With `Postgres`, `ConnectionStrings:DefaultConnection` is an Npgsql string, e.g.
+  `Host=localhost;Database=WordBuddyProgress;Username=postgres;Password=<password>`. Env var: `Database__Provider`.
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Progress validates
   tokens Identity issued
 - `Services:Content:*` — how Progress calls Content (WB-68, ADR 0008). Read once at startup:
@@ -260,6 +265,6 @@ Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
 | `WordBuddy.Progress.Api` | Controllers, `Program.cs`, composition root |
 | `WordBuddy.Progress.Application` | Commands/queries, DTOs, validators |
 | `WordBuddy.Progress.Domain` | `LearnerProgress`, `LearnerWordMembership`, `LearnerWordState`, `ReviewLog`, `VocabularyLearnerSettings` entities; `FsrsScheduler`, `AnswerGrader`, `NewWordCapPolicy` |
-| `WordBuddy.Progress.Infrastructure` | EF Core `ProgressDbContext`, repositories, MassTransit consumers |
+| `WordBuddy.Progress.Infrastructure` | EF Core `ProgressDbContext` (SQL Server and PostgreSQL subclasses), repositories, MassTransit consumers |
 | `WordBuddy.Progress.UnitTests` | Handler/domain unit tests (Moq) |
 | `WordBuddy.Progress.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

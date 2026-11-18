@@ -14,13 +14,13 @@ public class AppHostModelTests
     // Keys mirror docker-compose.yml (plan env table). Values are never asserted.
     public static TheoryData<string, string[]> ExpectedKeys => new()
     {
-        { "identity", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Jwt__ExpiryMinutes",
+        { "identity", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Jwt__ExpiryMinutes", "Database__Provider",
             "Messaging__RabbitMq__Host", "Messaging__RabbitMq__Username", "Messaging__RabbitMq__Password", "SupportLinks__UnlinkOverrideWaitDays"] },
-        { "content", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "FileStorage__BasePath",
+        { "content", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "FileStorage__BasePath", "Database__Provider",
             "Messaging__RabbitMq__Host", "Messaging__RabbitMq__Username", "Messaging__RabbitMq__Password",
             "Kestrel__Endpoints__Http__Url", "Kestrel__Endpoints__Grpc__Url"] },
-        { "quiz", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer"] },
-        { "progress", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Services__Content__BaseUrl",
+        { "quiz", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Database__Provider"] },
+        { "progress", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "ConnectionStrings__DefaultConnection", "Jwt__Secret", "Jwt__Issuer", "Database__Provider", "Services__Content__BaseUrl",
             "Services__Content__GrpcUrl", "Services__Content__Transport",
             "Messaging__RabbitMq__Host", "Messaging__RabbitMq__Username", "Messaging__RabbitMq__Password"] },
         { "notification", ["ASPNETCORE_ENVIRONMENT", "OpenTelemetry__OtlpEndpoint", "Jwt__Secret", "Jwt__Issuer"] },
@@ -242,5 +242,70 @@ public class AppHostModelTests
         HashSet<string> env = await AppHostFixture.GetEnvironmentKeysAsync(content);
 
         env.Should().Contain("Autofill__Claude__ApiKey");
+    }
+
+    private static readonly string[] DataApis = ["identity", "content", "quiz", "progress"];
+
+    private const string PostgresArgs = "Parameters:db-provider=Postgres";
+    private const string PgPasswordArg = "Parameters:pg-password=test-only-Pg1!";
+
+    [Fact]
+    public async Task AppHost_Build_DefaultProvider_DataApisGetSqlServerProviderAndNoPostgresResource()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
+
+        builder.Resources.Select(r => r.Name).Should().NotContain("pg");
+        foreach (string api in DataApis)
+        {
+            Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(builder.Resources.Single(r => r.Name == api));
+            env["Database__Provider"].Should().Be("SqlServer", "{0} must keep SQL Server by default", api);
+        }
+    }
+
+    [Fact]
+    public async Task AppHost_Build_PostgresProvider_HasPgResourceNoSqlResourceAndPostgresOnDataApis()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync(PostgresArgs, PgPasswordArg);
+
+        string[] names = [.. builder.Resources.Select(r => r.Name)];
+
+        names.Should().Contain("pg");
+        names.Should().NotContain("sql");
+        names.Should().Contain(Databases);
+        names.Should().Contain(Apis);
+        foreach (string api in DataApis)
+        {
+            Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(builder.Resources.Single(r => r.Name == api));
+            env["Database__Provider"].Should().Be("Postgres", "{0} must switch to PostgreSQL", api);
+            env.Should().ContainKey("ConnectionStrings__DefaultConnection");
+        }
+    }
+
+    [Fact]
+    public async Task AppHost_Build_PostgresProvider_PinsPortAndUsesAlpineImage()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync(PostgresArgs, PgPasswordArg);
+        IResource pg = builder.Resources.Single(r => r.Name == "pg");
+
+        pg.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "tcp").Port.Should().Be(54320);
+        pg.Annotations.OfType<ContainerImageAnnotation>().Single().Tag.Should().Be("17-alpine");
+    }
+
+    [Fact]
+    public async Task AppHost_Build_PostgresProvider_DoesNotDeclareSqlPasswordAndDefaultDoesNotDeclarePgPassword()
+    {
+        IDistributedApplicationTestingBuilder postgres = await AppHostFixture.CreateAsync(PostgresArgs, PgPasswordArg);
+        IDistributedApplicationTestingBuilder defaults = await AppHostFixture.CreateAsync();
+
+        postgres.Resources.OfType<ParameterResource>().Select(r => r.Name).Should().Contain("pg-password").And.NotContain("sql-password");
+        defaults.Resources.OfType<ParameterResource>().Select(r => r.Name).Should().Contain("sql-password").And.NotContain("pg-password");
+    }
+
+    [Fact]
+    public async Task AppHost_Build_UnknownProvider_Throws()
+    {
+        Func<Task> act = () => AppHostFixture.CreateAsync("Parameters:db-provider=Oracle");
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*db-provider*");
     }
 }

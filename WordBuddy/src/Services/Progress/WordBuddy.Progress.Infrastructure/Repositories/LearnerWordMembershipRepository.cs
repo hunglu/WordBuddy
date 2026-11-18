@@ -1,10 +1,10 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Progress.Infrastructure.Persistence.Dialects;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Progress.Infrastructure.Repositories;
@@ -13,11 +13,13 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
 {
     private readonly ProgressDbContext _dbContext;
     private readonly ILogger<LearnerWordMembershipRepository> _logger;
+    private readonly IDatabaseDialect _dialect;
 
-    public LearnerWordMembershipRepository(ProgressDbContext dbContext, ILogger<LearnerWordMembershipRepository> logger)
+    public LearnerWordMembershipRepository(ProgressDbContext dbContext, ILogger<LearnerWordMembershipRepository> logger, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _dialect = dialect;
     }
 
     public Task<Result<bool>> UpsertAddedAsync(
@@ -149,7 +151,6 @@ internal sealed class LearnerWordMembershipRepository : ILearnerWordMembershipRe
             .AsTracking()
             .FirstOrDefaultAsync(m => m.UserId == userId && m.SenseId == senseId, ct);
 
-    /// <summary>SQL Server 2601 (unique index) / 2627 (unique constraint) duplicate-key errors.</summary>
-    private static bool IsUniqueViolation(DbUpdateException ex) =>
-        ex.InnerException is SqlException { Number: 2601 or 2627 };
+    /// <summary>Duplicate-key error of the active database provider.</summary>
+    private bool IsUniqueViolation(DbUpdateException ex) => _dialect.IsUniqueViolation(ex);
 }

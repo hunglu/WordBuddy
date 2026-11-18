@@ -235,7 +235,8 @@ public sealed class LearnerWordEventPublishingTests : IAsyncLifetime
             () => _added.Count(m => m.UserId == userId) >= 4,
             TimeSpan.FromSeconds(15))).Should().BeTrue("each link is published once by the add and once by the backfill");
 
-        _added.Where(m => m.UserId == userId).Should().OnlyContain(m => m.AddedAtUtc == addedAt[m.SenseId] && m.AddedBy == userId);
+        // Postgres timestamptz keeps microseconds; the in-memory add event keeps 100 ns ticks.
+        _added.Where(m => m.UserId == userId).Should().OnlyContain(m => (m.AddedAtUtc - addedAt[m.SenseId]).Duration() < TimeSpan.FromMilliseconds(1) && m.AddedBy == userId);
         _added.Should().NotContain(m => m.UserId == SystemOwner.UserId);
     }
 

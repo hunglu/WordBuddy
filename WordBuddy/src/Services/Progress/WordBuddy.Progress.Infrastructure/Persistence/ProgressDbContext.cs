@@ -5,10 +5,13 @@ using WordBuddy.Shared.Infrastructure.Messaging;
 
 namespace WordBuddy.Progress.Infrastructure.Persistence;
 
-/// <summary>EF Core context for the Progress service's own database (<c>WordBuddyProgress</c>).</summary>
-public sealed class ProgressDbContext : DbContext
+/// <summary>EF Core context for the Progress service's own database (<c>WordBuddyProgress</c>).
+/// One shared model; the provider subclasses (<c>SqlServerProgressDbContext</c>, <c>PostgresProgressDbContext</c>) own their migrations.</summary>
+public abstract class ProgressDbContext : DbContext
 {
-    public ProgressDbContext(DbContextOptions<ProgressDbContext> options) : base(options)
+    /// <summary>Called by the provider subclasses with their own typed options.</summary>
+    /// <param name="options">Provider-configured options.</param>
+    protected ProgressDbContext(DbContextOptions options) : base(options)
     {
     }
 

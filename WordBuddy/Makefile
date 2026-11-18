@@ -2,7 +2,23 @@ SERVICES := identity content quiz progress notification
 CLUSTER_NAME := wordbuddy
 SERVICE ?=
 
-.PHONY: up down logs migrate clean pack-shared publish-shared \
+# Database provider (ADR 0009): sqlserver (default) or postgres. Picks the EF context for migrate / k8s-migrate
+# and the manifests for k8s-apply.
+DB ?= sqlserver
+ifeq ($(DB),sqlserver)
+DB_CONTEXT_PREFIX := SqlServer
+else ifeq ($(DB),postgres)
+DB_CONTEXT_PREFIX := Postgres
+else
+$(error DB must be sqlserver or postgres, got '$(DB)')
+endif
+# identity -> Identity (GNU sed, same trick as k8s-build-load)
+SERVICE_PASCAL = $(shell echo $(SERVICE) | sed 's/./\U&/')
+EF_CONTEXT = $(DB_CONTEXT_PREFIX)$(SERVICE_PASCAL)DbContext
+
+COMPOSE_POSTGRES := docker compose -f docker-compose.yml -f docker-compose.postgres.yml
+
+.PHONY: up up-postgres down down-postgres logs migrate clean pack-shared publish-shared \
         cluster-up cluster-down k8s-build-load k8s-apply k8s-logs k8s-migrate k8s-rabbitmq-ui
 
 ## --- docker-compose (local dev inner loop) ---
@@ -10,14 +26,21 @@ SERVICE ?=
 up:
 	docker compose up --build
 
+# PostgreSQL instead of SQL Server (docker-compose.postgres.yml; needs the *_PG_CONNECTION_STRING values from .env.example).
+up-postgres:
+	$(COMPOSE_POSTGRES) up --build
+
 down:
 	docker compose down
+
+down-postgres:
+	$(COMPOSE_POSTGRES) down
 
 logs:
 	docker compose logs -f $(SERVICE)
 
 migrate:
-	docker compose exec $(SERVICE)-api dotnet ef database update
+	docker compose exec $(SERVICE)-api dotnet ef database update --context $(EF_CONTEXT)
 
 clean:
 	docker compose down -v
@@ -64,11 +87,18 @@ else
 	kind load docker-image wordbuddy-$(SERVICE):dev --name $(CLUSTER_NAME)
 endif
 
+# DB=postgres swaps the SQL Server files (configmap, secret, database StatefulSet, Service, init Job) for k8s/postgres/.
 k8s-apply:
 	kubectl apply -f k8s/namespace.yaml
+ifeq ($(DB),postgres)
+	kubectl apply -f k8s/postgres/configmap.yaml -f k8s/postgres/secret.yaml
+	kubectl apply -f k8s/postgres/postgres-statefulset.yaml -f k8s/postgres/postgres-service.yaml
+	kubectl apply -f k8s/postgres/postgres-init-job.yaml
+else
 	kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
 	kubectl apply -f k8s/sqlserver-statefulset.yaml -f k8s/sqlserver-service.yaml
 	kubectl apply -f k8s/sqlserver-init-job.yaml
+endif
 	kubectl apply -f k8s/rabbitmq-deployment.yaml -f k8s/rabbitmq-service.yaml
 	kubectl apply -f k8s/identity-deployment.yaml -f k8s/identity-service.yaml
 	kubectl apply -f k8s/content-deployment.yaml -f k8s/content-service.yaml
@@ -85,4 +115,4 @@ k8s-logs:
 	kubectl -n wordbuddy logs -f deploy/$(SERVICE)-api
 
 k8s-migrate:
-	kubectl -n wordbuddy exec deploy/$(SERVICE)-api -- dotnet ef database update
+	kubectl -n wordbuddy exec deploy/$(SERVICE)-api -- dotnet ef database update --context $(EF_CONTEXT)

@@ -1,10 +1,11 @@
-using Microsoft.Data.SqlClient;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain.Challenges;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Progress.Infrastructure.Persistence.Dialects;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Progress.Infrastructure.Repositories;
@@ -13,11 +14,13 @@ internal sealed class ChallengeRepository : IChallengeRepository
 {
     private readonly ProgressDbContext _dbContext;
     private readonly ILogger<ChallengeRepository> _logger;
+    private readonly IDatabaseDialect _dialect;
 
-    public ChallengeRepository(ProgressDbContext dbContext, ILogger<ChallengeRepository> logger)
+    public ChallengeRepository(ProgressDbContext dbContext, ILogger<ChallengeRepository> logger, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _dialect = dialect;
     }
 
     public async Task<Result<Challenge>> GetByIdAsync(Guid challengeId, CancellationToken ct = default)
@@ -87,7 +90,6 @@ internal sealed class ChallengeRepository : IChallengeRepository
                 && _dbContext.Challenges.Any(c => c.Id == p.ChallengeId && c.Status != ChallengeStatus.Finished))
             .ToListAsync(ct);
 
-    private const int DeadlockVictimNumber = 1205;
     private const int MaxJoinAttempts = 4;
 
     public async Task<Result> AddParticipantIfRoomAsync(ChallengeParticipant participant, int capacity, CancellationToken ct = default)
@@ -98,18 +100,18 @@ internal sealed class ChallengeRepository : IChallengeRepository
             {
                 return await TryAddParticipantIfRoomAsync(participant, capacity, ct);
             }
-            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+            catch (DbUpdateException ex) when (_dialect.IsUniqueViolation(ex))
             {
                 // The unique (ChallengeId, UserId) index: the learner joined twice at once.
                 _logger.LogWarning(ex, "ChallengeParticipant insert hit the unique index");
                 _dbContext.Entry(participant).State = EntityState.Detached;
                 return Result.Failure(Error.Conflict("Challenge.AlreadyJoined", "The learner has already joined this challenge."));
             }
-            catch (Exception ex) when (ex is DbUpdateException or SqlException)
+            catch (Exception ex) when (ex is DbUpdateException or DbException)
             {
                 // Deadlock victim, timeout or similar: the transaction rolled back, so the learner is NOT joined.
                 _dbContext.Entry(participant).State = EntityState.Detached;
-                bool deadlock = (ex as SqlException ?? ex.InnerException as SqlException)?.Number == DeadlockVictimNumber;
+                bool deadlock = _dialect.IsDeadlock(ex);
                 if (deadlock && attempt < MaxJoinAttempts)
                 {
                     _logger.LogWarning(ex, "ChallengeParticipant join was a deadlock victim, retrying: Attempt={Attempt}", attempt);
@@ -126,12 +128,9 @@ internal sealed class ChallengeRepository : IChallengeRepository
     {
         await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(ct);
 
-        // UPDLOCK + HOLDLOCK takes an exclusive key-range lock: concurrent joins of one challenge queue up here
-        // instead of both holding shared locks and deadlocking on the insert. The index hint forces a seek on
-        // (ChallengeId, UserId), so the range lock covers only this challenge, whatever the optimizer thinks of a tiny table.
-        int count = await _dbContext.Database
-            .SqlQuery<int>($"SELECT COUNT(*) AS [Value] FROM [ChallengeParticipants] WITH (INDEX([IX_ChallengeParticipants_ChallengeId_UserId]), UPDLOCK, HOLDLOCK) WHERE [ChallengeId] = {participant.ChallengeId}")
-            .SingleAsync(ct);
+        // The dialect takes the lock that serializes concurrent joins of one challenge (SQL Server: key-range lock;
+        // PostgreSQL: FOR UPDATE on the Challenges row), then counts.
+        int count = await _dialect.CountParticipantsForJoinAsync(_dbContext, participant.ChallengeId, ct);
         if (count >= capacity)
         {
             return Result.Failure(ChallengeErrors.Full);

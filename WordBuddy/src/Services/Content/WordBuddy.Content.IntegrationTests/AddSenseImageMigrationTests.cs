@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.SqlServer;
 
 namespace WordBuddy.Content.IntegrationTests;
 
@@ -31,7 +32,7 @@ public sealed class AddSenseImageMigrationTests : IAsyncLifetime
         {
             InitialCatalog = $"WordBuddyContentImageTests_{Guid.NewGuid():N}",
         };
-        _dbContext = new ContentDbContext(new DbContextOptionsBuilder<ContentDbContext>().UseSqlServer(builder.ConnectionString).Options);
+        _dbContext = new SqlServerContentDbContext(new DbContextOptionsBuilder<SqlServerContentDbContext>().UseSqlServer(builder.ConnectionString).Options);
     }
 
     public async Task InitializeAsync()
@@ -54,7 +55,7 @@ VALUES ('{SenseId}', '{LexemeId}', N'Dog', N'An animal.', N'The dog barked.', '{
         await _dbContext.DisposeAsync();
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task AddSenseImage_Up_ExistingSenseKeepsDataAndHasNullImage()
     {
         // Raw SQL: the current model has later columns (WB-25) that this schema step does not have yet.

@@ -9,6 +9,9 @@ using WordBuddy.Progress.Infrastructure.Challenges;
 using WordBuddy.Progress.Infrastructure.ContentClient;
 using WordBuddy.Progress.Infrastructure.Messaging;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Progress.Infrastructure.Persistence.Dialects;
+using WordBuddy.Progress.Infrastructure.Persistence.Postgres;
+using WordBuddy.Progress.Infrastructure.Persistence.SqlServer;
 using WordBuddy.Progress.Infrastructure.Repositories;
 using WordBuddy.Shared.Infrastructure.Messaging;
 using WordBuddy.Shared.Protos.Content.V1;
@@ -20,9 +23,24 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<ProgressDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-                   .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+        DatabaseOptions database = DatabaseOptions.FromConfiguration(configuration);
+        string? connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        // Repositories, health checks and MassTransit keep resolving ProgressDbContext; only the subclass differs.
+        if (database.Provider == DatabaseProvider.Postgres)
+        {
+            services.AddDbContext<ProgressDbContext, PostgresProgressDbContext>(options =>
+                options.UseNpgsql(connectionString)
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+            services.AddSingleton<IDatabaseDialect, PostgresDatabaseDialect>();
+        }
+        else
+        {
+            services.AddDbContext<ProgressDbContext, SqlServerProgressDbContext>(options =>
+                options.UseSqlServer(connectionString)
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+            services.AddSingleton<IDatabaseDialect, SqlServerDatabaseDialect>();
+        }
 
         services.AddScoped<ILearnerProgressRepository, LearnerProgressRepository>();
         services.AddScoped<IVocabularyRecallRepository, VocabularyRecallRepository>();
@@ -59,7 +77,8 @@ public static class ServiceCollectionExtensions
             bus.AddConsumer<LearnerGroupMemberActivatedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberActivated);
             bus.AddConsumer<LearnerGroupMemberRemovedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberRemoved);
             bus.AddConsumer<LearnerGroupDeletedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.GroupDeleted);
-        });
+        },
+        database.Provider == DatabaseProvider.Postgres ? OutboxLockProvider.Postgres : OutboxLockProvider.SqlServer);
 
         return services;
     }

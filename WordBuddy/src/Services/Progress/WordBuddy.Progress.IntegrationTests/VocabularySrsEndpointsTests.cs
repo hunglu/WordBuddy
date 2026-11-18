@@ -588,11 +588,12 @@ public sealed class VocabularySrsEndpointsTests
             ProgressDbContext dbContext = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
 
             // A row shaped like one written before WB-28: none of the new columns is set.
+            // Provider-neutral SQL: quoted names, parameters for every value (booleans differ between engines).
             await dbContext.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO ReviewLogs (Id, UserId, SenseId, SessionId, OccurredAtUtc, ExerciseType, Skill, IsCorrect,
-                                        ResponseMs, HintUsed, IsDue, AttemptNo, Rating)
-                VALUES ({rowId}, {userId}, {Guid.NewGuid()}, {Guid.NewGuid()}, {DateTime.UtcNow}, 'Typing', 'Spelling', 1,
-                        4200, 0, 1, 1, 'Good')");
+                INSERT INTO ""ReviewLogs"" (""Id"", ""UserId"", ""SenseId"", ""SessionId"", ""OccurredAtUtc"", ""ExerciseType"", ""Skill"", ""IsCorrect"",
+                                        ""ResponseMs"", ""HintUsed"", ""IsDue"", ""AttemptNo"", ""Rating"")
+                VALUES ({rowId}, {userId}, {Guid.NewGuid()}, {Guid.NewGuid()}, {DateTime.UtcNow}, {"Typing"}, {"Spelling"}, {true},
+                        {4200}, {false}, {true}, {1}, {"Good"})");
         }
 
         List<ReviewLog> logs = await GetLogsAsync(userId);
