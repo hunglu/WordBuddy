@@ -61,3 +61,34 @@ Other: `tasks.md:101` still says `WordBuddy/CLAUDE.md` is not edited (review nit
 ## Verdict
 
 Not merged — Postgres-stack suites (e2e api, e2e ui, 2 GB check) and the Aspire run were not executed. Next: Sam frees port 5432 (or approves stopping `wb-pg`), runs `make down`, then `make up-postgres`, then re-run `/test`.
+
+## Round 2 — 2026-11-18
+
+**Verdict: needs fixes. Not merged.** One Progress integration test fails on Postgres every time. The tester stalled (watchdog) after finding it; the main session confirmed the failure and wrote this section.
+
+| Check | Result |
+| --- | --- |
+| Progress integration, Postgres (compose `postgres`) | 101 pass, **1 fail** (102) |
+| Same test alone, compose `postgres` | fails 3/3 |
+| Same test alone, fresh `postgres:17-alpine` (throwaway, port 55432) | fails 2/2 |
+| Same test at reviewed commit `d60e774`, fresh Postgres | fails 2/2 alone; full suite 100/101, same single failure |
+| Same test alone, SQL Server (LocalDB) | pass |
+
+Failing test: `Progress.IntegrationTests.Messaging.SupportLinkQueueTests.SupportLinkConsumers_Consume_FromProgressPrefixedQueues`
+
+```
+Expected harness.Consumed.Any<SupportLinkActivated>(LinkId == linkId) to be True, but found False.  (≈200 ms)
+```
+
+- No consumer exception inside the test window. The consumers run the EF inbox query (`SELECT *, xmin FROM "InboxState" ... FOR UPDATE`) but the harness reports nothing consumed before it goes inactive.
+- The `3D000 database does not exist` errors in the log come later: consumers still retry after the factory dropped the test database. They are a symptom, not the cause.
+- Not caused by round-1 test changes (fails at `d60e774`). Earlier runs reported this suite green on `wb-pg`; that could not be reproduced now. Cause is open → `/code`.
+
+Not run this round (blocked by the failure; rerun after the fix):
+
+- `e2e/api` on the Postgres stack, `e2e/ui` smoke (adult + child), 2 GB `docker stats` check, `aspire run` (both modes).
+
+Environment observations:
+
+- `docker compose ... --build` fails on this machine (Compose v5.6.1 bake: `additional privileges requested: pass "--allow=fs.read=src\Services\<X>\Dockerfile"`), also for the base file. `make up` / `make up-postgres` are affected. The Postgres stack was started with `up -d --no-build` using images built from this branch; all 5 APIs `/health/ready` = 200.
+- Postgres compose stack left running; `wb-pg` stopped (not removed).
