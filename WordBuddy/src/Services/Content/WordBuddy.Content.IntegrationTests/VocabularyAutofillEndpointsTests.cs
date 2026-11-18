@@ -337,9 +337,10 @@ public sealed class VocabularyAutofillEndpointsTests
 
             // A row written without the WB-25 columns, as before the migration.
             string hash = Sense.ComputeContentHash(word, "Old.", null);
+            // Provider-neutral SQL: quoted names, parameters for every value (booleans differ between engines).
             await db.Database.ExecuteSqlInterpolatedAsync($@"
-INSERT INTO Senses (Id, LexemeId, Word, Definition, ContentHash, Source, OwnerUserId, ShareStatus, VisibleToChildren, CreatedAtUtc)
-VALUES ({rawId}, {lexemeId}, {word}, N'Old.', {hash}, N'System', {SystemOwner.UserId}, N'Private', 0, {DateTime.UtcNow})");
+INSERT INTO ""Senses"" (""Id"", ""LexemeId"", ""Word"", ""Definition"", ""ContentHash"", ""Source"", ""OwnerUserId"", ""ShareStatus"", ""VisibleToChildren"", ""CreatedAtUtc"")
+VALUES ({rawId}, {lexemeId}, {word}, {"Old."}, {hash}, {"System"}, {SystemOwner.UserId}, {"Private"}, {false}, {DateTime.UtcNow})");
         }
 
         using IServiceScope check = _factory.Services.CreateScope();

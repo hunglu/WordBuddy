@@ -1,5 +1,4 @@
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -7,6 +6,7 @@ using WordBuddy.Content.Application.DTOs;
 using WordBuddy.Content.Application.Interfaces;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.Dialects;
 using WordBuddy.Content.Infrastructure.Persistence.Configurations;
 using WordBuddy.Shared.Kernel;
 
@@ -14,26 +14,15 @@ namespace WordBuddy.Content.Infrastructure.Repositories;
 
 internal sealed class LexemeAdminRepository : ILexemeAdminRepository
 {
-    // One statement: the row goes only while none of the six FK columns holds the asset, so a
-    // concurrent new reference cannot slip in between a check and the delete.
-    private const string GuardedDeleteSql = """
-        DELETE FROM [MediaAssets]
-        OUTPUT deleted.[Url]
-        WHERE [Id] = @id
-          AND NOT EXISTS (SELECT 1 FROM [Lexemes] WHERE [UkAudioAssetId] = @id OR [UsAudioAssetId] = @id)
-          AND NOT EXISTS (SELECT 1 FROM [Senses] WHERE [AudioAssetId] = @id OR [ImageAssetId] = @id)
-          AND NOT EXISTS (SELECT 1 FROM [DailyPhrases] WHERE [AudioAssetId] = @id OR [VideoAssetId] = @id)
-        """;
-
-    private const int ForeignKeyViolation = 547;
-
     private readonly ContentDbContext _dbContext;
     private readonly ILogger<LexemeAdminRepository> _logger;
+    private readonly IDatabaseDialect _dialect;
 
-    public LexemeAdminRepository(ContentDbContext dbContext, ILogger<LexemeAdminRepository> logger)
+    public LexemeAdminRepository(ContentDbContext dbContext, ILogger<LexemeAdminRepository> logger, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _dialect = dialect;
     }
 
     public async Task<Result<PagedResult<AdminLexemeListItemDto>>> SearchAsync(
@@ -45,7 +34,9 @@ internal sealed class LexemeAdminRepository : ILexemeAdminRepository
 
         IQueryable<Lexeme> query = _dbContext.Lexemes.AsNoTracking();
 
-        string? escaped = string.IsNullOrWhiteSpace(search) ? null : LikePattern.Escape(search);
+        // NormalizedLemma is stored upper-case; upper-casing the term keeps the match case-insensitive on
+        // PostgreSQL (SQL Server already ignores case through its collation).
+        string? escaped = string.IsNullOrWhiteSpace(search) ? null : LikePattern.Escape(search.ToUpperInvariant());
         string containsPattern = $"%{escaped}%";
         string prefixPattern = $"{escaped}%";
         if (escaped is not null)
@@ -227,30 +218,34 @@ internal sealed class LexemeAdminRepository : ILexemeAdminRepository
         DbConnection connection = _dbContext.Database.GetDbConnection();
         await using DbCommand command = connection.CreateCommand();
         command.Transaction = transaction.GetDbTransaction();
-        command.CommandText = GuardedDeleteSql;
+        command.CommandText = _dialect.GuardedMediaAssetDeleteSql;
 
         DbParameter parameter = command.CreateParameter();
         parameter.ParameterName = "@id";
         parameter.Value = assetId;
         command.Parameters.Add(parameter);
 
+        // PostgreSQL aborts the whole transaction on any error, so the statement runs behind a savepoint.
+        // Rolling back to it keeps the unlink that was already saved (on SQL Server this is harmless).
+        const string savepoint = "guarded_media_delete";
+        await transaction.CreateSavepointAsync(savepoint, ct);
         try
         {
             object? url = await command.ExecuteScalarAsync(ct);
             return url as string;
         }
-        catch (SqlException ex) when (ex.Number == ForeignKeyViolation)
+        catch (DbException ex) when (_dialect.IsForeignKeyViolation(ex))
         {
             // A concurrent writer referenced the asset after the NOT EXISTS probes. The statement
             // fails alone: the unlink still commits, the row and the file stay.
+            await transaction.RollbackToSavepointAsync(savepoint, ct);
             _logger.LogInformation("Media asset delete skipped: AssetId={AssetId} is referenced again", assetId);
             return null;
         }
     }
 
-    private static bool IsDuplicatePartOfSpeech(DbUpdateException ex) =>
-        ex.InnerException is SqlException { Number: 2601 or 2627 } sql
-        && sql.Message.Contains(LexemeConfiguration.LemmaPartOfSpeechIndexName, StringComparison.Ordinal);
+    private bool IsDuplicatePartOfSpeech(DbUpdateException ex) =>
+        _dialect.IsUniqueViolation(ex, LexemeConfiguration.LemmaPartOfSpeechIndexName);
 
     private static Error DuplicatePartOfSpeech() =>
         Error.Conflict("Lexeme.DuplicatePartOfSpeech", "Another lexeme with the same word already has this part of speech.");

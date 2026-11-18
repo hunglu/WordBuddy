@@ -73,6 +73,9 @@ this image.
 Copy `WordBuddy.Identity.Api/appsettings.Development.json.example` to
 `appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyIdentity`)
+- `Database:Provider` — `SqlServer` (default when missing) or `Postgres` (PostgreSQL 15 or newer, ADR 0009).
+  Any other value stops the host. With `Postgres`, `ConnectionStrings:DefaultConnection` is an Npgsql string, e.g.
+  `Host=localhost;Database=WordBuddyIdentity;Username=postgres;Password=<password>`. Env var: `Database__Provider`.
 - `Jwt:Secret` / `Jwt:Issuer` / `Jwt:ExpiryMinutes`
 - `Messaging:*` — bus settings, validated at startup (full key table: `docs/features/messaging.md`):
   `Transport`, `RabbitMq:{Host,VirtualHost,Username,HeartbeatSeconds,RequestedConnectionTimeoutMs}`,
@@ -99,6 +102,6 @@ every service uses.
 | `WordBuddy.Identity.Api` | Controllers, `Program.cs`, composition root |
 | `WordBuddy.Identity.Application` | Commands/queries, DTOs, validators |
 | `WordBuddy.Identity.Domain` | `User` entity, `AgeGroup` enum |
-| `WordBuddy.Identity.Infrastructure` | EF Core `IdentityDbContext`, repositories |
+| `WordBuddy.Identity.Infrastructure` | EF Core `IdentityDbContext` (SQL Server and PostgreSQL subclasses), repositories |
 | `WordBuddy.Identity.UnitTests` | Handler/domain unit tests (Moq) |
 | `WordBuddy.Identity.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

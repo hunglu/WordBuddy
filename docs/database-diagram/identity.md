@@ -1,7 +1,9 @@
 # Identity — database diagram
 
-Database `WordBuddyIdentity` · source: `IdentityDbContextModelSnapshot.cs` ·
+Database `WordBuddyIdentity` · source: `SqlServerIdentityDbContextModelSnapshot.cs` ·
 last migration: `20261017083349_AddPreferredLanguage`
+
+> **PostgreSQL:** On PostgreSQL (`Database:Provider=Postgres`, ADR 0009) `Users.Email`, `Users.Alias` and `Users.DisplayName` are `citext` (case-insensitive like SQL Server), filtered indexes use `"Column"` quoting, and every `DateTime` is `timestamp with time zone`. Logical schema, names and indexes are the same. Postgres migrations: `Migrations/Postgres/` (last: `InitialCreate`).
 
 ```mermaid
 erDiagram

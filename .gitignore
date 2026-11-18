@@ -3,6 +3,7 @@
 
 ## Kubernetes secrets — copy k8s/secret.yaml.example → k8s/secret.yaml to get started
 WordBuddy/k8s/secret.yaml
+WordBuddy/k8s/postgres/secret.yaml
 
 ## .NET
 bin/

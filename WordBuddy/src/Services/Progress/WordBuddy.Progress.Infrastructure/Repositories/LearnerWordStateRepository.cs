@@ -1,8 +1,8 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using WordBuddy.Progress.Application.Interfaces;
 using WordBuddy.Progress.Domain;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Progress.Infrastructure.Persistence.Dialects;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Progress.Infrastructure.Repositories;
@@ -10,10 +10,12 @@ namespace WordBuddy.Progress.Infrastructure.Repositories;
 internal sealed class LearnerWordStateRepository : ILearnerWordStateRepository
 {
     private readonly ProgressDbContext _dbContext;
+    private readonly IDatabaseDialect _dialect;
 
-    public LearnerWordStateRepository(ProgressDbContext dbContext)
+    public LearnerWordStateRepository(ProgressDbContext dbContext, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
+        _dialect = dialect;
     }
 
     public async Task<Result<LearnerWordState>> GetTrackedAsync(Guid userId, Guid senseId, CancellationToken ct = default)
@@ -104,10 +106,10 @@ internal sealed class LearnerWordStateRepository : ILearnerWordStateRepository
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Another request changed the same LearnerWordState (RowVersion) since it was read.
+            // Another request changed the same LearnerWordState (row version) since it was read.
             return Result.Failure(ConcurrentUpdate);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        catch (DbUpdateException ex) when (_dialect.IsUniqueViolation(ex))
         {
             // Duplicate (UserId, SessionId, SenseId, AttemptNo) on ReviewLogs, or another unique key.
             return Result.Failure(ConcurrentUpdate);

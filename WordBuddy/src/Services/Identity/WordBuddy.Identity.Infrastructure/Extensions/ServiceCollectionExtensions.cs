@@ -5,6 +5,8 @@ using WordBuddy.Identity.Application.Interfaces;
 using WordBuddy.Identity.Application.Settings;
 using WordBuddy.Identity.Infrastructure.Messaging;
 using WordBuddy.Identity.Infrastructure.Persistence;
+using WordBuddy.Identity.Infrastructure.Persistence.Postgres;
+using WordBuddy.Identity.Infrastructure.Persistence.SqlServer;
 using WordBuddy.Identity.Infrastructure.Repositories;
 using WordBuddy.Identity.Infrastructure.Services;
 using WordBuddy.Identity.Infrastructure.Settings;
@@ -17,12 +19,27 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<IdentityDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-                   .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+        DatabaseOptions database = DatabaseOptions.FromConfiguration(configuration);
+        string? connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        // Repositories, health checks and MassTransit keep resolving IdentityDbContext; only the subclass differs.
+        if (database.Provider == DatabaseProvider.Postgres)
+        {
+            services.AddDbContext<IdentityDbContext, PostgresIdentityDbContext>(options =>
+                options.UseNpgsql(connectionString)
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+        }
+        else
+        {
+            services.AddDbContext<IdentityDbContext, SqlServerIdentityDbContext>(options =>
+                options.UseSqlServer(connectionString)
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+        }
 
         // Publisher only: support-link events go out through the EF Core outbox (IdentityDbContext).
-        services.AddWordBuddyMessaging<IdentityDbContext>(configuration);
+        services.AddWordBuddyMessaging<IdentityDbContext>(
+            configuration,
+            lockProvider: database.Provider == DatabaseProvider.Postgres ? OutboxLockProvider.Postgres : OutboxLockProvider.SqlServer);
 
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
 

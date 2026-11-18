@@ -8,6 +8,9 @@ using WordBuddy.Content.Application.Interfaces.Autofill;
 using WordBuddy.Content.Infrastructure.Autofill;
 using WordBuddy.Content.Infrastructure.Messaging;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.Dialects;
+using WordBuddy.Content.Infrastructure.Persistence.Postgres;
+using WordBuddy.Content.Infrastructure.Persistence.SqlServer;
 using WordBuddy.Content.Infrastructure.Repositories;
 using WordBuddy.Content.Infrastructure.Services;
 using WordBuddy.Content.Infrastructure.Settings;
@@ -22,9 +25,24 @@ public static class ServiceCollectionExtensions
     /// <c>Autofill:UseFakeClients</c> switch on the keyless fake auto-fill clients.</param>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
-        services.AddDbContext<ContentDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-                   .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+        DatabaseOptions database = DatabaseOptions.FromConfiguration(configuration);
+        string? connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        // Repositories, health checks and MassTransit keep resolving ContentDbContext; only the subclass differs.
+        if (database.Provider == DatabaseProvider.Postgres)
+        {
+            services.AddDbContext<ContentDbContext, PostgresContentDbContext>(options =>
+                options.UseNpgsql(connectionString)
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+            services.AddSingleton<IDatabaseDialect, PostgresDatabaseDialect>();
+        }
+        else
+        {
+            services.AddDbContext<ContentDbContext, SqlServerContentDbContext>(options =>
+                options.UseSqlServer(connectionString)
+                       .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
+            services.AddSingleton<IDatabaseDialect, SqlServerDatabaseDialect>();
+        }
 
         // Publisher: LearnerWord changes go out through the EF Core outbox (ContentDbContext).
         // Consumer: Identity support-link events, deduped by the EF Core inbox.
@@ -35,7 +53,8 @@ public static class ServiceCollectionExtensions
             bus.AddConsumer<LearnerGroupMemberActivatedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberActivated);
             bus.AddConsumer<LearnerGroupMemberRemovedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.MemberRemoved);
             bus.AddConsumer<LearnerGroupDeletedConsumer>().Endpoint(e => e.Name = LearnerGroupQueues.GroupDeleted);
-        });
+        },
+        database.Provider == DatabaseProvider.Postgres ? OutboxLockProvider.Postgres : OutboxLockProvider.SqlServer);
 
         services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
 

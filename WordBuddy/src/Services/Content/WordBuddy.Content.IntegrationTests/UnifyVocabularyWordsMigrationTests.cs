@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.SqlServer;
 
 namespace WordBuddy.Content.IntegrationTests;
 
@@ -65,7 +66,7 @@ public sealed class UnifyVocabularyWordsMigrationTests : IAsyncLifetime
             InitialCatalog = $"WordBuddyContentMigrationTests_{Guid.NewGuid():N}",
         };
         _connectionString = builder.ConnectionString;
-        _dbContext = new ContentDbContext(new DbContextOptionsBuilder<ContentDbContext>().UseSqlServer(_connectionString).Options);
+        _dbContext = new SqlServerContentDbContext(new DbContextOptionsBuilder<SqlServerContentDbContext>().UseSqlServer(_connectionString).Options);
     }
 
     public async Task InitializeAsync()
@@ -140,7 +141,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
             .Select(r => ((Guid)r[0]!, (Guid)r[1]!, (bool)r[2]!))
             .ToList();
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_DropsOldTablesAndEveryFormerRowIsReachable()
     {
         List<object?[]> oldTables = await QueryAsync(
@@ -154,7 +155,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         formerIds.Should().OnlyContain(id => words.Contains(id) || (remaps.ContainsKey(id) && words.Contains(remaps[id])));
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_PreservesLessonWordIdsAudioAndLessonLinks()
     {
         List<object?[]> system = await QueryAsync(
@@ -169,7 +170,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         lessonLinks.Select(r => (Guid)r[0]!).Should().BeEquivalentTo([System1, System2]);
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_ComputesTheSameHashAsTheDomain()
     {
         List<object?[]> rows = await QueryAsync($"SELECT ContentHash, NormalizedWord FROM VocabularyWords WHERE Id = '{A1}'");
@@ -179,7 +180,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         ((string)rows[0][1]!).Should().Be("APPLE");
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_MergesDuplicatesAndRecordsRemaps()
     {
         Dictionary<Guid, Guid> remaps = await GetRemapsAsync();
@@ -193,7 +194,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         remaps.Should().NotContainKeys(E1, F1, H1, I1, J1);
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_LinksEveryOwnerOnceWithCorrectAuthorship()
     {
         Dictionary<Guid, Guid> remaps = await GetRemapsAsync();
@@ -215,7 +216,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         });
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_KeepsChildCopyOfNonChildVisibleSharedWord()
     {
         Dictionary<Guid, Guid> remaps = await GetRemapsAsync();
@@ -229,7 +230,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         links.Where(l => l.UserId == OwnerI).Should().BeEquivalentTo(new[] { (OwnerI, I1, true) });
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Up_LeavesNoDuplicateLearnerRowsPerOwner()
     {
         List<object?[]> duplicates = await QueryAsync(
@@ -242,7 +243,7 @@ INSERT INTO PersonalVocabularyWords (Id, OwnerUserId, OwnerAgeGroup, Word, Defin
         ((bool)index[0][0]!).Should().BeTrue();
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task UnifyVocabularyWords_Down_RebuildsOldTables()
     {
         await _dbContext.GetService<IMigrator>().MigrateAsync(BeforeMigration);

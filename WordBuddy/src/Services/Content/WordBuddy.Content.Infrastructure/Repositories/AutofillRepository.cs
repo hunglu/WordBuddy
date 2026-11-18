@@ -1,10 +1,10 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using WordBuddy.Content.Application.Interfaces.Autofill;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.Dialects;
 using WordBuddy.Shared.Kernel;
 
 namespace WordBuddy.Content.Infrastructure.Repositories;
@@ -13,11 +13,13 @@ internal sealed class AutofillRepository : IAutofillRepository
 {
     private readonly ContentDbContext _dbContext;
     private readonly ILogger<AutofillRepository> _logger;
+    private readonly IDatabaseDialect _dialect;
 
-    public AutofillRepository(ContentDbContext dbContext, ILogger<AutofillRepository> logger)
+    public AutofillRepository(ContentDbContext dbContext, ILogger<AutofillRepository> logger, IDatabaseDialect dialect)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _dialect = dialect;
     }
 
     public async Task<Result<IReadOnlyList<Sense>>> GetCatalogAsync(string normalizedLemma, CancellationToken ct = default)
@@ -66,16 +68,19 @@ internal sealed class AutofillRepository : IAutofillRepository
 
                 // Guarded orphan delete (D14/D16): the null-POS lexeme goes only when no sense —
                 // including any private learner sense — references it any more.
-                int deleted = await _dbContext.Database.ExecuteSqlInterpolatedAsync(
-                    $"DELETE FROM [Lexemes] WHERE [NormalizedLemma] = {save.NormalizedLemma} AND [PartOfSpeech] IS NULL AND NOT EXISTS (SELECT 1 FROM [Senses] s WHERE s.[LexemeId] = [Lexemes].[Id])",
-                    ct);
+                string normalizedLemma = save.NormalizedLemma;
+                int deleted = await _dbContext.Lexemes
+                    .Where(l => l.NormalizedLemma == normalizedLemma
+                        && l.PartOfSpeech == null
+                        && !_dbContext.Senses.Any(s => s.LexemeId == l.Id))
+                    .ExecuteDeleteAsync(ct);
 
                 await transaction.CommitAsync(ct);
                 _logger.LogDebug("Auto-fill saved; OrphanLexemesDeleted={Deleted}", deleted);
                 return Result.Success();
             });
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
+        catch (DbUpdateException ex) when (_dialect.IsUniqueViolation(ex))
         {
             // A concurrent auto-fill stored the same (NormalizedLemma, PartOfSpeech) first.
             _dbContext.ChangeTracker.Clear();

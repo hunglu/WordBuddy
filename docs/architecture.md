@@ -27,6 +27,13 @@ flowchart LR
 - **Messaging (WB-21).** Async events via MassTransit on RabbitMQ (`AddWordBuddyMessaging` in `WordBuddy.Shared.Infrastructure`). Publishers write to an EF Core outbox in the same transaction; consumers dedupe with an EF Core inbox. Payloads carry ids and timestamps only. The RabbitMQ management UI is internal: `127.0.0.1` in compose, `kubectl port-forward` in kind, never on the ingress.
 - **Auth.** Identity issues JWTs; every service validates them.
 - **One SQL Server instance** hosts all databases locally (`sqlserver` in compose); each service owns its schema and migrations.
+- **Persistence providers (WB-71, ADR `adr/0009-multi-provider-persistence.md`).** PostgreSQL becomes a second EF Core provider, chosen per service with `Database:Provider` = `SqlServer` (default) | `Postgres`. Only Infrastructure changes; each service keeps one migration set per provider.
+
+```mermaid
+flowchart LR
+    CFG["Database:Provider"] -->|SqlServer · default| SS[(SQL Server)]
+    CFG -->|Postgres| PG[(PostgreSQL)]
+```
 
 ## 2. Inside one service — Clean Architecture + CQRS
 

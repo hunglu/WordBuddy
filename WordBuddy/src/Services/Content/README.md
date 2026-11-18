@@ -125,11 +125,13 @@ dotnet user-secrets set "Messaging:RabbitMq:Password" "<password>" --project Wor
 dotnet run --project WordBuddy.Content.Api
 ```
 
-Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=content` or
-`dotnet ef database update`):
+Migrations (generate only; applying is ask-gated: `make k8s-migrate SERVICE=content [DB=postgres]` or
+`dotnet ef database update --context <context>`). Two migrations per change, one per provider
+(see the `ef-migration` skill):
 
 ```bash
-dotnet ef migrations add <Name> --project WordBuddy.Content.Infrastructure --startup-project WordBuddy.Content.Infrastructure --output-dir Persistence/Migrations
+dotnet ef migrations add <Name> --context SqlServerContentDbContext --project WordBuddy.Content.Infrastructure --startup-project WordBuddy.Content.Api --output-dir Persistence/Migrations/SqlServer
+dotnet ef migrations add <Name> --context PostgresContentDbContext  --project WordBuddy.Content.Infrastructure --startup-project WordBuddy.Content.Api --output-dir Persistence/Migrations/Postgres
 ```
 
 Latest messaging migration: `AddMessagingOutbox` (`InboxState`, `OutboxMessage`, `OutboxState`).
@@ -149,6 +151,9 @@ yet a real PersistentVolume, so uploaded media does not survive a pod restart in
 Copy `WordBuddy.Content.Api/appsettings.Development.json.example` to
 `appsettings.Development.json` (gitignored) to get started locally. It holds:
 - `ConnectionStrings:DefaultConnection` — this service's own database (`WordBuddyContent`)
+- `Database:Provider` — `SqlServer` (default when missing) or `Postgres` (PostgreSQL 15 or newer, ADR 0009).
+  Any other value stops the host. With `Postgres`, `ConnectionStrings:DefaultConnection` is an Npgsql string, e.g.
+  `Host=localhost;Database=WordBuddyContent;Username=postgres;Password=<password>`. Env var: `Database__Provider`.
 - `Jwt:Secret`/`Jwt:Issuer` — **must match Identity's** dev values, since Content validates
   tokens Identity issued
 - `FileStorage:BasePath` — local media storage root (`C:\WordBuddyMedia` in dev)
@@ -167,6 +172,6 @@ Copy `WordBuddy.Content.Api/appsettings.Development.json.example` to
 | `WordBuddy.Content.Api` | Controllers, `Program.cs`, composition root |
 | `WordBuddy.Content.Application` | Commands/queries, DTOs, validators, `IFileStorageService` |
 | `WordBuddy.Content.Domain` | `Lesson`/`Vocabulary`/`Grammar`/`DailyPhrase`/`MediaAsset` entities |
-| `WordBuddy.Content.Infrastructure` | EF Core `ContentDbContext`, repositories, `LocalFileStorageService` |
+| `WordBuddy.Content.Infrastructure` | EF Core `ContentDbContext` (SQL Server and PostgreSQL subclasses), repositories, `LocalFileStorageService` |
 | `WordBuddy.Content.UnitTests` | Handler/domain unit tests (Moq) |
 | `WordBuddy.Content.IntegrationTests` | API/DB integration tests (`WebApplicationFactory`) |

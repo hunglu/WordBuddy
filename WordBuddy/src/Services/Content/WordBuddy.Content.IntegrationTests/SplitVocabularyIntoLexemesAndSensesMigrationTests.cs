@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using WordBuddy.Content.Domain;
 using WordBuddy.Content.Infrastructure.Persistence;
+using WordBuddy.Content.Infrastructure.Persistence.SqlServer;
 
 namespace WordBuddy.Content.IntegrationTests;
 
@@ -65,7 +66,7 @@ public sealed class SplitVocabularyIntoLexemesAndSensesMigrationTests : IAsyncLi
             InitialCatalog = $"WordBuddyContentSplitTests_{Guid.NewGuid():N}",
         };
         _connectionString = builder.ConnectionString;
-        _dbContext = new ContentDbContext(new DbContextOptionsBuilder<ContentDbContext>().UseSqlServer(_connectionString).Options);
+        _dbContext = new SqlServerContentDbContext(new DbContextOptionsBuilder<SqlServerContentDbContext>().UseSqlServer(_connectionString).Options);
     }
 
     public async Task InitializeAsync()
@@ -172,7 +173,7 @@ INSERT INTO UserVocabularyWords (Id, UserId, VocabularyWordId, AddedAtUtc, IsAut
     private async Task<string> GetLemmaAsync(Guid lexemeId) =>
         (string)(await QueryAsync($"SELECT Lemma FROM Lexemes WHERE Id = '{lexemeId}'")).Single()[0]!;
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Up_KeepsEverySenseIdAndContentHashByteIdentical()
     {
         List<object?[]> senses = await QueryAsync($"SELECT {WordColumns} FROM Senses ORDER BY Id");
@@ -181,7 +182,7 @@ INSERT INTO UserVocabularyWords (Id, UserId, VocabularyWordId, AddedAtUtc, IsAut
         senses.Should().BeEquivalentTo(_wordsBefore, options => options.WithStrictOrdering());
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Up_CreatesOneLexemePerNormalizedWordWithNullPartOfSpeech()
     {
         List<object?[]> lexemes = await QueryAsync("SELECT Id, PartOfSpeech, NormalizedLemma FROM Lexemes");
@@ -200,7 +201,7 @@ INSERT INTO UserVocabularyWords (Id, UserId, VocabularyWordId, AddedAtUtc, IsAut
         (await GetLemmaAsync(lexemeIds[AppleA])).Should().Be("apple", "otherwise the oldest row wins");
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Up_CreatesUniqueLemmaPartOfSpeechIndexWithoutFilter()
     {
         List<object?[]> index = await QueryAsync(@"
@@ -225,7 +226,7 @@ ORDER BY ic.key_ordinal");
         (await insertDuplicate.Should().ThrowAsync<SqlException>()).Which.Number.Should().Be(2601);
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Up_KeepsLearnerWordIdsAndSetsAddedByLearner()
     {
         List<object?[]> links = await QueryAsync("SELECT Id, UserId, SenseId, AddedAtUtc, IsAuthor FROM LearnerWords ORDER BY Id");
@@ -235,7 +236,7 @@ ORDER BY ic.key_ordinal");
         extra.Should().OnlyContain(r => (string)r[0]! == "Learner" && r[1] == null);
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Up_RenamesLessonLinksToLessonSensesAndKeepsSortOrder()
     {
         List<object?[]> lessonLinks = await QueryAsync("SELECT LessonId, SenseId, SortOrder FROM LessonSenses ORDER BY LessonId, SenseId");
@@ -250,7 +251,7 @@ ORDER BY ic.key_ordinal");
         foreignKeys.Select(r => (string)r[0]!).Should().BeEquivalentTo(["FK_LessonSenses_Lessons_LessonId", "FK_LessonSenses_Senses_SenseId"]);
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Up_RenamesTablesAndCreatesSenseTranslations()
     {
         List<object?[]> oldTables = await QueryAsync(
@@ -271,7 +272,7 @@ ORDER BY ic.key_ordinal");
         oldNames.Should().BeEmpty("every PK, FK and index was renamed");
     }
 
-    [Fact]
+    [SqlServerOnlyFact]
     public async Task SplitVocabularyIntoLexemesAndSenses_Down_RestoresOldSchemaWithSameIds()
     {
         await _dbContext.GetService<IMigrator>().MigrateAsync(BeforeMigration);

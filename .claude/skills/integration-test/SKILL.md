@@ -1,6 +1,6 @@
 ---
 name: integration-test
-description: Writes API integration tests for a WordBuddy microservice using WebApplicationFactory against a real SQL Server database (never mocked EF Core). Use when adding or changing an endpoint, a migration that moves data, or an authorization policy (especially child vs adult), or when Sam asks for integration tests in <Service>.IntegrationTests.
+description: Writes API integration tests for a WordBuddy microservice using WebApplicationFactory against a real database, SQL Server by default or PostgreSQL (never mocked EF Core). Use when adding or changing an endpoint, a migration that moves data, or an authorization policy (especially child vs adult), or when Sam asks for integration tests in <Service>.IntegrationTests.
 ---
 
 # Integration tests
@@ -42,5 +42,10 @@ faked. Reference implementation: `WordBuddy/src/Services/Content/WordBuddy.Conte
 dotnet test WordBuddy/src/Services/<Service>/WordBuddy.<Service>.slnx --filter "FullyQualifiedName~IntegrationTests"
 ```
 
-Needs a reachable SQL Server (LocalDB, or the Docker one via `<SERVICE>_TEST_CONNECTION_STRING`).
-If none is reachable, report the suite as **skipped**, never as passed.
+Default provider: SQL Server (LocalDB, or the Docker one via `<SERVICE>_TEST_CONNECTION_STRING`).
+For PostgreSQL (ADR 0009) set `WORDBUDDY_TEST_DB_PROVIDER=Postgres` and
+`WORDBUDDY_TEST_PG_CONNECTION_STRING` (server part only, e.g. `Host=localhost;Username=postgres;Password=...`;
+each factory adds a unique `Database=WordBuddy<Service>Tests_<guid>`). Run the suite on both providers.
+Tests that replay SQL Server migrations use `[SqlServerOnlyFact]` and skip on Postgres; raw SQL in tests
+must be provider-neutral (quoted names, parameters for values).
+If a provider is not reachable, report that suite/provider as **skipped**, never as passed.

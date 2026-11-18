@@ -267,7 +267,7 @@ public sealed class LessonsAdminEndpointsTests
         {
             ContentDbContext otherDb = other.ServiceProvider.GetRequiredService<ContentDbContext>();
             await otherDb.Database.ExecuteSqlInterpolatedAsync(
-                $"INSERT INTO LessonSenses (LessonId, SenseId, SortOrder) VALUES ({lessonId}, {dog}, 0)");
+                $"INSERT INTO \"LessonSenses\" (\"LessonId\", \"SenseId\", \"SortOrder\") VALUES ({lessonId}, {dog}, 0)");
         }
 
         Result result = await repository.SaveChangesAsync();

@@ -1,9 +1,11 @@
 # Progress — database diagram
 
-Database `WordBuddyProgress` · source: `ProgressDbContextModelSnapshot.cs` ·
+Database `WordBuddyProgress` · source: `SqlServerProgressDbContextModelSnapshot.cs` ·
 last migration: `20261011130627_AddChallenges`
 
 The domain tables have no foreign keys between them (one exception: `VocabularySessionIssueItems` → `VocabularySessionIssues`); every id column points to another service.
+
+> **PostgreSQL:** On PostgreSQL (`Database:Provider=Postgres`, ADR 0009) `LearnerWordStates` has no `RowVersion` column: the `xmin` system column is the concurrency token. The filtered index on `ReviewLogs.ExerciseId` uses `"Column"` quoting and every `DateTime` is `timestamp with time zone`. Logical schema, names and indexes are the same. Postgres migrations: `Migrations/Postgres/` (last: `InitialCreate`).
 
 ```mermaid
 erDiagram

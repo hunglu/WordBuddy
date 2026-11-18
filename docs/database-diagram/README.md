@@ -1,8 +1,9 @@
 # Database diagrams
 
 One ER diagram per service, generated from that service's EF Core model snapshot
-(`*/Persistence/Migrations/*DbContextModelSnapshot.cs`). The snapshot is the source of truth;
-these diagrams must match it.
+(`*/Persistence/Migrations/SqlServer/SqlServer*DbContextModelSnapshot.cs`). The snapshot is the source of truth;
+these diagrams must match it. The Postgres provider (ADR 0009) has the same logical schema; each diagram carries one
+note for the Postgres-only column types. A new migration touches both migration sets.
 
 | Service | Database | Tables | Diagram |
 | --- | --- | --- | --- |

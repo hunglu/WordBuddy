@@ -1,0 +1,91 @@
+# PostgreSQL override (ADR 0009). Use it on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up --build     (or: make up-postgres)
+#
+# SQL Server and its init job move to the inactive "sqlserver" profile, so only PostgreSQL runs.
+# The four data APIs switch with Database__Provider=Postgres and read their own *_PG_CONNECTION_STRING
+# from .env (see .env.example). Needs Docker Compose 2.24 or newer (`depends_on: !override`).
+# Do not run it together with `aspire run` (same API ports).
+
+services:
+  sqlserver:
+    profiles: ["sqlserver"]
+
+  sqlserver-init:
+    profiles: ["sqlserver"]
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Creates the five databases if they are missing, then exits (same job as sqlserver-init).
+  postgres-init:
+    image: postgres:17-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        for db in WordBuddyIdentity WordBuddyContent WordBuddyQuiz WordBuddyProgress WordBuddyNotification; do
+          exists=$$(psql -h postgres -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$$db'")
+          if [ "$$exists" != "1" ]; then
+            psql -h postgres -U postgres -c "CREATE DATABASE \"$$db\""
+          fi
+        done
+    restart: "no"
+
+  identity-api:
+    depends_on: !override
+      postgres-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: ${IDENTITY_PG_CONNECTION_STRING}
+
+  content-api:
+    depends_on: !override
+      postgres-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: ${CONTENT_PG_CONNECTION_STRING}
+
+  quiz-api:
+    depends_on: !override
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: ${QUIZ_PG_CONNECTION_STRING}
+
+  progress-api:
+    depends_on: !override
+      postgres-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: ${PROGRESS_PG_CONNECTION_STRING}
+
+volumes:
+  pg-data:
