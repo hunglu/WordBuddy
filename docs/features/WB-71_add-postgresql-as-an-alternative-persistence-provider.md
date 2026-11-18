@@ -40,7 +40,7 @@ Database:Provider
 | docker compose | `make up` | `make up-postgres` (`docker-compose.postgres.yml`) |
 | Migrations | `make migrate SERVICE=<x>` | `make migrate SERVICE=<x> DB=postgres` |
 | kind | `make k8s-apply` | `make k8s-apply DB=postgres` (`k8s/postgres/`) |
-| Aspire | `aspire run` | `aspire run` with `db-provider=Postgres` |
+| Aspire | `aspire run` with `db-provider=SqlServer` + `sql-password` | `aspire run` (default since `appsettings.json` sets `db-provider=Postgres`; needs `pg-password`) |
 
 ## API
 

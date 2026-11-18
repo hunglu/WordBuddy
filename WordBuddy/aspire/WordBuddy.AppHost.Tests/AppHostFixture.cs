@@ -11,6 +11,7 @@ internal static class AppHostFixture
     private static readonly string[] BaseArgs =
     [
         "Parameters:sql-password=test-only-Sql1!",
+        "Parameters:pg-password=test-only-Pg1!",
         "Parameters:jwt-secret=test-only-jwt-secret-0123456789abcdef",
         "Parameters:rabbitmq-password=test-only-rabbit",
     ];

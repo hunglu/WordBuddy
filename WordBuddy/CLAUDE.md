@@ -133,7 +133,8 @@ make up-postgres                            # docker compose with PostgreSQL ins
 
 Content serves REST on 5081 and gRPC on 5091 (containers: 8080 / 8081). `--urls` has no effect there.
 
-Local dev loop (ADR `../docs/adr/0007`): `aspire run` from `aspire/` starts SQL Server, RabbitMQ,
+Local dev loop (ADR `../docs/adr/0007`): `aspire run` from `aspire/` starts PostgreSQL (default,
+`Parameters:db-provider` in the AppHost `appsettings.json`; `SqlServer` via user-secrets), RabbitMQ,
 the 5 APIs (5080-5084) and the UI (3000), with one dashboard. Setup and secrets: `README.md` →
 "Aspire (local dev)". Never run it together with `make up` (same ports). The AppHost stays
 orchestration-only: path-based `AddProject`, no `ProjectReference` to a service, no

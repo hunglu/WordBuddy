@@ -142,8 +142,10 @@ public class AppHostRunTests
     /// </summary>
     private static void UseThrowawayContainers(IDistributedApplicationTestingBuilder builder)
     {
-        IResource sql = builder.Resources.Single(r => r.Name == "sql");
-        sql.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "tcp").Port = null;
+        // The database container (pg by default, sql when db-provider=SqlServer) gets a dynamic host port,
+        // so a persistent container from a normal run may keep its fixed port.
+        IResource database = builder.Resources.Single(r => r.Name is "pg" or "sql");
+        database.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "tcp").Port = null;
 
         foreach (IResource resource in builder.Resources.Where(r => r is ContainerResource))
         {
