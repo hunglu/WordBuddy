@@ -65,20 +65,21 @@ dotnet pack src/Shared/WordBuddy.Shared.Kernel -o local-nuget-feed
 
 ## Aspire (local dev)
 
-One command starts SQL Server, RabbitMQ, the 5 APIs and the Vite UI, with one dashboard for
+One command starts PostgreSQL (default; SQL Server optional), RabbitMQ, the 5 APIs and the Vite UI, with one dashboard for
 traces and console logs (ADR [0007](../docs/adr/0007-aspire-local-orchestration.md)). It is a
 local dev loop only. Compose and `k8s/` are unchanged.
 
 ```
-aspire run → AppHost (WordBuddy/aspire) → SQL Server + RabbitMQ (containers)
+aspire run → AppHost (WordBuddy/aspire) → PostgreSQL (or SQL Server) + RabbitMQ (containers)
                                         → identity 5080, content 5081, quiz 5082,
                                           progress 5083, notification 5084 (processes)
                                         → ui 3000 (Vite)
 ```
 
 **Do not run it together with `make up`.** Both bind 5080-5084, 5672 and 15672. Stop Aspire first
-(Ctrl+C); RabbitMQ then frees its ports. The SQL Server container may keep running, but it uses
-host port 14330 (compose uses 1433), so it does not block `make up`.
+(Ctrl+C); RabbitMQ then frees its ports. The database container may keep running, but it uses
+host port 54320 for PostgreSQL or 14330 for SQL Server (compose uses 5432 / 1433), so it does not
+block `make up`.
 
 ### Prerequisites
 
@@ -92,7 +93,6 @@ host port 14330 (compose uses 1433), so it does not block `make up`.
 
 ```bash
 cd aspire/WordBuddy.AppHost
-dotnet user-secrets set "Parameters:sql-password" "<strong-sql-sa-password>"
 dotnet user-secrets set "Parameters:jwt-secret" "<at-least-32-characters>"
 dotnet user-secrets set "Parameters:rabbitmq-password" "<rabbitmq-password>"
 # optional, only to override the defaults from appsettings.json
@@ -103,10 +103,28 @@ dotnet user-secrets set "Parameters:rabbitmq-user" "wordbuddy"
 dotnet user-secrets set "Parameters:claude-api-key" "<claude-api-key>"
 ```
 
+**Database (ADR 0009).** Aspire runs on **PostgreSQL by default**: `db-provider` is `Postgres` in
+`appsettings.json`. Set the Postgres password once; to use SQL Server instead, override the
+provider and set `sql-password`:
+
+```bash
+cd aspire/WordBuddy.AppHost
+dotnet user-secrets set "Parameters:pg-password" "<strong-postgres-password>"
+# SQL Server instead of PostgreSQL:
+dotnet user-secrets set "Parameters:db-provider" "SqlServer"
+dotnet user-secrets set "Parameters:sql-password" "<strong-sql-sa-password>"
+```
+
+Postgres mode starts `postgres:17-alpine` on host port 54320 (compose keeps 5432) and no SQL Server
+container. `pg-password` is required in this mode: without it the AppHost waits for the value and
+the APIs never start. `sql-password` is needed only in SQL Server mode. Both passwords are read only
+on the first start with an empty volume. The services' own default (`Database:Provider`) stays
+`SqlServer`; Aspire sets it explicitly for each API.
+
 `Properties/launchSettings.json` starts the AppHost in `Development`, so it reads these
 user-secrets. If the dashboard asks for a secret, the AppHost did not start in `Development`; do
 not save a new value there, because it would no longer match the existing volumes.
-Non-secret defaults (`jwt-issuer`, `jwt-expiry-minutes`, `rabbitmq-user`) live in
+Non-secret defaults (`db-provider`, `jwt-issuer`, `jwt-expiry-minutes`, `rabbitmq-user`) live in
 `appsettings.json`; set them in user-secrets only to override them.
 
 ### Run
@@ -124,7 +142,8 @@ aspire run            # or: dotnet run --project WordBuddy.AppHost
 | Dashboard resource service | `localhost:20180` |
 | RabbitMQ management | <http://localhost:15672> |
 | RabbitMQ AMQP | `localhost:5672` |
-| SQL Server | `localhost,14330` (user `sa`, password = `Parameters:sql-password`) |
+| PostgreSQL (default) | `localhost:54320` (user `postgres`, password = `Parameters:pg-password`) |
+| SQL Server (`db-provider=SqlServer`) | `localhost,14330` (user `sa`, password = `Parameters:sql-password`) |
 | Uploaded media | `aspire/.data/media` (gitignored) |
 
 ### Good to know
@@ -159,7 +178,7 @@ provider for all four services. Mixing works but is not tested.
 | --- | --- | --- |
 | docker compose | `make up` | `make up-postgres` (`docker-compose.postgres.yml`; set `POSTGRES_PASSWORD` and `*_PG_CONNECTION_STRING` in `.env`, see `.env.example`) |
 | kind | `make k8s-apply` | `cp k8s/postgres/secret.yaml.example k8s/postgres/secret.yaml`, then `make k8s-apply DB=postgres` |
-| Aspire | `aspire run` | set `Parameters:db-provider=Postgres` and `Parameters:pg-password` (user-secrets), then `aspire run`. Container `postgres:17-alpine`, host port 54320 |
+| Aspire | set `Parameters:db-provider=SqlServer` and `Parameters:sql-password` (user-secrets), then `aspire run` | **default**: set `Parameters:pg-password` (user-secrets; see "Aspire (local dev)" → Prerequisites), then `aspire run`. Container `postgres:17-alpine`, host port 54320 |
 | migrations | `make migrate SERVICE=<x>` / `make k8s-migrate SERVICE=<x>` | add `DB=postgres` (passes `--context Postgres<Service>DbContext`) |
 
 Test suites: `WORDBUDDY_TEST_DB_PROVIDER=Postgres` and `WORDBUDDY_TEST_PG_CONNECTION_STRING`

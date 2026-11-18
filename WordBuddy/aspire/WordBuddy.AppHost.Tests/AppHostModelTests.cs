@@ -33,7 +33,7 @@ public class AppHostModelTests
 
         string[] names = [.. builder.Resources.Select(r => r.Name)];
 
-        names.Should().Contain(["sql", "rabbitmq", "ui"]);
+        names.Should().Contain(["pg", "rabbitmq", "ui"]);
         names.Should().Contain(Databases);
         names.Should().Contain(Apis);
     }
@@ -100,7 +100,7 @@ public class AppHostModelTests
 
         (string Resource, string Endpoint, int Port)[] expected =
         [
-            ("sql", "tcp", 14330),
+            ("pg", "tcp", 54320),
             ("rabbitmq", "tcp", 5672),
             ("rabbitmq", "management", 15672),
         ];
@@ -247,18 +247,40 @@ public class AppHostModelTests
     private static readonly string[] DataApis = ["identity", "content", "quiz", "progress"];
 
     private const string PostgresArgs = "Parameters:db-provider=Postgres";
+    private const string SqlServerArgs = "Parameters:db-provider=SqlServer";
     private const string PgPasswordArg = "Parameters:pg-password=test-only-Pg1!";
 
     [Fact]
-    public async Task AppHost_Build_DefaultProvider_DataApisGetSqlServerProviderAndNoPostgresResource()
+    public async Task AppHost_Build_DefaultProvider_DataApisGetPostgresProviderAndNoSqlResource()
     {
         IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync();
 
-        builder.Resources.Select(r => r.Name).Should().NotContain("pg");
+        string[] names = [.. builder.Resources.Select(r => r.Name)];
+
+        names.Should().Contain("pg", "appsettings.json makes PostgreSQL the Aspire default");
+        names.Should().NotContain("sql");
         foreach (string api in DataApis)
         {
             Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(builder.Resources.Single(r => r.Name == api));
-            env["Database__Provider"].Should().Be("SqlServer", "{0} must keep SQL Server by default", api);
+            env["Database__Provider"].Should().Be("Postgres", "{0} must use PostgreSQL by default under Aspire", api);
+        }
+    }
+
+    [Fact]
+    public async Task AppHost_Build_SqlServerProvider_HasSqlResourceOnPinnedPortAndSqlServerOnDataApis()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync(SqlServerArgs);
+
+        string[] names = [.. builder.Resources.Select(r => r.Name)];
+
+        names.Should().Contain("sql");
+        names.Should().NotContain("pg");
+        builder.Resources.Single(r => r.Name == "sql").Annotations.OfType<EndpointAnnotation>()
+            .Single(e => e.Name == "tcp").Port.Should().Be(14330);
+        foreach (string api in DataApis)
+        {
+            Dictionary<string, object> env = await AppHostFixture.GetEnvironmentAsync(builder.Resources.Single(r => r.Name == api));
+            env["Database__Provider"].Should().Be("SqlServer", "{0} must switch to SQL Server", api);
         }
     }
 
@@ -292,13 +314,13 @@ public class AppHostModelTests
     }
 
     [Fact]
-    public async Task AppHost_Build_PostgresProvider_DoesNotDeclareSqlPasswordAndDefaultDoesNotDeclarePgPassword()
+    public async Task AppHost_Build_PostgresProvider_DoesNotDeclareSqlPasswordAndSqlServerDoesNotDeclarePgPassword()
     {
         IDistributedApplicationTestingBuilder postgres = await AppHostFixture.CreateAsync(PostgresArgs, PgPasswordArg);
-        IDistributedApplicationTestingBuilder defaults = await AppHostFixture.CreateAsync();
+        IDistributedApplicationTestingBuilder sqlServer = await AppHostFixture.CreateAsync(SqlServerArgs);
 
         postgres.Resources.OfType<ParameterResource>().Select(r => r.Name).Should().Contain("pg-password").And.NotContain("sql-password");
-        defaults.Resources.OfType<ParameterResource>().Select(r => r.Name).Should().Contain("sql-password").And.NotContain("pg-password");
+        sqlServer.Resources.OfType<ParameterResource>().Select(r => r.Name).Should().Contain("sql-password").And.NotContain("pg-password");
     }
 
     [Fact]

@@ -3,8 +3,8 @@ using Aspire.Hosting.ApplicationModel;
 namespace WordBuddy.AppHost;
 
 /// <summary>
-/// Local dev orchestration for WordBuddy (ADR 0007). Starts SQL Server (default) or PostgreSQL
-/// (<c>Parameters:db-provider=Postgres</c>, ADR 0009) and RabbitMQ as containers, the 5 APIs as processes
+/// Local dev orchestration for WordBuddy (ADR 0007). Starts PostgreSQL (default from appsettings.json) or SQL Server
+/// (<c>Parameters:db-provider=SqlServer</c>, ADR 0009) and RabbitMQ as containers, the 5 APIs as processes
 /// (wired by csproj path, never by project reference) and the Vite UI.
 /// Environment keys mirror <c>docker-compose.yml</c> so both run paths stay aligned.
 /// </summary>
@@ -19,10 +19,10 @@ public static class Program
     /// <summary>Fixed PostgreSQL host port; compose owns 5432.</summary>
     public const int PostgresPort = 54320;
 
-    /// <summary>Value of <c>Parameters:db-provider</c> that selects the SQL Server model (default).</summary>
+    /// <summary>Value of <c>Parameters:db-provider</c> that selects the SQL Server model (also used when the key is unset).</summary>
     public const string SqlServerProvider = "SqlServer";
 
-    /// <summary>Value of <c>Parameters:db-provider</c> that selects the PostgreSQL model.</summary>
+    /// <summary>Value of <c>Parameters:db-provider</c> that selects the PostgreSQL model (the appsettings.json default).</summary>
     public const string PostgresProvider = "Postgres";
 
     /// <summary>Entry point: builds the model and runs it.</summary>
@@ -147,8 +147,8 @@ public static class Program
     }
 
     /// <summary>
-    /// Reads <c>Parameters:db-provider</c>: unset or <c>SqlServer</c> keeps the SQL Server stack, <c>Postgres</c>
-    /// starts PostgreSQL instead. Any other value fails fast. Read as plain configuration (not a prompting parameter).
+    /// Reads <c>Parameters:db-provider</c> (<c>Postgres</c> in appsettings.json): <c>Postgres</c> starts PostgreSQL, <c>SqlServer</c> or unset
+    /// starts SQL Server. Any other value fails fast. Read as plain configuration (not a prompting parameter).
     /// </summary>
     private static string ReadDbProvider(IDistributedApplicationBuilder builder)
     {
