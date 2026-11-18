@@ -1,6 +1,9 @@
 using FluentAssertions;
 using MassTransit.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using WordBuddy.Progress.Domain;
+using WordBuddy.Progress.Infrastructure.Persistence;
 using WordBuddy.Progress.Infrastructure.Messaging;
 using WordBuddy.Shared.Contracts.SupportLinks;
 
@@ -26,13 +29,40 @@ public sealed class SupportLinkQueueTests
         await harness.Bus.Publish(new SupportLinkActivated(linkId, Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow));
         await harness.Bus.Publish(new SupportLinkRevoked(linkId, Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow.AddSeconds(1)));
 
-        (await harness.Consumed.Any<SupportLinkActivated>(m => m.Context.Message.LinkId == linkId)).Should().BeTrue();
-        (await harness.Consumed.Any<SupportLinkRevoked>(m => m.Context.Message.LinkId == linkId)).Should().BeTrue();
+        // Poll the recorded list instead of Consumed.Any(): Any() gives up as soon as the harness inactivity
+        // timer (started with the host, 1.2 s) has fired. A cold start that migrates the database first
+        // (slower on PostgreSQL) outlives that timer, so Any() returned false before the consumers ran.
+        (await WaitUntilAsync(() => harness.Consumed.Select<SupportLinkActivated>(m => m.Context.Message.LinkId == linkId).Any()))
+            .Should().BeTrue("the activated consumer must run");
+        (await WaitUntilAsync(() => harness.Consumed.Select<SupportLinkRevoked>(m => m.Context.Message.LinkId == linkId).Any()))
+            .Should().BeTrue("the revoked consumer must run");
+
+        // Consumed also lists faulted consumes; the stored projection proves both consumers succeeded.
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ProgressDbContext db = scope.ServiceProvider.GetRequiredService<ProgressDbContext>();
+        SupportLinkProjection stored = await db.SupportLinkProjections.AsNoTracking().SingleAsync(p => p.LinkId == linkId);
+        stored.IsActive.Should().BeFalse("the revoke is the newest event");
 
         harness.Consumed.Select<SupportLinkActivated>(m => m.Context.Message.LinkId == linkId).First()
             .Context.ReceiveContext.InputAddress!.AbsolutePath.Should().EndWith("/" + SupportLinkQueues.Activated);
         harness.Consumed.Select<SupportLinkRevoked>(m => m.Context.Message.LinkId == linkId).First()
             .Context.ReceiveContext.InputAddress!.AbsolutePath.Should().EndWith("/" + SupportLinkQueues.Revoked);
         SupportLinkQueues.Activated.Should().Be("progress-support-link-activated");
+    }
+
+    private static async Task<bool> WaitUntilAsync(Func<bool> condition)
+    {
+        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return true;
+            }
+
+            await Task.Delay(50);
+        }
+
+        return condition();
     }
 }
