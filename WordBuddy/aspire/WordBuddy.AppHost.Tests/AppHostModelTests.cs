@@ -330,4 +330,47 @@ public class AppHostModelTests
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*db-provider*");
     }
+
+    [Fact]
+    public async Task AppHost_Build_PortsOverridden_ResourcesUseConfiguredPorts()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync(
+            "Ports:Postgres=55432", "Ports:RabbitMqManagement=15999", "Ports:Quiz=6082", "Ports:Ui=3100");
+
+        (string Resource, string Endpoint, int Port)[] expected =
+        [
+            ("pg", "tcp", 55432),
+            ("rabbitmq", "management", 15999),
+            ("quiz", "http", 6082),
+            ("ui", "http", 3100),
+            ("identity", "http", 5080),
+        ];
+
+        foreach ((string name, string endpointName, int port) in expected)
+        {
+            IResource resource = builder.Resources.Single(r => r.Name == name);
+            EndpointAnnotation endpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == endpointName);
+            endpoint.Port.Should().Be(port, "{0}/{1} must use Ports config or its default", name, endpointName);
+        }
+    }
+
+    [Fact]
+    public async Task AppHost_Build_SqlServerPortOverridden_SqlUsesConfiguredPort()
+    {
+        IDistributedApplicationTestingBuilder builder = await AppHostFixture.CreateAsync(SqlServerArgs, "Ports:SqlServer=14444");
+
+        builder.Resources.Single(r => r.Name == "sql").Annotations.OfType<EndpointAnnotation>()
+            .Single(e => e.Name == "tcp").Port.Should().Be(14444);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("0")]
+    [InlineData("70000")]
+    public async Task AppHost_Build_InvalidPort_Throws(string value)
+    {
+        Func<Task> act = () => AppHostFixture.CreateAsync($"Ports:Identity={value}");
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Ports:Identity*");
+    }
 }

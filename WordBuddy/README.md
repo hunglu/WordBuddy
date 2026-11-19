@@ -127,6 +127,11 @@ not save a new value there, because it would no longer match the existing volume
 Non-secret defaults (`db-provider`, `jwt-issuer`, `jwt-expiry-minutes`, `rabbitmq-user`) live in
 `appsettings.json`; set them in user-secrets only to override them.
 
+Host ports live in the `Ports` section of `appsettings.json` (`Postgres`, `SqlServer`, `RabbitMq`,
+`RabbitMqManagement`, `Identity` ... `Notification`, `Ui`). Unset keys keep the defaults in the
+table below. An invalid value stops the AppHost. Keep `RabbitMq` on 5672 (the services have no
+RabbitMQ port setting). If you change an API port, also change the Vite proxy and the e2e base URLs.
+
 ### Run
 
 ```bash

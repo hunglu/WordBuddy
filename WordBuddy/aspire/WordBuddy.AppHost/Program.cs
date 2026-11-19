@@ -13,10 +13,13 @@ public static class Program
     /// <summary>Relative path from the AppHost folder to the services root.</summary>
     private const string ServicesRoot = "../../src/Services";
 
-    /// <summary>Fixed SQL Server host port; compose owns 1433.</summary>
+    /// <summary>Configuration section with the host ports (<c>Ports:&lt;Name&gt;</c> in appsettings.json).</summary>
+    public const string PortsSection = "Ports";
+
+    /// <summary>Default SQL Server host port; compose owns 1433.</summary>
     public const int SqlPort = 14330;
 
-    /// <summary>Fixed PostgreSQL host port; compose owns 5432.</summary>
+    /// <summary>Default PostgreSQL host port; compose owns 5432.</summary>
     public const int PostgresPort = 54320;
 
     /// <summary>Value of <c>Parameters:db-provider</c> that selects the SQL Server model (also used when the key is unset).</summary>
@@ -54,9 +57,10 @@ public static class Program
             ? null
             : builder.AddParameter("claude-api-key", secret: true);
 
-        // Infrastructure containers. The database host port is pinned (SQL Server 14330, PostgreSQL 54320; not
-        // the compose ports 1433 / 5432, so the persistent container never blocks `make up`); RabbitMQ AMQP is
-        // pinned (no Port option in the services), so it uses the session lifetime and frees 5672/15672 on stop.
+        // Infrastructure containers. Host ports come from the Ports section (defaults below). The database port
+        // (SQL Server 14330, PostgreSQL 54320) is not a compose port (1433 / 5432), so the persistent container
+        // never blocks `make up`. RabbitMQ uses the session lifetime and frees 5672/15672 on stop; keep AMQP on
+        // 5672, because the services have no RabbitMQ port option.
         // Exactly one database server runs; the unused provider has no resource and no password parameter.
         IResourceBuilder<IResourceWithConnectionString> identityDb;
         IResourceBuilder<IResourceWithConnectionString> contentDb;
@@ -65,7 +69,7 @@ public static class Program
         if (postgres)
         {
             IResourceBuilder<ParameterResource> pgPassword = builder.AddParameter("pg-password", secret: true);
-            IResourceBuilder<PostgresServerResource> pg = builder.AddPostgres("pg", password: pgPassword, port: PostgresPort)
+            IResourceBuilder<PostgresServerResource> pg = builder.AddPostgres("pg", password: pgPassword, port: ReadPort(builder, "Postgres", PostgresPort))
                 .WithImageTag("17-alpine")
                 .WithDataVolume()
                 .WithLifetime(ContainerLifetime.Persistent);
@@ -79,7 +83,7 @@ public static class Program
         else
         {
             IResourceBuilder<ParameterResource> sqlPassword = builder.AddParameter("sql-password", secret: true);
-            IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword, port: SqlPort)
+            IResourceBuilder<SqlServerServerResource> sql = builder.AddSqlServer("sql", sqlPassword, port: ReadPort(builder, "SqlServer", SqlPort))
                 .WithDataVolume()
                 .WithLifetime(ContainerLifetime.Persistent);
 
@@ -90,12 +94,13 @@ public static class Program
             sql.AddDatabase("notificationdb", "WordBuddyNotification");
         }
 
-        IResourceBuilder<RabbitMQServerResource> rabbitmq = builder.AddRabbitMQ("rabbitmq", rabbitUser, rabbitPassword, port: 5672)
-            .WithManagementPlugin(port: 15672)
+        IResourceBuilder<RabbitMQServerResource> rabbitmq = builder.AddRabbitMQ("rabbitmq", rabbitUser, rabbitPassword, port: ReadPort(builder, "RabbitMq", 5672))
+            .WithManagementPlugin(port: ReadPort(builder, "RabbitMqManagement", 15672))
             .WithDataVolume();
 
-        // APIs: launch profiles are ignored; ports are pinned to the compose / Vite proxy / e2e ports.
-        IResourceBuilder<ProjectResource> identity = AddApi(builder, "identity", "Identity", 5080)
+        // APIs: launch profiles are ignored. Default ports match compose, the Vite proxy and e2e; change them
+        // there too when you override Ports:<Service>.
+        IResourceBuilder<ProjectResource> identity = AddApi(builder, "identity", "Identity", ReadPort(builder, "Identity", 5080))
             .WithReference(identityDb, "DefaultConnection").WaitFor(identityDb)
             .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer)
@@ -108,7 +113,7 @@ public static class Program
         // and injects Kestrel__Endpoints__{Http|Grpc}__Url with the allocated target ports, so the proxy owns
         // 5081 and 5091 and Kestrel binds the target ports. No endpoint is declared here for that reason.
         string mediaPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", ".data", "media"));
-        IResourceBuilder<ProjectResource> content = AddApi(builder, "content", "Content", 5081)
+        IResourceBuilder<ProjectResource> content = AddApi(builder, "content", "Content", ReadPort(builder, "Content", 5081))
             .WithReference(contentDb, "DefaultConnection").WaitFor(contentDb)
             .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer)
@@ -119,12 +124,12 @@ public static class Program
             content.WithEnvironment("Autofill__Claude__ApiKey", claudeApiKey);
         }
 
-        IResourceBuilder<ProjectResource> quiz = AddApi(builder, "quiz", "Quiz", 5082)
+        IResourceBuilder<ProjectResource> quiz = AddApi(builder, "quiz", "Quiz", ReadPort(builder, "Quiz", 5082))
             .WithReference(quizDb, "DefaultConnection").WaitFor(quizDb)
             .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer);
 
-        IResourceBuilder<ProjectResource> progress = AddApi(builder, "progress", "Progress", 5083)
+        IResourceBuilder<ProjectResource> progress = AddApi(builder, "progress", "Progress", ReadPort(builder, "Progress", 5083))
             .WithReference(progressDb, "DefaultConnection").WaitFor(progressDb)
             .WithEnvironment("Database__Provider", dbProvider)
             .WithJwt(jwtSecret, jwtIssuer)
@@ -134,12 +139,13 @@ public static class Program
             .WithRabbitMq(rabbitmq, rabbitUser, rabbitPassword);
 
         // Notification is a scaffold: JWT only, no database connection (same as compose).
-        AddApi(builder, "notification", "Notification", 5084)
+        AddApi(builder, "notification", "Notification", ReadPort(builder, "Notification", 5084))
             .WithJwt(jwtSecret, jwtIssuer);
 
-        // Vite UI on 3000. Its existing proxy reaches the APIs on their pinned ports.
+        // Vite UI (default 3000). Its proxy reaches the APIs on the default ports.
+        int uiPort = ReadPort(builder, "Ui", 3000);
         builder.AddViteApp("ui", "../../../WordBuddy.UI")
-            .WithEndpoint("http", endpoint => endpoint.Port = 3000)
+            .WithEndpoint("http", endpoint => endpoint.Port = uiPort)
             .WaitFor(identity)
             .WaitFor(content)
             .WaitFor(quiz)
@@ -164,6 +170,27 @@ public static class Program
         }
 
         throw new InvalidOperationException($"Unknown 'Parameters:db-provider' value '{raw}'. Use '{SqlServerProvider}' or '{PostgresProvider}'.");
+    }
+
+    /// <summary>
+    /// Reads host port <c>Ports:&lt;name&gt;</c>; unset means <paramref name="defaultPort"/>. A value outside
+    /// 1-65535 or not a number fails fast.
+    /// </summary>
+    private static int ReadPort(IDistributedApplicationBuilder builder, string name, int defaultPort)
+    {
+        string key = $"{PortsSection}:{name}";
+        string? raw = builder.Configuration[key];
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return defaultPort;
+        }
+
+        if (!int.TryParse(raw.Trim(), out int port) || port is < 1 or > 65535)
+        {
+            throw new InvalidOperationException($"Invalid '{key}' value '{raw}'. Use a port number from 1 to 65535.");
+        }
+
+        return port;
     }
 
     private static IResourceBuilder<ProjectResource> AddApi(
