@@ -1,14 +1,14 @@
 ---
 title: WB-77_Fix WB-75 review nits A and B
-status: implemented
+status: reviewed
 type: bugfix
 issue: 77
-pr: none
+pr: 78
 affects: docs/features/WB-75_production-deployment-single-host-docker-compose-and-kubernetes.md
 supersedes: none
-version: 1.3
+version: 1.4
 created: 2026-11-22T21:40:15+07:00
-updated: 2026-11-22T22:31:19+07:00
+updated: 2026-11-22T22:34:35+07:00
 ---
 
 ## Problem
