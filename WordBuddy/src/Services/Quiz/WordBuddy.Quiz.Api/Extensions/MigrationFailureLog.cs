@@ -11,9 +11,11 @@ namespace WordBuddy.Quiz.Api.Extensions;
 /// <remarks>
 /// The exception object is never passed to the logger, because its <c>Message</c> can echo part of the
 /// connection string (for example an <see cref="ArgumentException"/> from a malformed connection string).
+/// The provider message is withheld too: server text such as <c>Message</c>, <c>MessageText</c>, <c>Detail</c>,
+/// <c>Hint</c> or <c>Where</c> can hold row values (for example the duplicate key value, an email address).
 /// What is logged instead: the exception types, the stack traces, and, only for provider
-/// <see cref="DbException"/>s, the provider message and error code. Npgsql and SqlClient server messages
-/// hold the user name, database or host but never the password. Any other exception type keeps its message withheld.
+/// <see cref="DbException"/>s, an allowlist of data-free fields (error code, severity, schema names).
+/// Diagnose with the documented error code (for example 18456, 4060 or 28P01).
 /// </remarks>
 public static class MigrationFailureLog
 {
@@ -30,16 +32,32 @@ public static class MigrationFailureLog
             SqlException sql => sql.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
             _ => "n/a",
         };
-        string providerMessage = dbException?.Message ?? "(withheld: not a database provider error)";
+        string providerDetails = Details(dbException);
 
         logger.LogError(
-            "{Service} migration failed: {ExceptionType}, provider error code {ProviderErrorCode}, provider message {ProviderMessage}{NewLine}{StackTrace}",
+            "{Service} migration failed: {ExceptionType}, provider error code {ProviderErrorCode}, provider details {ProviderDetails}{NewLine}{StackTrace}",
             service,
             exception.GetType().Name,
             errorCode,
-            providerMessage,
+            providerDetails,
             Environment.NewLine,
             StackTraces(exception));
+    }
+
+    private static string Details(DbException? dbException)
+    {
+        System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.InvariantCulture;
+        return dbException switch
+        {
+            PostgresException postgres => string.Create(
+                culture,
+                $"severity={postgres.Severity}, schema={postgres.SchemaName}, table={postgres.TableName}, column={postgres.ColumnName}, constraint={postgres.ConstraintName}"),
+            SqlException sql => string.Create(
+                culture,
+                $"class={sql.Class}, state={sql.State}, procedure={sql.Procedure}, line={sql.LineNumber}"),
+            DbException other => string.Create(culture, $"error code={other.ErrorCode}"),
+            _ => "n/a",
+        };
     }
 
     private static DbException? Find(Exception? exception)

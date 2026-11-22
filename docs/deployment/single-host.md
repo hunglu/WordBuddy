@@ -130,7 +130,11 @@ docker compose -f docker-compose.yml -f docker-compose.sqlserver.yml up -d
 
 SQL Server needs 2 GB or more for itself: it does not fit a 2 GB host. The image default is the Developer edition, which is not licensed for production: set `MSSQL_PID` to a licensed edition.
 
-Set `SA_PASSWORD` in `.env`.
+Set `SA_PASSWORD` in `.env`. Password rules:
+
+- All five passwords (`SA_PASSWORD` and the four `*_DB_PASSWORD`) must be 16 or more letters and digits.
+- `sa` also needs upper and lower case plus digits (SQL Server complexity), so hex is not enough: `openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32`.
+- Fail fast: Compose stops when one of them is missing, and the init job exits 1 before any SQL runs when one is empty or not valid. The message names the variable, never the value.
 
 Least privilege: the `sqlserver-init` job creates one login and user per database (`wb_identity`, `wb_content`, `wb_quiz`, `wb_progress`) with the matching `*_DB_PASSWORD`, each `db_owner` on its own database only (EF Core migrations need it). The APIs and migrate jobs never use `sa`. The job is idempotent and resets the passwords on every `up`. `SA_PASSWORD` is used only by the health check and the init job.
 

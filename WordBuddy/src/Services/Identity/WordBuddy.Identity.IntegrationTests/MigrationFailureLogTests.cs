@@ -1,8 +1,11 @@
 using Microsoft.Extensions.Configuration;
+using System.Data.Common;
 using FluentAssertions;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using WordBuddy.Identity.Api.Extensions;
 using WordBuddy.Identity.Infrastructure.Persistence;
 using WordBuddy.Identity.Infrastructure.Persistence.Postgres;
@@ -40,6 +43,63 @@ public sealed class MigrationFailureLogTests
         string all = string.Join('\n', messages);
         all.Should().Contain("migration failed").And.Contain("provider error code").And.Contain("MigrateAsync");
         all.Should().NotContain(Password);
+    }
+
+    [Fact]
+    public async Task MigrationFailureLog_Write_OmitsKeyValueOnDuplicateKey()
+    {
+        const string Sentinel = "sentinel-key-value-4711";
+        Exception failure;
+        string expectedCode;
+        if (IdentityApiFactory.IsPostgres)
+        {
+            string server = Environment.GetEnvironmentVariable("WORDBUDDY_TEST_PG_CONNECTION_STRING")
+                ?? throw new InvalidOperationException("Set WORDBUDDY_TEST_PG_CONNECTION_STRING (server part only).");
+            await using NpgsqlConnection connection = new(server.TrimEnd(';') + ";Include Error Detail=true");
+            await connection.OpenAsync();
+            failure = await DuplicateInsertAsync(connection, "CREATE TEMP TABLE wb_dup (id text PRIMARY KEY)", "INSERT INTO wb_dup (id) VALUES ('" + Sentinel + "')");
+            expectedCode = "23505";
+        }
+        else
+        {
+            await using SqlConnection connection = new(new SqlConnectionStringBuilder(
+                Environment.GetEnvironmentVariable("IDENTITY_TEST_CONNECTION_STRING") ?? "Server=(localdb)\\mssqllocaldb;Trusted_Connection=true")
+            {
+                InitialCatalog = "master",
+            }.ConnectionString);
+            await connection.OpenAsync();
+            failure = await DuplicateInsertAsync(connection, "CREATE TABLE #wb_dup (id nvarchar(50) PRIMARY KEY)", "INSERT INTO #wb_dup (id) VALUES (N'" + Sentinel + "')");
+            expectedCode = "2627";
+        }
+
+        List<string> messages = [];
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(new CapturingLoggerProvider(messages)));
+
+        MigrationFailureLog.Write(loggerFactory.CreateLogger("test"), "WordBuddy.Test", new InvalidOperationException("outer", failure));
+
+        string all = string.Join('\n', messages);
+        all.Should().Contain(expectedCode).And.Contain("provider details").And.Contain("DuplicateInsertAsync");
+        all.Should().NotContain(Sentinel);
+    }
+
+    private static async Task<Exception> DuplicateInsertAsync(DbConnection connection, string createSql, string insertSql)
+    {
+        await using DbCommand create = connection.CreateCommand();
+        create.CommandText = createSql;
+        await create.ExecuteNonQueryAsync();
+        await using DbCommand insert = connection.CreateCommand();
+        insert.CommandText = insertSql;
+        await insert.ExecuteNonQueryAsync();
+        try
+        {
+            await insert.ExecuteNonQueryAsync();
+        }
+        catch (DbException exception)
+        {
+            return exception;
+        }
+
+        throw new InvalidOperationException("Expected a duplicate key error.");
     }
 
     private sealed class CapturingLoggerProvider(List<string> messages) : ILoggerProvider
