@@ -1,8 +1,62 @@
 # Review: Production deployment: single host (Docker Compose) and Kubernetes
 
-PR: #76 · Round 1 · Reviewed commit: 9f1c5ac · 2026-11-22T21:04:21+07:00
+PR: #76 · Round 2 · Reviewed commit: 7b0efeb · 2026-11-22T21:21:30+07:00
 
 ## Verdict
+
+Approve — all 4 round-1 majors and 8 of 9 nits are fixed (nit 13 is for `/test`). The fixes add 3 new nits and no blockers or majors.
+
+## Round 1 status
+
+| # | Round 1 | Status | Verified |
+| --- | --- | --- | --- |
+| 1 | major | fixed | `optional: true` on both `Bootstrap__Admin__*` refs. Compose uses `${...:-}`. Bootstrapper: admin exists → exit 0 before options are read |
+| 2 | major | fixed | Git mode `100755` on all 8 scripts, including the new `sqlserver/init.sh` |
+| 3 | major | fixed | `MigrationFailureLog` logs the type chain, stack traces, `SqlState` / `SqlException.Number`. The provider message is logged only for a `DbException`. No exception object goes to the logger. The 4 copies are identical apart from the service name (ADR 0001). See new nit A |
+| 4 | major | fixed | `sqlserver/init.sh`: one login + user per database, `db_owner` on its own database only. No API or migrate job uses `sa`. See new nit B |
+| 5 | nit | fixed | `... \| sed \| kubectl apply -f -`. If the render fails, `kubectl` gets empty input and exits non-zero, so the failure still shows |
+| 6 | nit | fixed | Header points to `make k8s-prod-render` |
+| 7 | nit | fixed | `cd ../..` in section 3 is right. See new nit C for the section 2 comment |
+| 8 | nit | fixed | `sqlcmd` runs inside the container with `$MSSQL_SA_PASSWORD`; `mkdir -p` first |
+| 9 | nit | fixed | Allow-list is `[ingress-nginx, traefik]`; k3s case explained in the runbook |
+| 10 | nit | fixed | "02:00 UTC" in both runbooks, the CronJob and the diagram |
+| 11 | nit | fixed | Backup step comes first in the upgrade section |
+| 12 | nit | fixed | All 5 SHAs match their tags (checked with `gh api repos/<repo>/git/ref/tags/<tag>`; all are `commit` objects): checkout v4.4.0, setup-buildx v3.12.0, login v3.7.0, metadata v5.10.0, build-push v6.19.2 |
+| 13 | nit | for /test | Quiz suites + one Quiz Development start |
+
+Checked and fine:
+
+| Area | Result |
+| --- | --- |
+| Password in migration logs | Npgsql and SqlClient connect/auth messages name user, host or database, never the password. A malformed connection string throws `ArgumentException` (not a `DbException`), so its message is withheld |
+| `MigrationFailureLogTests` | Sound. Unreachable port 1 with a known password; the capturing logger also records `exception.ToString()`, so a passed exception object would fail the test. Asserts exit 1, error code text and a `MigrateAsync` frame |
+| `init.sh` idempotency | `IF ... IS NULL` guards on database, login and user. `ALTER ROLE ... ADD MEMBER` is a no-op when already a member. `ALTER LOGIN` resets the password, which also makes rotation work. `-b` + `set -eu` stop on the first error |
+| `CHECK_POLICY = OFF` | Accepted. Hex secrets (`openssl rand -hex 24`) have no upper case and fail the Windows complexity rule. Length gives the strength. `ALTER LOGIN` keeps the OFF setting |
+| `/tmp/setup.sql` | Holds only the template (quoted heredoc), never a password |
+| `optional: true` | A fresh database with missing keys still fails the init container (exit 1), which is the wanted signal |
+
+## Findings (round 2)
+
+| # | Severity | File:line | Finding | Suggested fix |
+| --- | --- | --- | --- | --- |
+| A | nit | `WordBuddy.Identity.Api/Extensions/MigrationFailureLog.cs:33` (same line in Content, Quiz, Progress) | On SQL Server a duplicate-key `SqlException` (2601/2627) message contains the key value. Scenario: someone registers with the address later set as `BOOTSTRAP_ADMIN_EMAIL`; no admin exists, so the bootstrapper inserts, the unique index on `Users.Email` fails, and the log line holds "The duplicate key value is (that email)". Same for a future migration that adds a unique index over existing user data. Npgsql does not put `Detail` in `Message` by default, so Postgres is not affected | For `SqlException` 2601/2627 log only the number (withhold the message), or cut the message at "The duplicate key value is". Optional: in `AdminBootstrapper`, check `Users.AnyAsync(u => u.Email == email)` first and fail with a clear, email-free message |
+| B | nit | `WordBuddy/deploy/single-host/sqlserver/init.sh:17,19,30-33` | Passwords go into SQL as raw `sqlcmd` variables. The "letters and digits only" rule is a comment, not a check. A `'` breaks the batch (or runs extra SQL); a missing `.env` line gives an empty string and creates a login with a blank password (Compose only warns). The Postgres script quotes with `%L` and is safe | At the top of `setup()`: fail unless `printf '%s' "$password" \| grep -Eq '^[A-Za-z0-9]{16,}$'`. Or use `${IDENTITY_DB_PASSWORD:?}` in the overlay |
+| C | nit | `docs/deployment/kubernetes.md:30` | Comment says "from the repository root", but `WordBuddy/WordBuddy/k8s/production` is correct only from the folder that holds the clone. From the repo root the path is `WordBuddy/k8s/production` | Say "from the folder where you ran `git clone`" (as `single-host.md:26` does), or use `cd WordBuddy/k8s/production` from the repo root and adjust the comment |
+
+## Plan conformance
+
+- **Tasks:** 41/41 still reflected. The fix round touched only files already in the plan, plus the new `sqlserver/init.sh` and `MigrationFailureLog` + tests (direct answers to findings 3 and 4).
+- **Accepted by Sam, not findings:** dropped login rate-limit test, partial regression, Quiz Shared 1.4.0 check moved to `/test`.
+- **Out of scope:** nothing.
+- **DB diagrams:** no EF migration in the diff.
+
+## Previous rounds
+
+### Round 1 (commit 9f1c5ac)
+
+PR: #76 · Round 1 · Reviewed commit: 9f1c5ac · 2026-11-22T21:04:21+07:00
+
+#### Verdict
 
 Changes requested — 4 majors: a documented Kubernetes step breaks Identity, the runbook scripts are not executable, migration failures cannot be diagnosed, and the SQL Server overlay runs every API as `sa`. No blockers.
 
@@ -20,7 +74,7 @@ Security focus areas checked and fine:
 | CI | BuildKit secret (no build arg), `contents: read` + `packages: write`, semver + sha tags, OCI labels |
 | Local dev paths | `docker-compose.yml`, kind manifests and existing Make targets unchanged; `nginx.conf` change is additive |
 
-## Findings
+#### Findings
 
 | # | Severity | File:line | Finding | Suggested fix |
 | --- | --- | --- | --- | --- |
@@ -38,7 +92,7 @@ Security focus areas checked and fine:
 | 12 | nit | `.github/workflows/images.yml:30-60` | Third-party actions are pinned by major tag, not by commit SHA, in a job holding `packages: write`. | Pin `docker/*` actions to SHAs (Dependabot can update them). |
 | 13 | nit | `WordBuddy/src/Services/Quiz/WordBuddy.Quiz.Api/WordBuddy.Quiz.Api.csproj:23` | Quiz jumps from `Shared.Infrastructure` 1.0.2 to 1.4.0 (skips 1.1–1.3 changes, pulls MassTransit transitively) while Kernel stays 1.0.1. Builds, but the Development path of Quiz was not run (`make up` not run). | `/test`: run the Quiz suites and one Quiz Development start. |
 
-## Plan conformance
+#### Plan conformance
 
 - **Tasks:** 41/41 reflected in the diff. Login rate-limit test dropped and regression task partial — both accepted by Sam, not findings.
 - **Deviations (accepted, sound):**
@@ -52,7 +106,7 @@ Security focus areas checked and fine:
 - **Known note:** on kind, `/api/*` through the UI service returns 502 (nginx `resolver 127.0.0.11`); the Ingress routes APIs directly, so browsers are not affected.
 - **DB diagrams:** no EF migration in the diff, no diagram change needed.
 
-## Fix round 1
+#### Fix round 1
 
 | # | Result | What was done |
 | --- | --- | --- |
