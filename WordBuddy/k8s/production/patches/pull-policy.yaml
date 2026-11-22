@@ -1,0 +1,82 @@
+# Always pull, and use the optional GHCR pull secret (needed only when the images are private).
+# Create it once:
+#   kubectl -n wordbuddy create secret docker-registry ghcr-pull --docker-server=ghcr.io \
+#     --docker-username=<user> --docker-password=<PAT with read:packages>
+# A missing secret only logs a warning, so public images keep working.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: identity-api
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: content-api
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quiz-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: quiz-api
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: progress-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: progress-api
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: notification-api
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordbuddy-ui
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: wordbuddy-ui
+          imagePullPolicy: Always

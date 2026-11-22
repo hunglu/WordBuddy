@@ -1,0 +1,77 @@
+# WordBuddy production overlay (ADR 0010).
+#   cp secret.env.example secret.env     (fill it; gitignored)
+#   make k8s-prod-render                 (render; needs --load-restrictor=LoadRestrictionsNone, the make target sets it)
+#   make k8s-prod-apply VERSION=1.0.0    (apply; sets the image tags)
+# Replace OWNER with your GitHub owner (lower case) in the images below.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: wordbuddy
+
+resources:
+  - ../base
+  - ../postgres
+  - postgres-init-job.yaml
+  - media-pvc.yaml
+  - rabbitmq-pvc.yaml
+  - backup-pvc.yaml
+  - backup-cronjob.yaml
+  - networkpolicy.yaml
+
+images:
+  - name: wordbuddy-identity
+    newName: ghcr.io/OWNER/wordbuddy-identity
+    newTag: "0.0.0"
+  - name: wordbuddy-content
+    newName: ghcr.io/OWNER/wordbuddy-content
+    newTag: "0.0.0"
+  - name: wordbuddy-quiz
+    newName: ghcr.io/OWNER/wordbuddy-quiz
+    newTag: "0.0.0"
+  - name: wordbuddy-progress
+    newName: ghcr.io/OWNER/wordbuddy-progress
+    newTag: "0.0.0"
+  - name: wordbuddy-notification
+    newName: ghcr.io/OWNER/wordbuddy-notification
+    newTag: "0.0.0"
+  - name: wordbuddy-ui
+    newName: ghcr.io/OWNER/wordbuddy-ui
+    newTag: "0.0.0"
+  # No management plugin in production.
+  - name: rabbitmq
+    newTag: 4-alpine
+
+# Fixed names (no hash suffix): the base Deployments refer to wordbuddy-config / wordbuddy-secrets.
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: wordbuddy-config
+    literals:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Database__Provider=Postgres
+      - Jwt__Issuer=WordBuddy
+      - Jwt__ExpiryMinutes=60
+      - FileStorage__BasePath=/app/media
+      - Messaging__RabbitMq__Host=rabbitmq
+      - DOTNET_gcServer=0
+      # Pod network CIDR of the cluster; trusted for X-Forwarded-For. Adjust to your CNI (see the runbook).
+      - ForwardedHeaders__KnownNetworks__0=10.0.0.0/8
+  - name: postgres-init-script
+    files:
+      - init.sh=postgres-init.sh
+
+secretGenerator:
+  - name: wordbuddy-secrets
+    envs:
+      - secret.env
+
+patches:
+  - path: patches/pull-policy.yaml
+  - path: patches/migrate-init-containers.yaml
+  - path: patches/resources.yaml
+  - path: patches/media-volume.yaml
+  - path: patches/rabbitmq-volume.yaml
+  - path: ingress-patch.yaml
+    target:
+      kind: Ingress
+      name: wordbuddy-ingress

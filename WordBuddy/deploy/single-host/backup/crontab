@@ -1,0 +1,2 @@
+# m h dom mon dow  command
+0 2 * * * . /etc/backup.env && sh /backup/backup.sh >> /proc/1/fd/1 2>&1

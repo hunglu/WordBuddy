@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using WordBuddy.Progress.Infrastructure.Persistence;
+using WordBuddy.Shared.Infrastructure;
 using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Progress.Api.Extensions;
@@ -10,6 +11,7 @@ internal static class WebApplicationExtensions
     /// <summary>Wires the full middleware pipeline and applies migrations in Development (no seed data — Progress starts empty per user).</summary>
     public static async Task UseWordBuddyMiddlewareAsync(this WebApplication app)
     {
+        app.UseWordBuddyForwardedHeaders();
         app.UseSerilogRequestLogging();
 
         if (app.Environment.IsDevelopment())

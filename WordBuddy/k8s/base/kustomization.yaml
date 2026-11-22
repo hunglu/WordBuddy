@@ -1,0 +1,23 @@
+# Common application resources, base of k8s/production (WB-75). Lives in base/ because a kustomization
+# cannot contain its own overlay directory. Render with --load-restrictor=LoadRestrictionsNone (the files are one level up).
+# The kind path (make k8s-apply) still applies the single files and does not read this file.
+# Not included here: configmap, secret and the database (each overlay supplies its own).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../namespace.yaml
+  - ../rabbitmq-deployment.yaml
+  - ../rabbitmq-service.yaml
+  - ../identity-deployment.yaml
+  - ../identity-service.yaml
+  - ../content-deployment.yaml
+  - ../content-service.yaml
+  - ../quiz-deployment.yaml
+  - ../quiz-service.yaml
+  - ../progress-deployment.yaml
+  - ../progress-service.yaml
+  - ../notification-deployment.yaml
+  - ../notification-service.yaml
+  - ../ui-deployment.yaml
+  - ../ui-service.yaml
+  - ../ingress.yaml

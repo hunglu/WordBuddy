@@ -33,6 +33,10 @@ dotnet run --project WordBuddy.Quiz.Api --urls http://localhost:5082
 `wordbuddy-quiz:dev`. In the `k8s/` manifests: Deployment/Service `quiz-api`, database
 `WordBuddyQuiz`, Ingress path `/api/quiz`.
 
+## Production: `migrate` mode
+
+`dotnet WordBuddy.Quiz.Api.dll migrate` applies the Quiz migrations and exits (0 ok, 1 failed). It starts no web server and seeds no sample data. Production runbooks: [single host](../../../../docs/deployment/single-host.md), [Kubernetes](../../../../docs/deployment/kubernetes.md).
+
 ## Configuration
 
 Copy `WordBuddy.Quiz.Api/appsettings.Development.json.example` to

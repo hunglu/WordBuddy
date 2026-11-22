@@ -1,0 +1,18 @@
+# JSON6902 patch for wordbuddy-ingress: host, TLS and class.
+# - host: replace wordbuddy.example.com with your DNS name.
+# - tls: secret wordbuddy-tls (create it, or let cert-manager create it: see docs/deployment/kubernetes.md).
+# - class: "traefik" is the tested controller. Change it to the class of your controller.
+# - body size: the nginx annotation in the base is ignored by other controllers; set the limit there
+#   (for Traefik: a buffering Middleware, see the runbook).
+- op: add
+  path: /spec/ingressClassName
+  value: traefik
+- op: add
+  path: /spec/rules/0/host
+  value: wordbuddy.example.com
+- op: add
+  path: /spec/tls
+  value:
+    - hosts:
+        - wordbuddy.example.com
+      secretName: wordbuddy-tls

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-data
+  namespace: wordbuddy
+spec:
+  accessModes: ["ReadWriteOnce"]
+  # storageClassName: <your class>   (default class when omitted)
+  resources:
+    requests:
+      storage: 10Gi

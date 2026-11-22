@@ -229,6 +229,10 @@ Latest migration: `AddDashboard` (`VocabularySessionIssues`). Before it: `AddVoc
 | `content` | always | Content `GET /health` (REST) |
 | `content-grpc` | `Transport=Grpc` | Content `grpc.health.v1` `Check` (3 s deadline) |
 
+## Production: `migrate` mode
+
+`dotnet WordBuddy.Progress.Api.dll migrate` applies the Progress migrations and exits (0 ok, 1 failed). It starts no web server and seeds no sample data. Production runbooks: [single host](../../../../docs/deployment/single-host.md), [Kubernetes](../../../../docs/deployment/kubernetes.md).
+
 ## Configuration
 
 Copy `WordBuddy.Progress.Api/appsettings.Development.json.example` to
