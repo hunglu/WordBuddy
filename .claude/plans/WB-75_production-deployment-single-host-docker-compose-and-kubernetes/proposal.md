@@ -1,14 +1,14 @@
 ---
 title: WB-75_Production deployment: single host (Docker Compose) and Kubernetes
-status: in-progress
+status: implemented
 type: new
 issue: 75
 pr: none
 affects: docs/features/WB-75_production-deployment-single-host-docker-compose-and-kubernetes.md
 supersedes: none
-version: 1.2
+version: 1.3
 created: 2026-11-22T10:44:24+07:00
-updated: 2026-11-22T11:52:07+07:00
+updated: 2026-11-22T20:56:49+07:00
 ---
 
 ## Problem
