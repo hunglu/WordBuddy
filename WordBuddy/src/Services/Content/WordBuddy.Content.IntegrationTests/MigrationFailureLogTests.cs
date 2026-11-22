@@ -54,14 +54,18 @@ public sealed class MigrationFailureLogTests
         {
             string server = Environment.GetEnvironmentVariable("WORDBUDDY_TEST_PG_CONNECTION_STRING")
                 ?? throw new InvalidOperationException("Set WORDBUDDY_TEST_PG_CONNECTION_STRING (server part only).");
-            await using NpgsqlConnection connection = new(server);
+            await using NpgsqlConnection connection = new(server.TrimEnd(';') + ";Include Error Detail=true");
             await connection.OpenAsync();
             failure = await DuplicateInsertAsync(connection, "CREATE TEMP TABLE wb_dup (id text PRIMARY KEY)", "INSERT INTO wb_dup (id) VALUES ('" + Sentinel + "')");
             expectedCode = "23505";
         }
         else
         {
-            await using SqlConnection connection = new("Server=(localdb)\\mssqllocaldb;Database=master;Trusted_Connection=true");
+            await using SqlConnection connection = new(new SqlConnectionStringBuilder(
+                Environment.GetEnvironmentVariable("CONTENT_TEST_CONNECTION_STRING") ?? "Server=(localdb)\\mssqllocaldb;Trusted_Connection=true")
+            {
+                InitialCatalog = "master",
+            }.ConnectionString);
             await connection.OpenAsync();
             failure = await DuplicateInsertAsync(connection, "CREATE TABLE #wb_dup (id nvarchar(50) PRIMARY KEY)", "INSERT INTO #wb_dup (id) VALUES (N'" + Sentinel + "')");
             expectedCode = "2627";
