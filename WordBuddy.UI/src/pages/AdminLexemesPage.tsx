@@ -71,7 +71,7 @@ export function AdminLexemesPage(): ReactElement {
       <h1 className="text-3xl font-extrabold text-wb-ink">{t('lexemes.title')}</h1>
       <p className="mt-1 text-wb-ink-muted">{t('lexemes.intro')}</p>
 
-      <div className="mt-6 flex flex-wrap items-end gap-3">
+      <div className="mt-6 flex flex-wrap gap-3">
         <label className="min-w-64 flex-1 text-sm font-semibold text-wb-ink">
           {t('lexemes.search')}
           <input
