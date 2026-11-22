@@ -1,0 +1,12 @@
+# Caddy: automatic HTTPS (Let's Encrypt) and HTTP -> HTTPS redirect.
+# SITE_ADDRESS = the public host name, e.g. wordbuddy.example.com.
+# SITE_ADDRESS=localhost makes Caddy use its internal CA (self-signed, "tls internal") for local smoke tests.
+{$SITE_ADDRESS} {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	request_body {
+		max_size 50MB
+	}
+
+	reverse_proxy wordbuddy-ui:80
+}

@@ -1,5 +1,6 @@
 using Serilog;
 using WordBuddy.Identity.Infrastructure.Seeding;
+using WordBuddy.Shared.Infrastructure;
 using WordBuddy.Shared.Infrastructure.Health;
 
 namespace WordBuddy.Identity.Api.Extensions;
@@ -9,6 +10,7 @@ internal static class WebApplicationExtensions
     /// <summary>Wires the full middleware pipeline and runs the Development seeder.</summary>
     public static async Task UseWordBuddyMiddlewareAsync(this WebApplication app)
     {
+        app.UseWordBuddyForwardedHeaders();
         app.UseSerilogRequestLogging();
 
         if (app.Environment.IsDevelopment())

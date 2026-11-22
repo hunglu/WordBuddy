@@ -1,0 +1,16 @@
+# Content media lives on a PVC instead of emptyDir.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-api
+  namespace: wordbuddy
+spec:
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      volumes:
+        - name: media-data
+          emptyDir: null
+          persistentVolumeClaim:
+            claimName: media-data

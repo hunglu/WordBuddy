@@ -68,6 +68,10 @@ manifests: Deployment/Service `identity-api`, database `WordBuddyIdentity`, Ingr
 `/api/auth`. If you bumped a shared package version, run `make publish-shared` before rebuilding
 this image.
 
+## Production: `migrate` mode
+
+`dotnet WordBuddy.Identity.Api.dll migrate` applies the Identity migrations and exits (0 ok, 1 failed). It starts no web server and seeds no sample data. It also creates the first admin when none exists (`Bootstrap__Admin__Email`, `Bootstrap__Admin__Password`, at least 12 characters, `Bootstrap__Admin__DisplayName` optional). It never logs the email or the password, and exits 1 when no admin exists and the settings are missing. Production runbooks: [single host](../../../../docs/deployment/single-host.md), [Kubernetes](../../../../docs/deployment/kubernetes.md).
+
 ## Configuration
 
 Copy `WordBuddy.Identity.Api/appsettings.Development.json.example` to

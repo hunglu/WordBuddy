@@ -19,7 +19,8 @@ EF_CONTEXT = $(DB_CONTEXT_PREFIX)$(SERVICE_PASCAL)DbContext
 COMPOSE_POSTGRES := docker compose -f docker-compose.yml -f docker-compose.postgres.yml
 
 .PHONY: up up-postgres down down-postgres logs migrate clean pack-shared publish-shared \
-        cluster-up cluster-down k8s-build-load k8s-apply k8s-logs k8s-migrate k8s-rabbitmq-ui
+        cluster-up cluster-down k8s-build-load k8s-apply k8s-logs k8s-migrate k8s-rabbitmq-ui \
+        k8s-prod-render k8s-prod-apply k8s-prod-health
 
 ## --- docker-compose (local dev inner loop) ---
 
@@ -116,3 +117,35 @@ k8s-logs:
 
 k8s-migrate:
 	kubectl -n wordbuddy exec deploy/$(SERVICE)-api -- dotnet ef database update --context $(EF_CONTEXT)
+
+## --- Kubernetes production overlay (ADR 0010, WB-75) ---
+# Needs k8s/production/secret.env (copy secret.env.example). Uses the ACTIVE kube context.
+# The overlay reads manifests one level up, so kustomize runs with --load-restrictor=LoadRestrictionsNone.
+KUSTOMIZE_PROD := kubectl kustomize --load-restrictor=LoadRestrictionsNone k8s/production
+OWNER ?=
+VERSION ?=
+
+# Renders the overlay (no cluster access). Also checks that both copies of the Postgres init script are identical.
+k8s-prod-render:
+	@diff -q deploy/single-host/postgres/init.sh k8s/production/postgres-init.sh
+	$(KUSTOMIZE_PROD)
+
+# make k8s-prod-apply OWNER=<github-owner> VERSION=1.0.0 -- shows the kube context and asks first.
+k8s-prod-apply:
+	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make k8s-prod-apply OWNER=me VERSION=1.0.0"; exit 1; }
+	@test -n "$(OWNER)" || { echo "OWNER (GitHub owner, lower case) is required"; exit 1; }
+	@diff -q deploy/single-host/postgres/init.sh k8s/production/postgres-init.sh
+	@echo "kube context: $$(kubectl config current-context)"
+	@echo "Deploying WordBuddy $(VERSION) from ghcr.io/$(OWNER) to this cluster."
+	@read -p "Continue? [y/N] " answer; [ "$$answer" = "y" ] || { echo "cancelled"; exit 1; }
+	$(KUSTOMIZE_PROD) | sed -e 's#ghcr.io/OWNER/#ghcr.io/$(OWNER)/#g' -e 's#\(ghcr.io/[^ ]*wordbuddy-[a-z]*\):0.0.0#\1:$(VERSION)#g' > k8s/production/.rendered.yaml
+	kubectl -n wordbuddy delete job postgres-init --ignore-not-found
+	kubectl apply -f k8s/production/.rendered.yaml
+
+# Waits for every Deployment (readiness = /health/ready) and lists the pods.
+k8s-prod-health:
+	@echo "kube context: $$(kubectl config current-context)"
+	@for d in rabbitmq identity-api content-api quiz-api progress-api notification-api wordbuddy-ui; do \
+		kubectl -n wordbuddy rollout status deploy/$$d --timeout=180s || exit 1; \
+	done
+	kubectl -n wordbuddy get pods

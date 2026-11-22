@@ -1,0 +1,105 @@
+# Optional overlay: SQL Server instead of PostgreSQL (ADR 0009, ADR 0010).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.sqlserver.yml up -d
+#
+# SQL Server needs at least 2 GB RAM for itself, so it does not fit a 2 GB host. The Developer
+# edition image is not licensed for production: set MSSQL_PID to a licensed edition (for example
+# Standard) and make sure you own the licence. Needs Docker Compose 2.24 or newer.
+# PostgreSQL, its init job and the automatic backup move to inactive profiles. SQL Server backups
+# are manual: see docs/deployment/single-host.md.
+
+services:
+  postgres:
+    profiles: ["postgres"]
+  postgres-init:
+    profiles: ["postgres"]
+  backup:
+    profiles: ["postgres"]
+  restore:
+    profiles: ["postgres"]
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    restart: "no"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    entrypoint: >
+      bash -c '
+      for db in WordBuddyIdentity WordBuddyContent WordBuddyQuiz WordBuddyProgress; do
+        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID(N'"'"'$$db'"'"') IS NULL CREATE DATABASE [$$db];";
+      done'
+
+  identity-migrate:
+    depends_on: !override
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyIdentity;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  content-migrate:
+    depends_on: !override
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyContent;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  quiz-migrate:
+    depends_on: !override
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyQuiz;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  progress-migrate:
+    depends_on: !override
+      sqlserver-init:
+        condition: service_completed_successfully
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyProgress;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  identity-api:
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyIdentity;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  content-api:
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyContent;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  quiz-api:
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyQuiz;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+  progress-api:
+    environment:
+      Database__Provider: SqlServer
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyProgress;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+
+volumes:
+  sqlserver-data:

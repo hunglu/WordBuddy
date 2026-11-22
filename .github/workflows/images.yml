@@ -1,0 +1,68 @@
+# Builds and pushes the six WordBuddy images to GHCR (ADR 0010).
+# Trigger: a version tag (vX.Y.Z) or a manual run.
+# Prerequisites: the WordBuddy.Shared.* packages are published to GitHub Packages
+# (make publish-shared) and each package grants this repository read access (Actions access).
+name: images
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: identity, context: WordBuddy/src/Services/Identity, secrets: true }
+          - { name: content, context: WordBuddy/src/Services/Content, secrets: true }
+          - { name: quiz, context: WordBuddy/src/Services/Quiz, secrets: true }
+          - { name: progress, context: WordBuddy/src/Services/Progress, secrets: true }
+          - { name: notification, context: WordBuddy/src/Services/Notification, secrets: true }
+          - { name: ui, context: WordBuddy.UI, secrets: false }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image name (lower case owner)
+        id: meta-name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/wordbuddy-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.meta-name.outputs.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # BuildKit secret: never a build arg. The UI image does not restore GitHub Packages.
+          secrets: ${{ matrix.secrets && format('github_token={0}', secrets.GITHUB_TOKEN) || '' }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}

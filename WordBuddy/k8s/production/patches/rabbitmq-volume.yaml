@@ -1,0 +1,16 @@
+# RabbitMQ data lives on a PVC instead of emptyDir (queued outbox messages survive a restart).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: wordbuddy
+spec:
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      volumes:
+        - name: rabbitmq-data
+          emptyDir: null
+          persistentVolumeClaim:
+            claimName: rabbitmq-data

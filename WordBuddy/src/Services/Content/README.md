@@ -146,6 +146,10 @@ Deployment/Service `content-api` (ports `http` 8080 and `grpc` 8081), database
 to `/app/media` in Docker/Kubernetes (an `emptyDir` volume in `k8s/content-deployment.yaml` — not
 yet a real PersistentVolume, so uploaded media does not survive a pod restart in this phase).
 
+## Production: `migrate` mode
+
+`dotnet WordBuddy.Content.Api.dll migrate` applies the Content migrations and exits (0 ok, 1 failed). It starts no web server and seeds no sample data. Production runbooks: [single host](../../../../docs/deployment/single-host.md), [Kubernetes](../../../../docs/deployment/kubernetes.md).
+
 ## Configuration
 
 Copy `WordBuddy.Content.Api/appsettings.Development.json.example` to

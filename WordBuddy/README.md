@@ -209,6 +209,17 @@ make k8s-rabbitmq-ui          # RabbitMQ management UI on http://localhost:15672
 See [`CLAUDE.md`](./CLAUDE.md)'s "Running in Docker / local Kubernetes" section for the full
 service → image → deployment → ingress-path table and the independence-model rationale.
 
+## Production deployment
+
+Two paths use the same versioned GHCR images (built by `.github/workflows/images.yml` on a `v*` tag):
+
+| Target | Files | Runbook |
+| --- | --- | --- |
+| Single host (Docker Compose + Caddy, 2 GB) | `deploy/single-host/` | [single-host.md](../docs/deployment/single-host.md) |
+| Kubernetes (Kustomize overlay) | `k8s/production/` | [kubernetes.md](../docs/deployment/kubernetes.md) |
+
+Decision: [ADR 0010](../docs/adr/0010-production-deployment-topology.md). Each data service has a `migrate` run mode (`dotnet WordBuddy.<Service>.Api.dll migrate`) that applies its migrations and exits. Identity also creates the first admin there (`Bootstrap__Admin__Email` / `__Password`).
+
 ## Roadmap
 
 1. **Project Setup** *(this phase)* — independent per-service solution skeletons, shared NuGet

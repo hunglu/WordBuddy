@@ -46,3 +46,11 @@ docs/local*
 !docs/*.example
 ## Aspire AppHost local media folder
 WordBuddy/aspire/.data/
+
+## Production single-host deployment (WB-75): real secrets and backups
+WordBuddy/deploy/single-host/.env
+WordBuddy/deploy/single-host/backups/
+
+## Kubernetes production overlay secret (copy secret.env.example)
+WordBuddy/k8s/production/secret.env
+WordBuddy/k8s/production/.rendered.yaml

@@ -1,0 +1,84 @@
+# Production resource limits. Small defaults for a modest cluster: raise them for real load.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      containers:
+        - name: identity-api
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      containers:
+        - name: content-api
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quiz-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      containers:
+        - name: quiz-api
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: progress-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      containers:
+        - name: progress-api
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      containers:
+        - name: notification-api
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 250m, memory: 256Mi }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 1000m, memory: 768Mi }

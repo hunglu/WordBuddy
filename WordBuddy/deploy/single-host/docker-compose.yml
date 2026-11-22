@@ -1,0 +1,277 @@
+# WordBuddy production on one host (ADR 0010). Images only: nothing is built on the host.
+#
+#   cp .env.example .env     (fill every value)
+#   docker compose up -d     (migrates, then starts)
+#   ./scripts/health.sh
+#
+# Runbook: docs/deployment/single-host.md. Only Caddy publishes ports (80, 443).
+
+name: wordbuddy-prod
+
+x-api-common: &api-common
+  restart: unless-stopped
+
+x-api-env: &api-env
+  ASPNETCORE_ENVIRONMENT: Production
+  Database__Provider: ${DATABASE_PROVIDER:-Postgres}
+  Jwt__Secret: ${JWT_SECRET}
+  Jwt__Issuer: ${JWT_ISSUER:-WordBuddy}
+  Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES:-60}
+  DOTNET_gcServer: "0"
+  ForwardedHeaders__KnownNetworks__0: ${FORWARDED_HEADERS_KNOWN_NETWORK:-172.28.0.0/16}
+
+x-rabbit-env: &rabbit-env
+  Messaging__RabbitMq__Host: rabbitmq
+  Messaging__RabbitMq__Username: ${RABBITMQ_USER}
+  Messaging__RabbitMq__Password: ${RABBITMQ_PASSWORD}
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    mem_limit: 64m
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - wordbuddy-ui
+
+  wordbuddy-ui:
+    image: ${IMAGE_REGISTRY}/wordbuddy-ui:${WORDBUDDY_VERSION}
+    restart: unless-stopped
+    mem_limit: 64m
+    depends_on:
+      - identity-api
+      - content-api
+      - quiz-api
+      - progress-api
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    mem_limit: 384m
+    command: ["postgres", "-c", "shared_buffers=128MB"]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Creates the four databases and four owner roles if missing, then exits. Safe to run on every `up`.
+  postgres-init:
+    image: postgres:17-alpine
+    mem_limit: 64m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      CONTENT_DB_PASSWORD: ${CONTENT_DB_PASSWORD}
+      QUIZ_DB_PASSWORD: ${QUIZ_DB_PASSWORD}
+      PROGRESS_DB_PASSWORD: ${PROGRESS_DB_PASSWORD}
+    volumes:
+      - ./postgres/init.sh:/init.sh:ro
+    entrypoint: ["sh", "/init.sh"]
+    restart: "no"
+
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-wordbuddy.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  # --- one-shot migrations: same image as the API, "migrate" run mode ---
+  identity-migrate:
+    image: ${IMAGE_REGISTRY}/wordbuddy-identity:${WORDBUDDY_VERSION}
+    command: ["migrate"]
+    restart: "no"
+    mem_limit: 192m
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *api-env
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyIdentity;Username=wb_identity;Password=${IDENTITY_DB_PASSWORD}
+      Bootstrap__Admin__Email: ${BOOTSTRAP_ADMIN_EMAIL}
+      Bootstrap__Admin__Password: ${BOOTSTRAP_ADMIN_PASSWORD}
+      Bootstrap__Admin__DisplayName: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-Admin}
+
+  content-migrate:
+    image: ${IMAGE_REGISTRY}/wordbuddy-content:${WORDBUDDY_VERSION}
+    command: ["migrate"]
+    restart: "no"
+    mem_limit: 192m
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *api-env
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyContent;Username=wb_content;Password=${CONTENT_DB_PASSWORD}
+
+  quiz-migrate:
+    image: ${IMAGE_REGISTRY}/wordbuddy-quiz:${WORDBUDDY_VERSION}
+    command: ["migrate"]
+    restart: "no"
+    mem_limit: 192m
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *api-env
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyQuiz;Username=wb_quiz;Password=${QUIZ_DB_PASSWORD}
+
+  progress-migrate:
+    image: ${IMAGE_REGISTRY}/wordbuddy-progress:${WORDBUDDY_VERSION}
+    command: ["migrate"]
+    restart: "no"
+    mem_limit: 192m
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *api-env
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyProgress;Username=wb_progress;Password=${PROGRESS_DB_PASSWORD}
+
+  # --- APIs (no published ports: reached through wordbuddy-ui) ---
+  identity-api:
+    <<: *api-common
+    image: ${IMAGE_REGISTRY}/wordbuddy-identity:${WORDBUDDY_VERSION}
+    mem_limit: 192m
+    depends_on:
+      identity-migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: [*api-env, *rabbit-env]
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyIdentity;Username=wb_identity;Password=${IDENTITY_DB_PASSWORD}
+
+  content-api:
+    <<: *api-common
+    image: ${IMAGE_REGISTRY}/wordbuddy-content:${WORDBUDDY_VERSION}
+    mem_limit: 192m
+    depends_on:
+      content-migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: [*api-env, *rabbit-env]
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyContent;Username=wb_content;Password=${CONTENT_DB_PASSWORD}
+      FileStorage__BasePath: /app/media
+      Autofill__Claude__ApiKey: ${AUTOFILL_CLAUDE_API_KEY:-}
+    expose:
+      - "8081"
+    volumes:
+      - media-data:/app/media
+
+  quiz-api:
+    <<: *api-common
+    image: ${IMAGE_REGISTRY}/wordbuddy-quiz:${WORDBUDDY_VERSION}
+    mem_limit: 192m
+    depends_on:
+      quiz-migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *api-env
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyQuiz;Username=wb_quiz;Password=${QUIZ_DB_PASSWORD}
+
+  progress-api:
+    <<: *api-common
+    image: ${IMAGE_REGISTRY}/wordbuddy-progress:${WORDBUDDY_VERSION}
+    mem_limit: 192m
+    depends_on:
+      progress-migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: [*api-env, *rabbit-env]
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyProgress;Username=wb_progress;Password=${PROGRESS_DB_PASSWORD}
+      Services__Content__BaseUrl: http://content-api:8080
+      Services__Content__GrpcUrl: http://content-api:8081
+      Services__Content__Transport: Grpc
+
+  notification-api:
+    <<: *api-common
+    image: ${IMAGE_REGISTRY}/wordbuddy-notification:${WORDBUDDY_VERSION}
+    mem_limit: 192m
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER:-WordBuddy}
+      DOTNET_gcServer: "0"
+
+  # --- backups: nightly at 02:00, see backup/backup.sh ---
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    mem_limit: 64m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./backup:/backup:ro
+      - ./backups:/backups
+      - media-data:/media:ro
+    entrypoint: ["sh", "/backup/entrypoint.sh"]
+
+  # Used by scripts/restore.sh only (profile "tools": never started by `up`). Media is writable here.
+  restore:
+    image: postgres:17-alpine
+    profiles: ["tools"]
+    restart: "no"
+    mem_limit: 128m
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backup:/backup:ro
+      - ./backups:/backups:ro
+      - media-data:/media
+    entrypoint: ["sh", "/backup/restore-inner.sh"]
+
+networks:
+  default:
+    name: wordbuddy-prod
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  pg-data:
+  media-data:
+  rabbitmq-data:
+  caddy-data:
+  caddy-config:

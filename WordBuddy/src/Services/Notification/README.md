@@ -28,6 +28,10 @@ dotnet run --project WordBuddy.Notification.Api --urls http://localhost:5084
 `wordbuddy-notification:dev`. In the `k8s/` manifests: Deployment/Service `notification-api` —
 no database, no Ingress route yet (no public endpoints).
 
+## Production
+
+No database and no `migrate` mode. It runs in the production stacks with `ASPNETCORE_ENVIRONMENT=Production`. Runbooks: [single host](../../../../docs/deployment/single-host.md), [Kubernetes](../../../../docs/deployment/kubernetes.md).
+
 ## Configuration
 
 Copy `WordBuddy.Notification.Api/appsettings.Development.json.example` to

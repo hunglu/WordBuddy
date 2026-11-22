@@ -1,0 +1,59 @@
+# Nightly pg_dump of the four databases into the backup-data PVC (02:00 cluster time), keep 14 days.
+# Media files are not included (PVC snapshot is the operator's job, see docs/deployment/kubernetes.md).
+# Manual run: kubectl -n wordbuddy create job --from=cronjob/postgres-backup backup-manual
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: wordbuddy
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:17-alpine
+              env:
+                - name: PGHOST
+                  value: postgres
+                - name: PGUSER
+                  value: postgres
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: wordbuddy-secrets
+                      key: POSTGRES_PASSWORD
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  umask 077
+                  day="$(date +%Y-%m-%d)"
+                  dir="/backups/$day"
+                  mkdir -p "$dir"
+                  for db in WordBuddyIdentity WordBuddyContent WordBuddyQuiz WordBuddyProgress; do
+                    pg_dump -Fc --no-owner -d "$db" -f "$dir/$db.dump"
+                    echo "backup: $db done"
+                  done
+                  find /backups -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec find {} -delete \;
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+              resources:
+                requests: { cpu: 10m, memory: 64Mi }
+                limits: { cpu: 500m, memory: 256Mi }
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: backup-data

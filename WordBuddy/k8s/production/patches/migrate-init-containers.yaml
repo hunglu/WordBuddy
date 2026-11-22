@@ -1,0 +1,136 @@
+# Migrate init containers (WB-75): same image as the API, "migrate" run mode. They run before every
+# API start, so `kubectl apply -k` is the single deploy path. EF Core migration locking guards
+# concurrent pods. Identity also gets the first-admin keys.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: migrate
+          image: wordbuddy-identity:dev
+          imagePullPolicy: Always
+          args: ["migrate"]
+          envFrom:
+            - configMapRef:
+                name: wordbuddy-config
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Identity_ConnectionStrings__DefaultConnection
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Jwt__Secret
+            - name: Bootstrap__Admin__Email
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Bootstrap__Admin__Email
+            - name: Bootstrap__Admin__Password
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Bootstrap__Admin__Password
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: migrate
+          image: wordbuddy-content:dev
+          imagePullPolicy: Always
+          args: ["migrate"]
+          envFrom:
+            - configMapRef:
+                name: wordbuddy-config
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Content_ConnectionStrings__DefaultConnection
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Jwt__Secret
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quiz-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: migrate
+          image: wordbuddy-quiz:dev
+          imagePullPolicy: Always
+          args: ["migrate"]
+          envFrom:
+            - configMapRef:
+                name: wordbuddy-config
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Quiz_ConnectionStrings__DefaultConnection
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Jwt__Secret
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: progress-api
+  namespace: wordbuddy
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: migrate
+          image: wordbuddy-progress:dev
+          imagePullPolicy: Always
+          args: ["migrate"]
+          envFrom:
+            - configMapRef:
+                name: wordbuddy-config
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Progress_ConnectionStrings__DefaultConnection
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: wordbuddy-secrets
+                  key: Jwt__Secret
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
