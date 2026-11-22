@@ -1,4 +1,4 @@
-# Nightly pg_dump of the four databases into the backup-data PVC (02:00 cluster time), keep 14 days.
+# Nightly pg_dump of the four databases into the backup-data PVC (02:00 UTC: the CronJob has no timeZone, so the controller time zone applies), keep 14 days.
 # Media files are not included (PVC snapshot is the operator's job, see docs/deployment/kubernetes.md).
 # Manual run: kubectl -n wordbuddy create job --from=cronjob/postgres-backup backup-manual
 apiVersion: batch/v1

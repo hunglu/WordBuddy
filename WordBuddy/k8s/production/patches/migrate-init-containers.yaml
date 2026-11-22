@@ -33,11 +33,13 @@ spec:
                 secretKeyRef:
                   name: wordbuddy-secrets
                   key: Bootstrap__Admin__Email
+                  optional: true
             - name: Bootstrap__Admin__Password
               valueFrom:
                 secretKeyRef:
                   name: wordbuddy-secrets
                   key: Bootstrap__Admin__Password
+                  optional: true
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { cpu: 500m, memory: 256Mi }

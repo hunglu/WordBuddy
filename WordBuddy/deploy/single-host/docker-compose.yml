@@ -117,8 +117,8 @@ services:
     environment:
       <<: *api-env
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=WordBuddyIdentity;Username=wb_identity;Password=${IDENTITY_DB_PASSWORD}
-      Bootstrap__Admin__Email: ${BOOTSTRAP_ADMIN_EMAIL}
-      Bootstrap__Admin__Password: ${BOOTSTRAP_ADMIN_PASSWORD}
+      Bootstrap__Admin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      Bootstrap__Admin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       Bootstrap__Admin__DisplayName: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-Admin}
 
   content-migrate:

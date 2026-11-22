@@ -29,7 +29,8 @@ spec:
             matchExpressions:
               - key: kubernetes.io/metadata.name
                 operator: In
-                values: [ingress-nginx, traefik, kube-system, ingress]
+                # Namespace of YOUR ingress controller. k3s: Traefik is in kube-system, add it here.
+                values: [ingress-nginx, traefik]
       ports:
         - port: 8080
         - port: 80

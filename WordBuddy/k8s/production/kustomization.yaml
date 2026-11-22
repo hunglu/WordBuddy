@@ -1,6 +1,6 @@
 # WordBuddy production overlay (ADR 0010).
 #   cp secret.env.example secret.env     (fill it; gitignored)
-#   kubectl kustomize k8s/production     (render)
+#   make k8s-prod-render                 (render; needs --load-restrictor=LoadRestrictionsNone, the make target sets it)
 #   make k8s-prod-apply VERSION=1.0.0    (apply; sets the image tags)
 # Replace OWNER with your GitHub owner (lower case) in the images below.
 apiVersion: kustomize.config.k8s.io/v1beta1

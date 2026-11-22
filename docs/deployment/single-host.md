@@ -7,7 +7,7 @@ flowchart LR
   user --> caddy["Caddy :80/:443"] --> ui["wordbuddy-ui (nginx)"] --> apis["identity / content / quiz / progress APIs"]
   apis --> pg[(PostgreSQL)]
   apis --> mq[RabbitMQ]
-  backup["backup (02:00)"] --> pg
+  backup["backup (02:00 UTC)"] --> pg
 ```
 
 ## 1. Host prerequisites
@@ -67,11 +67,13 @@ Prints one line per API (`OK` or `FAIL`). Exit code is non-zero on any failure. 
 
 1. Sign in with `BOOTSTRAP_ADMIN_EMAIL` and the password.
 2. Change the password in the profile page.
-3. Remove `BOOTSTRAP_ADMIN_PASSWORD` from `.env` (it is not used again once an admin exists).
+3. Remove `BOOTSTRAP_ADMIN_PASSWORD` and `BOOTSTRAP_ADMIN_EMAIL` from `.env`, or leave them empty. Once an admin exists, `identity-migrate` skips the bootstrap and still exits 0 when they are missing.
 
-If the `identity-migrate` service exits with code 1, the admin variables are missing or invalid: `docker compose logs identity-migrate`.
+If the `identity-migrate` service exits with code 1 on a fresh database, the admin variables are missing or invalid: `docker compose logs identity-migrate`.
 
 ## 7. Upgrade to a new release
+
+Take a backup first (section 8), then:
 
 ```bash
 # set WORDBUDDY_VERSION in .env, then
@@ -80,11 +82,11 @@ docker compose up -d
 ./scripts/health.sh
 ```
 
-Migrations run again before the APIs restart. Take a backup first (section 8).
+Migrations run again before the APIs restart.
 
 ## 8. Backup
 
-The `backup` container runs every night at 02:00: one `pg_dump -Fc` file per database plus `media.tar.gz` in `./backups/<YYYY-MM-DD>/` (permissions `0600`). Backups older than 14 days are removed (`BACKUP_RETENTION_DAYS`).
+The `backup` container runs every night at 02:00 UTC (container time, not configurable): one `pg_dump -Fc` file per database plus `media.tar.gz` in `./backups/<YYYY-MM-DD>/` (permissions `0600`). Backups older than 14 days are removed (`BACKUP_RETENTION_DAYS`).
 
 Manual run:
 
@@ -126,14 +128,21 @@ Only 80 and 443 (and your SSH port) may be open. Compose publishes nothing else.
 docker compose -f docker-compose.yml -f docker-compose.sqlserver.yml up -d
 ```
 
-SQL Server needs 2 GB or more for itself: it does not fit a 2 GB host. The image default is the Developer edition, which is not licensed for production: set `MSSQL_PID` to a licensed edition. Set `SA_PASSWORD` in `.env`. The automatic backup is off. Back up with `BACKUP DATABASE` for the four `WordBuddy*` databases:
+SQL Server needs 2 GB or more for itself: it does not fit a 2 GB host. The image default is the Developer edition, which is not licensed for production: set `MSSQL_PID` to a licensed edition.
+
+Set `SA_PASSWORD` in `.env`.
+
+Least privilege: the `sqlserver-init` job creates one login and user per database (`wb_identity`, `wb_content`, `wb_quiz`, `wb_progress`) with the matching `*_DB_PASSWORD`, each `db_owner` on its own database only (EF Core migrations need it). The APIs and migrate jobs never use `sa`. The job is idempotent and resets the passwords on every `up`. `SA_PASSWORD` is used only by the health check and the init job.
+
+The automatic backup is off. Back up with `BACKUP DATABASE` for the four `WordBuddy*` databases. The password is read inside the container (`$MSSQL_SA_PASSWORD`), so your host shell does not need it:
 
 ```bash
-docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C \
-  -Q "BACKUP DATABASE [WordBuddyIdentity] TO DISK = '/var/opt/mssql/backup/WordBuddyIdentity.bak'"
+docker compose exec sqlserver mkdir -p /var/opt/mssql/backup
+docker compose exec sqlserver sh -c "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"\$MSSQL_SA_PASSWORD\" -C \
+  -Q \"BACKUP DATABASE [WordBuddyIdentity] TO DISK = '/var/opt/mssql/backup/WordBuddyIdentity.bak'\""
 ```
 
-Repeat for Content, Quiz and Progress, and restore with `RESTORE DATABASE`.
+Repeat for Content, Quiz and Progress. Copy the files off the host and encrypt them (children's data). Restore with `RESTORE DATABASE`.
 
 ## Local smoke test
 

@@ -28,8 +28,7 @@ public static class MigrationRunner
         }
         catch (Exception exception)
         {
-            // Only the exception type is logged: provider messages can contain the connection string.
-            logger.LogError("Identity migration failed: {ExceptionType}", exception.GetType().Name);
+            MigrationFailureLog.Write(logger, "Identity", exception);
             return 1;
         }
     }

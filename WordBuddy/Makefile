@@ -138,9 +138,8 @@ k8s-prod-apply:
 	@echo "kube context: $$(kubectl config current-context)"
 	@echo "Deploying WordBuddy $(VERSION) from ghcr.io/$(OWNER) to this cluster."
 	@read -p "Continue? [y/N] " answer; [ "$$answer" = "y" ] || { echo "cancelled"; exit 1; }
-	$(KUSTOMIZE_PROD) | sed -e 's#ghcr.io/OWNER/#ghcr.io/$(OWNER)/#g' -e 's#\(ghcr.io/[^ ]*wordbuddy-[a-z]*\):0.0.0#\1:$(VERSION)#g' > k8s/production/.rendered.yaml
 	kubectl -n wordbuddy delete job postgres-init --ignore-not-found
-	kubectl apply -f k8s/production/.rendered.yaml
+	$(KUSTOMIZE_PROD) | sed -e 's#ghcr.io/OWNER/#ghcr.io/$(OWNER)/#g' -e 's#\(ghcr.io/[^ ]*wordbuddy-[a-z]*\):0.0.0#\1:$(VERSION)#g' | kubectl apply -f -
 
 # Waits for every Deployment (readiness = /health/ready) and lists the pods.
 k8s-prod-health:

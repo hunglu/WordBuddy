@@ -27,7 +27,7 @@ The kind path (`make k8s-apply`) is for local development and is unchanged.
 ## 2. Configure
 
 ```bash
-cd WordBuddy/k8s/production
+cd WordBuddy/WordBuddy/k8s/production        # from the repository root
 cp secret.env.example secret.env     # gitignored, fill every CHANGE_ME
 ```
 
@@ -37,7 +37,7 @@ Then edit these files:
 | --- | --- |
 | `kustomization.yaml` | Replace `OWNER` in the six image names. Set `ForwardedHeaders__KnownNetworks__0` to your pod CIDR (`10.0.0.0/8` is the default) |
 | `ingress-patch.yaml` | Host name, TLS host, `ingressClassName` (default `traefik`) |
-| `networkpolicy.yaml` | Add your ingress controller namespace if it is not listed |
+| `networkpolicy.yaml` | Set the namespace of your ingress controller (see section 4) |
 | `*-pvc.yaml` | `storageClassName`, sizes |
 
 Database passwords appear twice in `secret.env` (role password and connection string): keep them equal and use letters and digits only.
@@ -53,7 +53,7 @@ kubectl -n wordbuddy create secret docker-registry ghcr-pull --docker-server=ghc
 ## 3. Render and apply
 
 ```bash
-cd WordBuddy
+cd ../..                                            # now in WordBuddy/WordBuddy
 make k8s-prod-render | less                         # no cluster access
 make k8s-prod-apply OWNER=<owner> VERSION=1.0.0      # shows the kube context, asks to continue
 make k8s-prod-health                                 # waits for all Deployments
@@ -63,7 +63,9 @@ Order inside the cluster: PostgreSQL → `postgres-init` Job (databases and role
 
 `k8s-prod-apply` works on the **active kube context**. Check it first (`kubectl config current-context`).
 
-## 4. TLS
+## 4. Ingress controller and TLS
+
+The NetworkPolicy lets only the ingress controller namespace reach the UI and APIs. Default: `ingress-nginx` and `traefik`. k3s runs Traefik in `kube-system`: add it to `values` in `networkpolicy.yaml`, but only if that is your controller (it opens the policy to all pods of that namespace). Check with `kubectl get pods -A | grep -i -e traefik -e ingress`.
 
 Option A, pre-created Secret:
 
@@ -79,9 +81,9 @@ Upload limit: the base Ingress sets the ingress-nginx annotation `proxy-body-siz
 
 1. Open `https://<host>` and sign in with `Bootstrap__Admin__Email` and its password.
 2. Change the password in the profile page.
-3. Remove `Bootstrap__Admin__Password` from `secret.env` and run `make k8s-prod-apply` again.
+3. Remove `Bootstrap__Admin__Password` (and `Bootstrap__Admin__Email`) from `secret.env` and run `make k8s-prod-apply` again. The init container reads these keys as `optional`, so the pod still starts. Once an admin exists, the bootstrap is skipped and exits 0.
 
-If the pod stays in `Init:Error` for Identity, read the log: `kubectl -n wordbuddy logs deploy/identity-api -c migrate`.
+If the pod stays in `Init:Error` for Identity on a fresh database (admin keys missing or invalid), read the log: `kubectl -n wordbuddy logs deploy/identity-api -c migrate`.
 
 ## 6. Upgrade
 
@@ -89,7 +91,7 @@ Run `make k8s-prod-apply OWNER=<owner> VERSION=<new>`. The init containers migra
 
 ## 7. Backup and restore
 
-The CronJob `postgres-backup` runs at 02:00 and writes `pg_dump -Fc` files for the four databases into the `backup-data` PVC, folder `<YYYY-MM-DD>`, keeping 14 days. Media files are not in it: snapshot the `media-data` PVC with your storage provider.
+The CronJob `postgres-backup` runs at 02:00 UTC (the CronJob has no `timeZone`; add `spec.timeZone` in `backup-cronjob.yaml` to change it) and writes `pg_dump -Fc` files for the four databases into the `backup-data` PVC, folder `<YYYY-MM-DD>`, keeping 14 days. Media files are not in it: snapshot the `media-data` PVC with your storage provider.
 
 Manual backup:
 

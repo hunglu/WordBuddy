@@ -2,6 +2,8 @@
 #
 #   docker compose -f docker-compose.yml -f docker-compose.sqlserver.yml up -d
 #
+# The APIs connect as one least-privilege login per database (wb_identity, wb_content, wb_quiz, wb_progress:
+# db_owner on its own database only). `sa` is used only by the health check and sqlserver-init.
 # SQL Server needs at least 2 GB RAM for itself, so it does not fit a 2 GB host. The Developer
 # edition image is not licensed for production: set MSSQL_PID to a licensed edition (for example
 # Standard) and make sure you own the licence. Needs Docker Compose 2.24 or newer.
@@ -43,11 +45,13 @@ services:
         condition: service_healthy
     environment:
       MSSQL_SA_PASSWORD: ${SA_PASSWORD}
-    entrypoint: >
-      bash -c '
-      for db in WordBuddyIdentity WordBuddyContent WordBuddyQuiz WordBuddyProgress; do
-        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID(N'"'"'$$db'"'"') IS NULL CREATE DATABASE [$$db];";
-      done'
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      CONTENT_DB_PASSWORD: ${CONTENT_DB_PASSWORD}
+      QUIZ_DB_PASSWORD: ${QUIZ_DB_PASSWORD}
+      PROGRESS_DB_PASSWORD: ${PROGRESS_DB_PASSWORD}
+    volumes:
+      - ./sqlserver/init.sh:/init.sh:ro
+    entrypoint: ["bash", "/init.sh"]
 
   identity-migrate:
     depends_on: !override
@@ -55,7 +59,7 @@ services:
         condition: service_completed_successfully
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyIdentity;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyIdentity;User Id=wb_identity;Password=${IDENTITY_DB_PASSWORD};TrustServerCertificate=True
 
   content-migrate:
     depends_on: !override
@@ -63,7 +67,7 @@ services:
         condition: service_completed_successfully
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyContent;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyContent;User Id=wb_content;Password=${CONTENT_DB_PASSWORD};TrustServerCertificate=True
 
   quiz-migrate:
     depends_on: !override
@@ -71,7 +75,7 @@ services:
         condition: service_completed_successfully
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyQuiz;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyQuiz;User Id=wb_quiz;Password=${QUIZ_DB_PASSWORD};TrustServerCertificate=True
 
   progress-migrate:
     depends_on: !override
@@ -79,27 +83,27 @@ services:
         condition: service_completed_successfully
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyProgress;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyProgress;User Id=wb_progress;Password=${PROGRESS_DB_PASSWORD};TrustServerCertificate=True
 
   identity-api:
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyIdentity;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyIdentity;User Id=wb_identity;Password=${IDENTITY_DB_PASSWORD};TrustServerCertificate=True
 
   content-api:
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyContent;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyContent;User Id=wb_content;Password=${CONTENT_DB_PASSWORD};TrustServerCertificate=True
 
   quiz-api:
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyQuiz;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyQuiz;User Id=wb_quiz;Password=${QUIZ_DB_PASSWORD};TrustServerCertificate=True
 
   progress-api:
     environment:
       Database__Provider: SqlServer
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyProgress;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=WordBuddyProgress;User Id=wb_progress;Password=${PROGRESS_DB_PASSWORD};TrustServerCertificate=True
 
 volumes:
   sqlserver-data:

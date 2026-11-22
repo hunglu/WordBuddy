@@ -51,3 +51,21 @@ Security focus areas checked and fine:
 - **Out of scope:** nothing outside the plan.
 - **Known note:** on kind, `/api/*` through the UI service returns 502 (nginx `resolver 127.0.0.11`); the Ingress routes APIs directly, so browsers are not affected.
 - **DB diagrams:** no EF migration in the diff, no diagram change needed.
+
+## Fix round 1
+
+| # | Result | What was done |
+| --- | --- | --- |
+| 1 | fixed | `optional: true` on both `Bootstrap__Admin__*` refs in `migrate-init-containers.yaml`. Compose uses `${BOOTSTRAP_ADMIN_*:-}`. Both runbooks say the keys may be removed. Identity bootstrapper checked: admin exists + settings missing = exit 0; no admin + settings missing = exit 1 (existing tests cover both) |
+| 2 | fixed | `git update-index --chmod=+x` on `scripts/health.sh`, `scripts/restore.sh`, `backup/*.sh`, `postgres/init.sh`, `k8s/production/postgres-init.sh` and the new `sqlserver/init.sh` |
+| 3 | fixed | New `MigrationFailureLog` (per service, Api project) logs exception types, stack traces of the full chain, `PostgresException.SqlState` / `SqlException.Number`. The provider message is logged only when the chain holds a `DbException` (server messages hold user, database or host, never the password). Other exception types keep the message withheld, because e.g. an `ArgumentException` from a bad connection string can echo it. The exception object is never passed to the logger. New test `MigrationFailureLogTests` per service (unreachable DB, asserts code and stack trace present, password absent) |
+| 4 | fixed | `sqlserver/init.sh` (idempotent) creates the 4 databases, one login + user per database (`wb_identity`, ...) with `db_owner` on its own database only. APIs and migrate jobs use them. `sa` stays only for health check and init. Verified in a real SQL Server container: init runs twice, `wb_identity` can create a table in its database and cannot open another. Runbook and `.env.example` updated |
+| 5 | fixed | `k8s-prod-apply` pipes into `kubectl apply -f -`; no rendered Secret on disk |
+| 6 | fixed | `kustomization.yaml` header points to `make k8s-prod-render` and names the load restrictor |
+| 7 | fixed | `cd` paths in `kubernetes.md` |
+| 8 | fixed | SQL Server backup command runs `sqlcmd` inside the container with `$MSSQL_SA_PASSWORD`, `mkdir -p` first |
+| 9 | fixed | `kube-system` and `ingress` removed from the allow-list (default `ingress-nginx`, `traefik`); comment and runbook section 4 explain the k3s case |
+| 10 | fixed | Documented as 02:00 UTC (not configurable; Alpine image has no tzdata) in both runbooks, CronJob and compose comments |
+| 11 | fixed | Backup step first in the upgrade section |
+| 12 | fixed | All 5 actions pinned by full commit SHA with version comment; SHAs read with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` (all `commit` objects) |
+| 13 | for /test | Quiz unit tests run and pass (17) |
