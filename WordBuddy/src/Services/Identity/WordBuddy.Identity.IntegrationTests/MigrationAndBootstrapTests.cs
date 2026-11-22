@@ -122,6 +122,44 @@ public sealed class MigrationAndBootstrapTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AdminBootstrapper_Run_FailsWithoutPiiWhenEmailTaken()
+    {
+        await AssertEmailTakenIsRejectedAsync(AgeGroup.Adult);
+    }
+
+    [Fact]
+    public async Task AdminBootstrapper_Run_FailsWithoutPiiWhenEmailTakenByChild()
+    {
+        await AssertEmailTakenIsRejectedAsync(AgeGroup.Child);
+    }
+
+    private async Task AssertEmailTakenIsRejectedAsync(AgeGroup ageGroup)
+    {
+        (await MigrationRunner.RunAsync(_services, Configuration(null, null))).Should().Be(1);
+        Guid existingId = Guid.NewGuid();
+        using (IServiceScope seedScope = _services.CreateScope())
+        {
+            IdentityDbContext seedContext = seedScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+            await seedContext.Users.AddAsync(new User(existingId, AdminEmail, "Existing", "hash", ageGroup, isAdmin: false));
+            await seedContext.SaveChangesAsync();
+        }
+
+        int exitCode = await MigrationRunner.RunAsync(_services, Configuration(AdminEmail, AdminPassword));
+
+        exitCode.Should().Be(1);
+        using IServiceScope scope = _services.CreateScope();
+        IdentityDbContext dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        (await dbContext.Users.AnyAsync(user => user.IsAdmin)).Should().BeFalse();
+        User existing = await dbContext.Users.SingleAsync();
+        existing.Id.Should().Be(existingId);
+        existing.IsAdmin.Should().BeFalse();
+        existing.AgeGroup.Should().Be(ageGroup);
+        existing.PasswordHash.Should().Be("hash");
+        string all = string.Join('\n', _logs.Messages);
+        all.Should().Contain("already uses the configured admin email").And.NotContain(AdminEmail).And.NotContain(AdminPassword);
+    }
+
+    [Fact]
     public async Task AdminBootstrapper_Run_DoesNotLogSecrets()
     {
         await MigrationRunner.RunAsync(_services, Configuration(AdminEmail, AdminPassword));

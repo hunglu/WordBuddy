@@ -70,6 +70,8 @@ No UI change. `WordBuddy.UI/nginx.conf` now forwards `X-Forwarded-For` / `X-Forw
 
 ## Pending changes
 
+- WB-77_fix-wb-75-review-nits-a-and-b — no PII in migration failure logs; validate SQL Server init passwords (#77)
+
 ## Change history
 
 - WB-75_production-deployment-single-host-docker-compose-and-kubernetes — first version: single-host and Kubernetes production deployment, CI images, migrate mode, admin bootstrap, backups.

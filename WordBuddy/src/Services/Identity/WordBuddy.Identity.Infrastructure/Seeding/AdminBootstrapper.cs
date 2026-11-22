@@ -12,7 +12,9 @@ namespace WordBuddy.Identity.Infrastructure.Seeding;
 public static class AdminBootstrapper
 {
     /// <summary>
-    /// Creates one Adult admin when none exists. Returns <c>false</c> when no admin exists and the options are not usable.
+    /// Creates one Adult admin when none exists. Returns <c>true</c> when an admin already exists or was created.
+    /// Returns <c>false</c> when no admin exists and the options are not usable, or when another account already
+    /// uses the configured email. That account is never promoted or changed.
     /// </summary>
     /// <param name="dbContext">The Identity database.</param>
     /// <param name="options">The <c>Bootstrap:Admin</c> settings.</param>
@@ -29,6 +31,13 @@ public static class AdminBootstrapper
         if (!options.IsValid())
         {
             logger.LogError("Admin bootstrap not configured: set Bootstrap:Admin Email and Password (at least {MinLength} characters)", AdminBootstrapOptions.PasswordMinLength);
+            return false;
+        }
+
+        bool emailTaken = await dbContext.Users.AnyAsync(user => user.Email == options.Email);
+        if (emailTaken)
+        {
+            logger.LogError("Admin bootstrap failed: a non-admin account already uses the configured admin email. Set a different Bootstrap:Admin:Email");
             return false;
         }
 
