@@ -1,14 +1,15 @@
 ---
 title: Batch stage commits and sync issue status
-status: done
+status: released
+released: v1.0.0
 type: change
 issue: 8
 pr: 9
 affects: none
 supersedes: none
-version: 1.7
+version: 1.8
 created: 2026-10-01T17:37:59+07:00
-updated: 2026-10-01T23:00:00+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem

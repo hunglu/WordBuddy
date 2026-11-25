@@ -1,14 +1,15 @@
 ---
 title: WB-24_Learner support links
-status: done
+status: released
+released: v1.0.0
 type: new
 issue: 24
 pr: 35
 affects: docs/features/learner-support-links.md
 supersedes: none
-version: 1.9
+version: 1.10
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-08T17:00:00+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem

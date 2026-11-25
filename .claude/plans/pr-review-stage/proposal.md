@@ -1,14 +1,15 @@
 ---
 title: Add pull request and code review stage to the SDLC workflow
-status: done
+status: released
+released: v1.0.0
 type: change
 issue: 3
 pr: 4
 affects: none
 supersedes: none
-version: 9.0
+version: 9.1
 created: 2026-10-01T01:04:51+07:00
-updated: 2026-10-01T09:58:33+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 > Retro-filed: the change was made directly in conversation before this proposal existed, then

@@ -1,14 +1,15 @@
 ---
 title: WB-66_Fix Aspire secrets prompt and pin dev ports
-status: done
+status: released
+released: v1.0.0
 type: bugfix
 issue: 66
 pr: 67
 affects: docs/features/WB-61_adopt-net-aspire-for-local-orchestration.md
 supersedes: none
-version: 5.0
+version: 5.1
 created: 2026-11-03T21:29:47+07:00
-updated: 2026-11-03T22:30:00+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem

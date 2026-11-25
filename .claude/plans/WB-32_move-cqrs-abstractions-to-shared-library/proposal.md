@@ -1,14 +1,15 @@
 ---
 title: WB-32_Move CQRS abstractions to shared library
-status: done
+status: released
+released: v1.0.0
 type: change
 issue: 32
 pr: 45
 affects: none
 supersedes: none
-version: 1.5
+version: 1.6
 created: 2026-10-06T22:34:27+07:00
-updated: 2026-10-13T09:35:33+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem

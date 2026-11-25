@@ -1,14 +1,15 @@
 ---
 title: WB-16_Vocabulary lexeme sense model
-status: done
+status: released
+released: v1.0.0
 type: change
 issue: 16
 pr: 17
 affects: docs/features/vocabulary.md
 supersedes: refactor-database-scheme-to-store-vocabulary-item
-version: 3.3
+version: 3.4
 created: 2026-10-04T23:49:41+07:00
-updated: 2026-10-05T10:07:45+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem

@@ -1,13 +1,14 @@
 ---
 title: Define FE theme tokens
-status: done
+status: released
+released: v1.0.0
 type: change
 issue: 2
 affects: docs/features/ui-theme.md
 supersedes: none
-version: 11.0
+version: 11.1
 created: 2026-09-30T00:00:00+07:00
-updated: 2026-10-01T00:47:21+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem

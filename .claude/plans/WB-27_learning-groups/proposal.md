@@ -1,14 +1,15 @@
 ---
 title: WB-27_Learning groups
-status: done
+status: released
+released: v1.0.0
 type: new
 issue: 27
 pr: 39
 affects: docs/features/learning-groups.md
 supersedes: none
-version: 1.6
+version: 1.7
 created: 2026-10-05T15:38:12+07:00
-updated: 2026-10-10T22:01:00+07:00
+updated: 2026-11-25T17:21:13+07:00
 ---
 
 ## Problem
