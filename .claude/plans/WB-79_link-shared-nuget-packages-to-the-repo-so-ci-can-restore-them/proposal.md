@@ -1,14 +1,14 @@
 ---
 title: WB-79_Link shared NuGet packages to the repo so CI can restore them
-status: reviewed
+status: done
 type: bugfix
 issue: 79
 pr: 80
 affects: docs/features/WB-75_production-deployment-single-host-docker-compose-and-kubernetes.md
 supersedes: none
-version: 2.0
+version: 3.0
 created: 2026-11-26T00:25:05+07:00
-updated: 2026-11-26T22:34:43+07:00
+updated: 2026-11-26T22:42:44+07:00
 ---
 
 ## Problem
