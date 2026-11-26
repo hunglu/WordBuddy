@@ -190,8 +190,10 @@ Test suites: `WORDBUDDY_TEST_DB_PROVIDER=Postgres` and `WORDBUDDY_TEST_PG_CONNEC
 (server part only, e.g. `Host=localhost;Username=postgres;Password=<password>`) switch every
 `*.IntegrationTests` project to PostgreSQL. Each run creates and drops its own database. Without them, tests use SQL Server.
 
-Shared package: the Postgres outbox lock needs `WordBuddy.Shared.Infrastructure` 1.3.0 (`make pack-shared`
-locally; `make publish-shared` for Docker and kind builds).
+Shared package: the Postgres outbox lock needs `WordBuddy.Shared.Infrastructure` 1.4.1 (`make pack-shared`
+locally; `make publish-shared` for Docker and kind builds). New shared versions carry `RepositoryUrl`
+(`src/Shared/Directory.Build.props`), so GitHub links them to this repo. Run `make publish-shared`
+before a release tag when a shared version changes.
 
 ## Running in Docker / local Kubernetes
 

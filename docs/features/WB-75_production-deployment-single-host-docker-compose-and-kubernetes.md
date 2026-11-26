@@ -70,7 +70,7 @@ No UI change. `WordBuddy.UI/nginx.conf` now forwards `X-Forwarded-For` / `X-Forw
 
 ## Pending changes
 
-None.
+- WB-79_link-shared-nuget-packages-to-the-repo-so-ci-can-restore-them — link the shared NuGet packages to the repo so `images.yml` can restore them (#79)
 
 ## Change history
 

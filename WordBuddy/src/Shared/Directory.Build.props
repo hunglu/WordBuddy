@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/hunglu/WordBuddy</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+</Project>

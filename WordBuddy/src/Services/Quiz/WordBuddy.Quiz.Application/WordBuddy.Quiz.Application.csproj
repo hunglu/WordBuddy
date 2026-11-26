@@ -8,8 +8,8 @@
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
-    <PackageReference Include="WordBuddy.Shared.Kernel" Version="1.0.1" />
-    <PackageReference Include="WordBuddy.Shared.Application" Version="1.0.0" />
+    <PackageReference Include="WordBuddy.Shared.Kernel" Version="1.1.1" />
+    <PackageReference Include="WordBuddy.Shared.Application" Version="1.0.1" />
   </ItemGroup>
 
   <PropertyGroup>
