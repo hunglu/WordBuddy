@@ -18,8 +18,8 @@
 
 ## Publish (ask-gated, Sam)
 
-- [ ] **Ask-gated:** Sam runs (or approves) `make publish-shared` with a PAT that has `write:packages`. Needed before any Docker or CI build can restore the new versions — 5 new versions visible on `github.com/hunglu?tab=packages`.
-- [ ] Sam checks each of the 5 package pages — "Repository" shows `hunglu/WordBuddy`; "Inherit access from source repository" is on (turn on if not). Record the result in the test report.
+- [x] **Ask-gated:** Sam runs (or approves) `make publish-shared` with a PAT that has `write:packages`. Needed before any Docker or CI build can restore the new versions — 5 new versions visible on `github.com/hunglu?tab=packages`. — `make publish-shared` run by Sam: Kernel 1.1.1, Application 1.0.1, Infrastructure 1.4.1, Contracts 1.4.1, Protos 1.0.1 pushed; older versions skipped as duplicates.
+- [ ] Sam checks each of the 5 package pages — "Repository" shows `hunglu/WordBuddy`; "Inherit access from source repository" is on (turn on if not). Record the result in the test report. — Verified via `gh api`: repository = hunglu/WordBuddy, visibility private, 5/5. "Inherit access from source repository" is not visible via the API: pending Sam's confirmation. Left unchecked.
 
 ## CI / docs
 
@@ -30,8 +30,8 @@
 ## Tests
 
 - [x] `dotnet test` for Identity, Content, Quiz, Progress, Notification slnx on SQL Server (`(localdb)\mssqllocaldb`) — all green. — Identity 262+66, Content 481+235, Quiz 17+10, Progress 472+106 pass; Notification has no tests
-- [ ] Same 4 data-service suites with `WORDBUDDY_TEST_DB_PROVIDER=Postgres` — all green.
-- [ ] Docker restore from GitHub only (after publish): build one service image, e.g. `docker build --secret id=github_token,env=GITHUB_TOKEN WordBuddy/src/Services/Content` (Dockerfile removes the local feed) — restore succeeds; ask-gated if `docker compose`/`make up` is used.
-- [ ] kind path still restores: `make k8s-build-load` (or note skipped with reason in the test report) — 5 API images build.
+- [ ] Same 4 data-service suites with `WORDBUDDY_TEST_DB_PROVIDER=Postgres` — all green. — OPEN: `WORDBUDDY_TEST_PG_CONNECTION_STRING` is not set in the coder environment; not run.
+- [x] Docker restore from GitHub only (after publish): build one service image, e.g. `docker build --secret id=github_token,env=GITHUB_TOKEN WordBuddy/src/Services/Content` (Dockerfile removes the local feed) — restore succeeds; ask-gated if `docker compose`/`make up` is used. — `docker build --secret` of Content succeeded (token passed inline from `gh auth token`).
+- [x] kind path still restores: `make k8s-build-load` (or note skipped with reason in the test report) — 5 API images build. — `make k8s-build-load` exit 0: 5 API images + UI built and loaded into kind-wordbuddy; Quiz/Progress/Notification restore logs seen.
 - [ ] Tester: update living spec `docs/features/WB-75_...md` (line 21 packages linked + `GITHUB_TOKEN`; line 25 `Infrastructure` 1.4.1; WB-79 to "Change history") — spec matches the merged state.
 - [ ] Release check (done in `/release v1.0.1`, ask-gated tag): `images.yml` run on `v1.0.1` — 6/6 matrix jobs green, GHCR shows `1.0.1` for all 6 images; then Sam applies the CLAUDE.md text from plan §6.
