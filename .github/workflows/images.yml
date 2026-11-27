@@ -1,8 +1,10 @@
 # Builds and pushes the six WordBuddy images to GHCR (ADR 0010).
 # Trigger: a version tag (vX.Y.Z) or a manual run.
 # Prerequisites: the WordBuddy.Shared.* packages are published to GitHub Packages
-# (make publish-shared) and each package is linked to this repository (RepositoryUrl in
-# src/Shared/Directory.Build.props) and inherits its access, so GITHUB_TOKEN can restore it.
+# (make publish-shared) and linked to this repository (RepositoryUrl in
+# src/Shared/Directory.Build.props). Each package also needs, once, in its settings:
+# "Manage Actions access" -> add repository WordBuddy, role Read. Without it, restore with
+# GITHUB_TOKEN fails with NU1301 (403), even with "Inherit access" on.
 name: images
 
 on:

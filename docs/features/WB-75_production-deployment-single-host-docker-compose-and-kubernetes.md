@@ -70,7 +70,7 @@ No UI change. `WordBuddy.UI/nginx.conf` now forwards `X-Forwarded-For` / `X-Forw
 
 ## Pending changes
 
-None.
+- WB-81_docs-manage-actions-access-read-per-shared-package — docs name the per-package "Manage Actions access → WordBuddy (Read)" step (#81)
 
 ## Change history
 

@@ -195,6 +195,11 @@ locally; `make publish-shared` for Docker and kind builds). New shared versions 
 (`src/Shared/Directory.Build.props`), so GitHub links them to this repo. Run `make publish-shared`
 before a release tag when a shared version changes.
 
+CI (`images.yml`) restores the shared packages with `GITHUB_TOKEN`. For that, each package
+needs one manual step on GitHub: package settings → "Manage Actions access" → "Add
+repository" → `WordBuddy`, role Read. The repo link and "Inherit access" alone return 403.
+Do this for every new `WordBuddy.Shared.*` package.
+
 ## Running in Docker / local Kubernetes
 
 ```bash
