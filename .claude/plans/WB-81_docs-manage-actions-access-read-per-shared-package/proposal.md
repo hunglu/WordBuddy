@@ -1,14 +1,14 @@
 ---
 title: WB-81_docs: Manage Actions access Read per shared package
-status: implemented
+status: reviewed
 type: bugfix
 issue: 81
-pr: none
+pr: 82
 affects: docs/features/WB-75_production-deployment-single-host-docker-compose-and-kubernetes.md
 supersedes: none
-version: 3.0
+version: 4.0
 created: 2026-11-27T23:27:48+07:00
-updated: 2026-11-27T23:31:50+07:00
+updated: 2026-11-27T23:35:38+07:00
 ---
 
 ## Problem
