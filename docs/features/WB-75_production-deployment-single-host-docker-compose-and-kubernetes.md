@@ -3,7 +3,7 @@ feature: Production deployment (single host and Kubernetes)
 services: Identity | Content | Quiz | Progress | Notification | UI
 audience: Both
 state: shipped
-last-updated-by: WB-79_link-shared-nuget-packages-to-the-repo-so-ci-can-restore-them
+last-updated-by: WB-81_docs-manage-actions-access-read-per-shared-package
 ---
 
 # Production deployment (single host and Kubernetes)
@@ -18,7 +18,7 @@ GHCR images (built by CI on tag v*)
 
 ## What it does
 
-- **Images:** `.github/workflows/images.yml` builds 6 images (5 APIs + UI) on a `v*` tag or by hand. Tags: `X.Y.Z`, `X.Y`, `sha-<short>`. The 5 `WordBuddy.Shared.*` packages are linked to the repo (`RepositoryUrl` in `src/Shared/Directory.Build.props`). The GitHub Packages restore uses `GITHUB_TOKEN` as a BuildKit secret, with no stored PAT.
+- **Images:** `.github/workflows/images.yml` builds 6 images (5 APIs + UI) on a `v*` tag or by hand. Tags: `X.Y.Z`, `X.Y`, `sha-<short>`. The 5 `WordBuddy.Shared.*` packages are linked to the repo (`RepositoryUrl` in `src/Shared/Directory.Build.props`), and each grants `WordBuddy` Read under "Manage Actions access" (once per package; the link alone gives 403). The GitHub Packages restore uses `GITHUB_TOKEN` as a BuildKit secret, with no stored PAT.
 - **Production environment:** `ASPNETCORE_ENVIRONMENT=Production`. Swagger returns 404. No dev seed data.
 - **Migrate step:** each data API (Identity, Content, Quiz, Progress) has a `migrate` argument: apply migrations, then exit 0 (ok) or 1 (failed). Failures log the error type, stack, DB error code and non-sensitive error fields (SQL Server: number, class, state; PostgreSQL: SQLSTATE, table, constraint). The provider message is withheld, so a duplicate-key error never leaks a key value (such as an email). Neither the connection string nor the password is logged.
 - **Admin bootstrap:** Identity `migrate` creates one Adult admin from `Bootstrap__Admin__*` when no admin exists. It does nothing when one exists, exits 1 when a fresh database has no keys. It never logs the email or password. If a user with the admin email already exists, it fails (exit 1) with a clear error and does not promote that user, so no duplicate-key insert runs.
@@ -70,10 +70,11 @@ No UI change. `WordBuddy.UI/nginx.conf` now forwards `X-Forwarded-For` / `X-Forw
 
 ## Pending changes
 
-- WB-81_docs-manage-actions-access-read-per-shared-package — docs name the per-package "Manage Actions access → WordBuddy (Read)" step (#81)
+None.
 
 ## Change history
 
 - WB-75_production-deployment-single-host-docker-compose-and-kubernetes — first version: single-host and Kubernetes production deployment, CI images, migrate mode, admin bootstrap, backups.
 - WB-77_fix-wb-75-review-nits-a-and-b — migration failure logs withhold the provider message (no key values); admin email clash fails without promoting the user; SQL Server init and overlay reject empty or unsafe passwords (#77).
 - WB-79_link-shared-nuget-packages-to-the-repo-so-ci-can-restore-them — shared NuGet packages bumped and linked to the repo so `images.yml` restores them with `GITHUB_TOKEN`; Infrastructure 1.4.1 (#79).
+- WB-81_docs-manage-actions-access-read-per-shared-package — docs name the per-package "Manage Actions access → WordBuddy (Read)" step; the repo link and "Inherit access" alone give 403 (#81).
